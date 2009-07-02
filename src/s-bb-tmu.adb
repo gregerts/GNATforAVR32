@@ -94,6 +94,10 @@ package body System.BB.TMU is
    pragma Inline (Get_Compare);
    --  Computes the COMPARE value for a clock
 
+   function Is_Active (Clock : Clock_Id) return Boolean;
+   pragma Inline_Always (Is_Active);
+   --  Returns true when the given clock is active (running)
+
    ------------
    -- Cancel --
    ------------
@@ -108,7 +112,7 @@ package body System.BB.TMU is
          TM.Set := False;
          TM.Timeout := CPU_Time'First;
 
-         if TM.Clock.Running then
+         if Is_Active (TM.Clock) then
             CPU.Adjust_Compare (Max_Compare);
          end if;
 
@@ -124,12 +128,7 @@ package body System.BB.TMU is
       Count : Word;
    begin
 
-      pragma Assert (Clock_A.Running and not Clock_B.Running);
-
-      --  TM_A is active, TM_B is being actived
-
-      Clock_A.Running := False;
-      Clock_B.Running := True;
+      pragma Assert (Is_Active (Clock_A) and Clock_A /= Clock_B);
 
       --  Swap in counter for TM_B
 
@@ -333,7 +332,6 @@ package body System.BB.TMU is
    --------------------
 
    procedure Initialize_TMU (Environment_Clock : Clock_Id) is
-      Clock : Clock_Id;
    begin
       --  Initialize the clock of the environment thread
 
@@ -344,9 +342,12 @@ package body System.BB.TMU is
       Initialize_Clock (Idle_Clock_Desc'Access);
 
       for I in Interrupt_Clock_Desc'Range loop
-         Clock := Interrupt_Clock_Desc (I)'Access;
-         Initialize_Clock (Clock);
-         To_Clock (I - Interrupt_Clock_Desc'First + 1) := Clock;
+         declare
+            Clock : constant Clock_Id := Interrupt_Clock_Desc (I)'Access;
+         begin
+            Initialize_Clock (Clock);
+            To_Clock (I - Interrupt_Clock_Desc'First + 1) := Clock;
+         end;
       end loop;
 
       --  Install compare handler
@@ -356,7 +357,6 @@ package body System.BB.TMU is
       --  Activate clock of environment thread
 
       Stack (0) := Environment_Clock;
-      Environment_Clock.Running := True;
 
       CPU.Reset_Count (Max_Compare);
 
@@ -372,6 +372,15 @@ package body System.BB.TMU is
    begin
       return Interrupt_Clock_Desc (Priority)'Access;
    end Interrupt_Clock;
+
+   ---------------
+   -- Is_Active --
+   ---------------
+
+   function Is_Active (Clock : Clock_Id) return Boolean is
+   begin
+      return Clock = Stack (Top).Active;
+   end Is_Active;
 
    ----------------
    -- Leave_Idle --
@@ -440,7 +449,6 @@ package body System.BB.TMU is
       Timeout : CPU_Time)
    is
    begin
-      pragma Assert (TM.Clock /= null);
 
       --  Set timer
 
@@ -449,7 +457,7 @@ package body System.BB.TMU is
 
       --  Adjust COMPARE if the timer is active
 
-      if TM.Clock.Running then
+      if Is_Active (TM.Clock) then
          CPU.Adjust_Compare (Get_Compare (TM.Clock));
       end if;
 
@@ -468,7 +476,7 @@ package body System.BB.TMU is
 
       --  If clock is not active return base time
 
-      if not Clock.Running then
+      if not Is_Active (Clock) then
          return Clock.Base_Time;
       end if;
 

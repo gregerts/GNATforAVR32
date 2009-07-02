@@ -179,9 +179,6 @@ private
          TM : Timer_Id;
          --  Timer bound to this clock, or null if no timer is set
 
-         Running : Boolean;
-         --  Flag indicating if the timer is running (active)
-
       end record;
 
    pragma Suppress_Initialization (Clock_Descriptor);
