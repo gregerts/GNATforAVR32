@@ -1,0 +1,96 @@
+Test (0, 10000, 2, 10000)
+
+	Set:       2000000
+	Cancelled: 1000000
+	Expired:   1000000
+	Lost:      0
+
+	D_Min:     8.0000e-05 [s]
+	D_Max:     3.7067e-04 [s]
+	D_Mean:    3.1167e-04 [s]
+	D_SVar:    3.1324e-02 [s]
+
+Test (0, 10000, 4, 10000)
+
+	Set:       2000200
+	Cancelled: 1000200
+	Expired:   1000000
+	Lost:      0
+
+	D_Min:     8.0000e-05 [s]
+	D_Max:     7.3067e-04 [s]
+	D_Mean:    3.4655e-04 [s]
+	D_SVar:    3.6494e-02 [s]
+
+Test (0, 10000, 8, 10000)
+
+	Set:       2000600
+	Cancelled: 1000600
+	Expired:   1000000
+	Lost:      0
+
+	D_Min:     8.0000e-05 [s]
+	D_Max:     1.4400e-03 [s]
+	D_Mean:    4.2674e-04 [s]
+	D_SVar:    4.6311e-02 [s]
+
+Test (0, 10000, 16, 10000)
+
+	Set:       2001400
+	Cancelled: 1001400
+	Expired:   1000000
+	Lost:      0
+
+	D_Min:     8.0000e-05 [s]
+	D_Max:     2.7200e-03 [s]
+	D_Mean:    9.2047e-04 [s]
+	D_SVar:    9.8534e-02 [s]
+
+Test (0, 10000, 32, 10000)
+
+	Set:       2003000
+	Cancelled: 1003000
+	Expired:   1000000
+	Lost:      0
+
+	D_Min:     8.0000e-05 [s]
+	D_Max:     3.5727e-01 [s]
+	D_Mean:    1.6437e-01 [s]
+	D_SVar:    1.8017e+01 [s]
+
+Test (0, 10000, 64, 10000)
+
+	Set:       2006200
+	Cancelled: 1006200
+	Expired:   1000000
+	Lost:      0
+
+	D_Min:     8.0000e-05 [s]
+	D_Max:     4.1546e-01 [s]
+	D_Mean:    2.1626e-01 [s]
+	D_SVar:    2.3378e+01 [s]
+
+Test (0, 10000, 128, 10000)
+
+	Set:       2012600
+	Cancelled: 1012600
+	Expired:   1000000
+	Lost:      0
+
+	D_Min:     7.7333e-05 [s]
+	D_Max:     5.1211e-01 [s]
+	D_Mean:    2.7679e-01 [s]
+	D_SVar:    2.9230e+01 [s]
+
+Test (0, 10000, 256, 10000)
+
+	Set:       2025400
+	Cancelled: 1025400
+	Expired:   1000000
+	Lost:      0
+
+	D_Min:     7.7333e-05 [s]
+	D_Max:     5.2110e-01 [s]
+	D_Mean:    3.2002e-01 [s]
+	D_SVar:    3.3448e+01 [s]
+

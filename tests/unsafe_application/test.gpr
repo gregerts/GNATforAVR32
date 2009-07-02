@@ -1,0 +1,34 @@
+project Test is
+
+  for Main use ("main");
+
+  for Source_Dirs use ("./", "../common");
+
+  package Builder is
+     for Default_Switches ("Ada")
+       use ("--GCC=avr32-gcc",
+            "--RTS=../../build/");
+  end Builder;
+
+  package Compiler is
+     for Default_Switches ("Ada")
+       use ("-gnatan",
+            "-gnatw.X",
+            "-nostartfiles",
+	    "-g",
+            "-O2");
+  end Compiler;
+
+  package Linker is
+     for Default_Switches ("Ada")
+       use ("--GCC=avr32-gcc",
+            "--LINK=avr32-gcc",
+            "-nostartfiles",
+            "ada_crt0.o",
+            "-D0",
+            "-d1k",
+            "-march=avr32elf",
+            "-mpart=uc3a0512");
+  end Linker;
+
+end Test;

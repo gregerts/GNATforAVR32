@@ -1,0 +1,35 @@
+project Raventest is
+
+  for Main use ("main");
+
+  for Source_Dirs use ("./", "../common");
+
+  package Builder is
+     for Default_Switches ("Ada")
+       use ("--GCC=avr32-gcc",
+            "--RTS=../../build/");
+  end Builder;
+
+  package Compiler is
+     for Default_Switches ("Ada")
+       use ("-gnatan",
+            "-gnatw.X",
+            "-nostartfiles",
+            "-nostdinc",
+            "-O2",
+            "-g");
+  end Compiler;
+
+  package Linker is
+     for Default_Switches ("Ada")
+       use ("--GCC=avr32-gcc",
+            "--LINK=avr32-gcc",
+            "-nostartfiles",
+            "-D0",
+            "-d1k",
+            "ada_crt0.o",
+            "-march=avr32elf",
+            "-mpart=uc3a0512");
+  end Linker;
+
+end Raventest;
