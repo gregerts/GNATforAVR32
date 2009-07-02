@@ -65,13 +65,21 @@ package System.BB.TMU is
 
    type Thread_Id is not null access all System.BB.Threads.Thread_Descriptor;
 
-   ------------
-   -- Timer  --
-   ------------
+   ----------------------
+   -- Clock_Descriptor --
+   ----------------------
 
-   type Timer is private;
+   type Clock_Descriptor is limited private;
 
-   type Timer_Id is access all Timer;
+   type Clock_Id is access all Clock_Descriptor;
+
+   ----------------------
+   -- Timer_Descriptor --
+   ----------------------
+
+   type Timer_Descriptor (Clock : Clock_Id) is private;
+
+   type Timer_Id is access all Timer_Descriptor;
 
    type Timer_Handler is access procedure (Data : System.Address);
 
@@ -79,52 +87,51 @@ package System.BB.TMU is
    -- Initialization --
    --------------------
 
-   procedure Initialize_Timer (TM : Timer_Id);
-   --  Initializes the given timer.
+   procedure Initialize_Clock (Clock : Clock_Id);
+   --  Initializes the given Clock.
 
-   procedure Initialize_TMU (Environment_TM : Timer_Id);
+   procedure Initialize_TMU (Environment_Clock : Clock_Id);
    --  Initialize this package. Must be called before any other
-   --  procedures and functions.
+   --  procedures and functions in this package.
 
-   ----------------
-   -- Operations --
-   ----------------
+   ----------------------
+   -- Clock operations --
+   ----------------------
 
-   function Acquire_Interrupt_Timer
-     (Priority : Interrupt_Priority) return Timer_Id;
-   --  Acquire the timer of the given interrupt priority, returns null
-   --  if the timer is already acquired.
-
-   function Acquire_Thread_Timer (Id : Thread_Id) return Timer_Id;
-   --  Acquire the timer of the given thread, returns null if the
-   --  timer is already acquired.
-
-   procedure Cancel_Handler (TM : Timer_Id);
-   --  Cancels handler of TM
-
-   function Clock (TM : Timer_Id) return CPU_Time;
-   --  Get execution time of the given timer
-
-   function Idle_Clock return CPU_Time;
-   pragma Inline (Idle_Clock);
-   --  Returns the execution time used by the pseudo idle thread
+   function Idle_Clock return Clock_Id;
+   pragma Inline_Always (Idle_Clock);
+   --  Returns the execution time clock for the pseudo idle thread
 
    function Interrupt_Clock
-     (Priority : Interrupt_Priority) return CPU_Time;
-   pragma Inline (Interrupt_Clock);
-   --  Returns the execution time used by the pseudo interrupt level
-   --  server thread.
+     (Priority : Interrupt_Priority) return Clock_Id;
+   pragma Inline_Always (Interrupt_Clock);
+   --  Returns the execution time clock for the given interrupt level
 
-   procedure Set_Handler
+   function Thread_Clock (Id : Thread_Id) return Clock_Id;
+   pragma Inline_Always (Thread_Clock);
+   --  Returns execution time clock for the given thread
+
+   function Time_Of (Clock : Clock_Id) return CPU_Time;
+   --  Get execution time of the given clock
+
+   ----------------------
+   -- Timer operations --
+   ----------------------
+
+   function Create
+     (Clock   : not null Clock_Id;
+      Handler : not null Timer_Handler;
+      Data    : System.Address) return Timer_Id;
+   --  Creates a timer for the given clock with the given handler and
+   --  data. Return null if the clock already has a timer.
+
+   procedure Cancel (TM : Timer_Id);
+   --  Cancels the timer
+
+   procedure Set
      (TM      : Timer_Id;
-      Timeout : CPU_Time;
-      Handler : Timer_Handler;
-      Data    : System.Address);
+      Timeout : CPU_Time);
    --  Sets the timer, may overwrite an already pending timeout
-
-   function Thread_Clock (Id : Thread_Id) return CPU_Time;
-   pragma Inline (Thread_Clock);
-   --  Returns execution time of the given thread
 
    function Time_Remaining (TM : Timer_Id) return CPU_Time;
    --  Returns time remaining before timeout or 0 if no timeout
@@ -159,19 +166,28 @@ package System.BB.TMU is
 
 private
 
-   type Timer is
+   type Clock_Descriptor is
       record
-         Active_TM : Timer_Id;
-         --  Will point to timer of another thread if this thread is
-         --  executing code by proxy, otherwise to this timer.
-
          Base_Time : CPU_Time;
          pragma Volatile (Base_Time);
-         --  Base time, updated when the timer is deactivated
+         --  Base time, updated when the clock is deactivated
 
-         Timeout : CPU_Time;
-         --  Timeout of timer or CPU_Time'First if timer is not set
+         Active : Clock_Id;
+         --  Will point to clock of another thread if this thread is
+         --  executing code by proxy, otherwise to this timer.
 
+         TM : Timer_Id;
+         --  Timer bound to this clock, or null if no timer is set
+
+         Running : Boolean;
+         --  Flag indicating if the timer is running (active)
+
+      end record;
+
+   pragma Suppress_Initialization (Clock_Descriptor);
+
+   type Timer_Descriptor (Clock : Clock_Id) is
+      record
          Handler : Timer_Handler;
          --  Handler to be called when the timer expires or null if
          --  timer not set.
@@ -179,14 +195,14 @@ private
          Data : System.Address;
          --  Argument to be given when calling handler
 
-         Active : Boolean;
-         --  Flag indicating if the timer is active (running)
+         Timeout : CPU_Time;
+         --  Timeout of timer or CPU_Time'First if timer is not set
 
-         Acquired : Boolean;
-         --  Flag indicating if the timer is acquired
+         Set : Boolean;
+         --  True if the timer is set
 
       end record;
 
-   pragma Suppress_Initialization (Timer);
+   pragma Suppress_Initialization (Timer_Descriptor);
 
 end System.BB.TMU;

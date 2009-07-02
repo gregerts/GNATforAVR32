@@ -122,10 +122,7 @@ package System.Task_Primitives.Operations is
    -- TMU --
    ---------
 
-   function Acquire_Task_Timer (T : ST.Task_Id) return System.BB.TMU.Timer_Id;
-   --  This function acquires the timer of a task
-
-   function Task_Clock (T : ST.Task_Id) return System.BB.TMU.CPU_Time;
+   function Task_Clock (T : ST.Task_Id) return System.BB.TMU.Clock_Id;
    pragma Inline (Task_Clock);
    --  This function returns the exeuction time of the given task
 

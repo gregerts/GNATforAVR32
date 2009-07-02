@@ -59,11 +59,12 @@ package body System.BB.Time is
    pragma Volatile (Base_Time);
    --  Base of clock (i.e. MSP), stored in memory
 
-   Last_Alarm : aliased Alarm_Timer := (Timeout => Time'Last,
-                                        Handler => null,
-                                        Data    => Null_Address,
-                                        Next    => null,
-                                        Prev    => null);
+   Last_Alarm : aliased Alarm_Descriptor := (Timeout => Time'Last,
+                                             Handler => null,
+                                             Data    => Null_Address,
+                                             Next    => null,
+                                             Prev    => null,
+                                             Set     => False);
    --  Last alarm in queue
 
    First_Alarm : Alarm_Id := Last_Alarm'Access;
@@ -124,48 +125,21 @@ package body System.BB.Time is
 
          --  Remove first event from queue. The queue has to be in a
          --  consistent state prior to calling the handler since it
-         --  may in turn call procedures that manipulates the queue.
+         --  may call procedures manipulating the queue.
 
          First_Alarm     := Alarm.Next;
          Alarm.Next.Prev := null;
 
-         --  Clear event and call handler
+         --  Clear alarm and call handler with alarm data
 
-         declare
-            Handler : constant Alarm_Handler  := Alarm.Handler;
-            Data    : constant System.Address := Alarm.Data;
-         begin
-            pragma Assert (Handler /= null);
+         pragma Assert (Alarm.Set);
 
-            Clear   (Alarm);
-            Handler (Data);
-         end;
+         Clear (Alarm);
+         Alarm.Handler (Alarm.Data);
 
-         --  Read clock and update base time if there is a pending
-         --  clock interrupt in order to avoid unecessary interrupts.
+         --  Read clock and get first event from alarm queue
 
-         declare
-            B : Time           := Base_Time;
-            C : Timer_Interval := Peripherals.Read_Clock;
-
-         begin
-
-            if Peripherals.Pending_Clock then
-
-               B := B + Clock_Period;
-               C := Peripherals.Read_Clock;
-
-               Base_Time := B;
-
-               Peripherals.Clear_Clock_Interrupt;
-
-            end if;
-
-            Now := B + Time (C);
-         end;
-
-         --  Get first event from queue, may have been updated
-
+         Now   := Clock;
          Alarm := First_Alarm;
 
          exit when Alarm.Timeout > Now;
@@ -187,17 +161,17 @@ package body System.BB.Time is
 
    end Alarm_Wrapper;
 
-   --------------------
-   -- Cancel_Handler --
-   --------------------
+   ------------
+   -- Cancel --
+   ------------
 
-   procedure Cancel_Handler (Alarm : Alarm_Id)
+   procedure Cancel (Alarm : Alarm_Id)
    is
    begin
 
       pragma Assert (Alarm /= null);
 
-      if Alarm.Handler /= null then
+      if Alarm.Set then
 
          --  Check if Alarm is first in queue
 
@@ -221,7 +195,7 @@ package body System.BB.Time is
 
       end if;
 
-   end Cancel_Handler;
+   end Cancel;
 
    -----------
    -- Clear --
@@ -230,10 +204,9 @@ package body System.BB.Time is
    procedure Clear (Alarm : Alarm_Id) is
    begin
       Alarm.Timeout := Time'First;
-      Alarm.Handler := null;
-      Alarm.Data    := Null_Address;
       Alarm.Next    := null;
       Alarm.Prev    := null;
+      Alarm.Set     := False;
    end Clear;
 
    -----------
@@ -255,13 +228,11 @@ package body System.BB.Time is
          exit when B = Base_Time;
       end loop;
 
-      --  If a clock interrupt is pending the task has to have the
-      --  highest priority or is executing within kernel. The
-      --  interrupt may have occured after reading B and C.
+      --  If a clock interrupt is pending the task has the highest
+      --  priority or is executing within kernel.
 
       if Peripherals.Pending_Clock then
          B := B + Clock_Period;
-         C := Peripherals.Read_Clock;
       end if;
 
       return B + Time (C);
@@ -310,6 +281,26 @@ package body System.BB.Time is
 
    end Clock_Handler;
 
+   ------------
+   -- Create --
+   ------------
+
+   function Create
+     (Handler : not null Alarm_Handler;
+      Data    : System.Address) return Alarm_Id
+   is
+      Alarm : constant Alarm_Id := new Alarm_Descriptor;
+   begin
+
+      Alarm.Handler := Handler;
+      Alarm.Data    := Data;
+
+      Clear (Alarm);
+
+      return Alarm;
+
+   end Create;
+
    -----------------------
    -- Initialize_Timers --
    -----------------------
@@ -328,27 +319,20 @@ package body System.BB.Time is
 
    end Initialize_Timers;
 
-   -----------------
-   -- Set_Handler --
-   -----------------
+   ---------
+   -- Set --
+   ---------
 
-   procedure Set_Handler
+   procedure Set
      (Alarm   : Alarm_Id;
-      Timeout : Time;
-      Handler : Alarm_Handler;
-      Data    : System.Address)
+      Timeout : Time)
    is
       Aux : Alarm_Id := Last_Alarm'Access;
    begin
+      --  Set alarm timeout
 
-      pragma Assert (Alarm.Handler = null);
-      pragma Assert (Handler /= null);
-
-      --  Set alarm timeout, handler and data
-
+      Alarm.Set := True;
       Alarm.Timeout := Timeout;
-      Alarm.Handler := Handler;
-      Alarm.Data    := Data;
 
       --  Search queue from end for element Aux where Aux.Prev = null
       --  (first in queue) or Aux.Prev.Timeout <= Alarm.Timeout
@@ -381,7 +365,7 @@ package body System.BB.Time is
 
       end if;
 
-   end Set_Handler;
+   end Set;
 
    -------------------
    -- Time_Of_Alarm --
@@ -399,7 +383,6 @@ package body System.BB.Time is
    procedure Update_Alarm_Timer is
       Now, Diff : Time;
    begin
-
       --  Return if updates are deferred
 
       if Defer_Update then

@@ -107,10 +107,7 @@ package body System.BB.Threads is
 
          --  Set alarm for waking up thread
 
-         Set_Handler (Self_Id.Alarm'Access,
-                      T,
-                      Wakeup_Delayed'Access,
-                      To_Address (Self_Id));
+         Set (Self_Id.Alarm, T);
 
       else
          --  The alarm time is not in the future, yield the CPU
@@ -198,7 +195,12 @@ package body System.BB.Threads is
 
       --  Initialize the Time Management Unit
 
-      TMU.Initialize_TMU (Environment_Thread.TM'Access);
+      TMU.Initialize_TMU (Environment_Thread.Clock'Access);
+
+      --  Create alarm timer
+
+      Environment_Thread.Alarm := Create (Wakeup_Delayed'Access,
+                                          To_Address (Environment_Thread));
 
       Protection.Leave_Kernel;
    end Initialize;
@@ -326,9 +328,13 @@ package body System.BB.Threads is
 
       Initialize_Context (Id.Context'Access, Code, Arg, Id.Top_Of_Stack);
 
-      --  Initialize execution timer
+      --  Initialize execution time clock
 
-      TMU.Initialize_Timer (Id.TM'Access);
+      TMU.Initialize_Clock (Id.Clock'Access);
+
+      --  Create alarm timer
+
+      Id.Alarm := Create (Wakeup_Delayed'Access, To_Address (Id));
 
       Protection.Leave_Kernel;
    end Thread_Create;

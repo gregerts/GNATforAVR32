@@ -80,7 +80,7 @@ package body Ada.Execution_Time.Timers is
 
       Protection.Enter_Kernel;
 
-      TMU.Cancel_Handler (TM.Id);
+      TMU.Cancel (TM.Id);
 
       Cancelled  := TM.Handler /= null;
       TM.Handler := null;
@@ -123,17 +123,22 @@ package body Ada.Execution_Time.Timers is
 
    procedure Initialize (TM : in out Timer'Class) is
       use type Ada.Task_Identification.Task_Id;
+
+      Clock : TMU.Clock_Id;
+
    begin
 
       pragma Assert (TM.Id = null);
 
+      if TM in Interrupt_Timer'Class then
+         Clock := TMU.Interrupt_Clock (Interrupt_Timer (TM).I);
+      else
+         Clock := STPO.Task_Clock (To_Task_Id (TM.T.all));
+      end if;
+
       Protection.Enter_Kernel;
 
-      if TM in Interrupt_Timer'Class then
-         TM.Id := TMU.Acquire_Interrupt_Timer (Interrupt_Timer (TM).I);
-      else
-         TM.Id := STPO.Acquire_Task_Timer (To_Task_Id (TM.T.all));
-      end if;
+      TM.Id := TMU.Create (Clock, Execute_Handler'Access, TM'Address);
 
       Protection.Leave_Kernel_No_Change;
 
@@ -152,13 +157,16 @@ package body Ada.Execution_Time.Timers is
       In_Time : Ada.Real_Time.Time_Span;
       Handler : Timer_Handler)
    is
+      At_Time : CPU_Time;
    begin
 
       if TM.Id = null then
          Initialize (TM);
       end if;
 
-      Set_Handler (TM, CPU_Time (TMU.Clock (TM.Id)) + In_Time, Handler);
+      At_Time := CPU_Time (TMU.Time_Of (TM.Id.Clock)) + In_Time;
+
+      Set_Handler (TM, At_Time, Handler);
 
    end Set_Handler;
 
@@ -182,12 +190,9 @@ package body Ada.Execution_Time.Timers is
       TM.Handler := Handler;
 
       if Handler /= null then
-         TMU.Set_Handler (TM.Id,
-                          TMU.CPU_Time (At_Time),
-                          Execute_Handler'Access,
-                          TM'Address);
+         TMU.Set (TM.Id, TMU.CPU_Time (At_Time));
       else
-         TMU.Cancel_Handler (TM.Id);
+         TMU.Cancel (TM.Id);
       end if;
 
       Protection.Leave_Kernel_No_Change;

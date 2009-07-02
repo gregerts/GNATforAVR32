@@ -45,13 +45,14 @@ package body System.BB.TMU is
 
    subtype Word is CPU.Word;
 
-   type Interrupt_Timer_Array is array (Interrupt_Priority) of aliased Timer;
-   pragma Suppress_Initialization (Interrupt_Timer_Array);
+   type Interrupt_Clock_Array is
+     array (Interrupt_Priority) of aliased Clock_Descriptor;
+   pragma Suppress_Initialization (Interrupt_Clock_Array);
 
-   subtype Timer_Index is Interrupts.Interrupt_Level;
+   subtype Clock_Index is Interrupts.Interrupt_Level;
 
-   type Timer_Array is array (Timer_Index) of Timer_Id;
-   pragma Suppress_Initialization (Timer_Array);
+   type Clock_Array is array (Clock_Index) of Clock_Id;
+   pragma Suppress_Initialization (Clock_Array);
 
    -----------------------
    -- Local definitions --
@@ -60,176 +61,116 @@ package body System.BB.TMU is
    Max_Compare : constant := Word'Last / 2;
    --  Maximal value set to COMPARE register
 
-   Idle_TM : aliased Timer;
-   --  Timer of the pseudo idle thread
+   Idle_Clock_Desc : aliased Clock_Descriptor;
+   --  Clock of the pseudo idle thread
 
-   Interrupt_TM : Interrupt_Timer_Array;
-   --  Timers of the pseudo server threads for each interrupt priority
+   Interrupt_Clock_Desc : Interrupt_Clock_Array;
+   --  Clocks of the pseudo server threads for each interrupt priority
 
-   Stack : Timer_Array;
+   Stack : Clock_Array;
    --  Stack of timers
 
-   Top : Timer_Index;
+   Top : Clock_Index;
    --  Index of stack top
 
-   To_Timer : Timer_Array;
-   --  Access to interrupt level timers indexed by level
+   To_Clock : Clock_Array;
+   --  Access to interrupt level clock indexed by level
 
    -----------------------
    -- Local subprograms --
    -----------------------
 
-   function Acquire (TM : Timer_Id) return Timer_Id;
-   --  Acquires a timer, returns null if already acquired
+   procedure Change_Clock (Clock_A, Clock_B : Clock_Id);
+   --  Change clock from Clk_A to Clk_B
 
    procedure Compare_Handler (Id : Interrupts.Interrupt_ID);
    --  Handler for the COMPARE interrupt
 
    procedure Context_Switch (Running, First : Thread_Id);
    pragma Export (Asm, Context_Switch, "tmu_context_switch");
-   --  Changes TMU context from the running to first thread. This
-   --  procedure is only called from context switch assembler code.
+   --  Changes TMU context from the running to first thread
 
-   function Get_Compare (TM : Timer_Id) return Word;
+   function Get_Compare (Clock : Clock_Id) return Word;
    pragma Inline (Get_Compare);
-   --  Computes the COMPARE value for a timer from its status, base
-   --  time and timeout. The returned value is always in the range
-   --  from 1 to Max_Compare.
+   --  Computes the COMPARE value for a clock
 
-   procedure Swap_Timer (TM_A, TM_B : Timer_Id);
-   --  Swap timer from TM_A to TM_B
+   ------------
+   -- Cancel --
+   ------------
 
-   -------------
-   -- Acquire --
-   -------------
-
-   function Acquire (TM : Timer_Id) return Timer_Id is
-      TM_R : Timer_Id := null;
-   begin
-
-      if not TM.Acquired then
-         TM.Acquired := True;
-         TM_R := TM;
-      end if;
-
-      return TM_R;
-
-   end Acquire;
-
-   ----------------------------
-   -- Aquire_Interrupt_Timer --
-   ----------------------------
-
-   function Acquire_Interrupt_Timer
-     (Priority : Interrupt_Priority) return Timer_Id
-   is
-   begin
-      --  Timer for the highest interrupt level is not supported
-
-      if Priority < Interrupt_Priority'Last then
-         return Acquire (Interrupt_TM (Priority)'Access);
-      else
-         return null;
-      end if;
-
-   end Acquire_Interrupt_Timer;
-
-   --------------------------
-   -- Acquire_Thread_Timer --
-   --------------------------
-
-   function Acquire_Thread_Timer (Id : Thread_Id) return Timer_Id is
-   begin
-      return Acquire (Id.TM'Access);
-   end Acquire_Thread_Timer;
-
-   --------------------
-   -- Cancel_Handler --
-   --------------------
-
-   procedure Cancel_Handler (TM : Timer_Id) is
+   procedure Cancel (TM : Timer_Id) is
    begin
 
       pragma Assert (TM /= null);
 
-      if TM.Handler /= null then
+      if TM.Set then
 
+         TM.Set := False;
          TM.Timeout := CPU_Time'First;
-         TM.Handler := null;
-         TM.Data    := Null_Address;
 
-         if TM.Active then
+         if TM.Clock.Running then
             CPU.Adjust_Compare (Max_Compare);
          end if;
 
       end if;
 
-   end Cancel_Handler;
+   end Cancel;
 
-   -----------
-   -- Clock --
-   -----------
+   ------------------
+   -- Change_Clock --
+   ------------------
 
-   function Clock (TM : Timer_Id) return CPU_Time is
-      B : CPU_Time;
-      C : Word;
-
+   procedure Change_Clock (Clock_A, Clock_B : Clock_Id) is
+      Count : Word;
    begin
 
-      pragma Assert (TM /= null);
+      pragma Assert (Clock_A.Running and not Clock_B.Running);
 
-      --  If TM is not active return base time
+      --  TM_A is active, TM_B is being actived
 
-      if not TM.Active then
-         return TM.Base_Time;
-      end if;
+      Clock_A.Running := False;
+      Clock_B.Running := True;
 
-      --  Else Clock is sum of base time and count
+      --  Swap in counter for TM_B
 
-      loop
+      CPU.Swap_Count (Get_Compare (Clock_B), Count);
 
-         B := TM.Base_Time;
-         C := CPU.Get_Count;
+      --  Update base time for TM_A
 
-         exit when B = TM.Base_Time;
+      Clock_A.Base_Time := Clock_A.Base_Time + CPU_Time (Count);
 
-      end loop;
-
-      return B + CPU_Time (C);
-
-   end Clock;
+   end Change_Clock;
 
    ---------------------
    -- Compare_Handler --
    ---------------------
 
    procedure Compare_Handler (Id : Interrupts.Interrupt_ID) is
-      TM : Timer_Id;
+      Clock : Clock_Id;
+      TM    : Timer_Id;
    begin
 
       pragma Assert (Id = Peripherals.COMPARE);
       pragma Assert (Top > 0);
 
-      --  Only the active timer second from the top of the stack can
-      --  be expired since timeouts are not allowed for highest
-      --  priority.
+      --  Only the active clock second from the top of the stack can
+      --  have an expired timer since timeouts are not allowed for
+      --  highest priority.
 
-      TM := Stack (Top - 1).Active_TM;
+      Clock := Stack (Top - 1).Active;
+      TM    := Clock.TM;
 
-      --  Check if the timer is set and has expired
+      --  Check if the timer is non-null, is set and has expired
 
-      if TM.Handler /= null and then TM.Timeout <= TM.Base_Time then
+      if TM /= null
+        and then TM.Set
+        and then TM.Timeout <= Clock.Base_Time then
 
-         declare
-            Handler : constant Timer_Handler  := TM.Handler;
-            Data    : constant System.Address := TM.Data;
-         begin
-            TM.Timeout := CPU_Time'First;
-            TM.Handler := null;
-            TM.Data    := Null_Address;
+         --  Clear timer and call handler
 
-            Handler (Data);
-         end;
+         TM.Set := False;
+         TM.Timeout := CPU_Time'First;
+         TM.Handler (TM.Data);
 
       end if;
 
@@ -244,31 +185,61 @@ package body System.BB.TMU is
 
       --  Set bottom of stack to timer of first thread
 
-      Stack (0) := First.TM'Access;
+      Stack (0) := First.Clock'Access;
 
       --  Swap active timers if not in interrupt
 
       if Top = 0 then
-         Swap_Timer (Running.TM.Active_TM, First.TM.Active_TM);
+         Change_Clock (Running.Clock.Active, First.Clock.Active);
       else
          Leave_Interrupt;
       end if;
 
    end Context_Switch;
 
+   ------------
+   -- Create --
+   ------------
+
+   function Create
+     (Clock   : not null Clock_Id;
+      Handler : not null Timer_Handler;
+      Data    : System.Address) return Timer_Id
+   is
+      TM : Timer_Id := null;
+   begin
+
+      if Clock.TM = null
+        and then Clock /= Interrupt_Clock (Interrupt_Priority'Last) then
+
+         TM := new Timer_Descriptor (Clock);
+
+         TM.Handler := Handler;
+         TM.Data    := Data;
+         TM.Timeout := CPU_Time'First;
+         TM.Set     := False;
+
+         Clock.TM := TM;
+
+      end if;
+
+      return TM;
+
+   end Create;
+
    ----------------
    -- Enter_Idle --
    ----------------
 
    procedure Enter_Idle is
-      TM : constant Timer_Id := Stack (0);
+      Clock : constant Clock_Id := Stack (0);
    begin
       pragma Assert (Top = 0);
-      pragma Assert (TM.Active_TM = TM);
+      pragma Assert (Clock.Active = Clock);
 
-      TM.Active_TM := Idle_TM'Access;
+      Clock.Active := Idle_Clock_Desc'Access;
 
-      Swap_Timer (TM, TM.Active_TM);
+      Change_Clock (Clock, Clock.Active);
 
    end Enter_Idle;
 
@@ -277,8 +248,8 @@ package body System.BB.TMU is
    ---------------------
 
    procedure Enter_Interrupt (Level : Interrupts.Interrupt_Level) is
-      TM_A : constant Timer_Id := Stack (Top).Active_TM;
-      TM_B : constant Timer_Id := To_Timer (Level);
+      Clock_A : constant Clock_Id := Stack (Top).Active;
+      Clock_B : constant Clock_Id := To_Clock (Level);
 
    begin
 
@@ -288,11 +259,11 @@ package body System.BB.TMU is
       --  Set new top of stack
 
       Top         := Top + 1;
-      Stack (Top) := TM_B;
+      Stack (Top) := Clock_B;
 
       --  Swap timer to new top of stack
 
-      Swap_Timer (TM_A, TM_B);
+      Change_Clock (Clock_A, Clock_B);
 
    end Enter_Interrupt;
 
@@ -306,13 +277,13 @@ package body System.BB.TMU is
       CPU.Disable_Interrupts;
 
       declare
-         TM : constant Timer_Id := Stack (Top);
+         Clock : constant Clock_Id := Stack (Top);
       begin
-         pragma Assert (TM.Active_TM = TM);
+         pragma Assert (Clock.Active = Clock);
 
-         TM.Active_TM := Id.TM'Access;
+         Clock.Active := Id.Clock'Access;
 
-         Swap_Timer (TM, TM.Active_TM);
+         Change_Clock (Clock, Clock.Active);
       end;
 
       CPU.Restore_Interrupts;
@@ -323,14 +294,14 @@ package body System.BB.TMU is
    -- Get_Compare --
    -----------------
 
-   function Get_Compare (TM : Timer_Id) return Word is
-      B : constant CPU_Time := TM.Base_Time;
+   function Get_Compare (Clock : Clock_Id) return Word is
+      B : constant CPU_Time := Clock.Base_Time;
    begin
 
-      if TM.Handler = null then
+      if Clock.TM = null or else not Clock.TM.Set then
          return Max_Compare;
-      elsif TM.Timeout > B then
-         return Word (CPU_Time'Min (TM.Timeout - B, Max_Compare));
+      elsif Clock.TM.Timeout > B then
+         return Word (CPU_Time'Min (Clock.TM.Timeout - B, Max_Compare));
       else
          return 1;
       end if;
@@ -341,52 +312,50 @@ package body System.BB.TMU is
    -- Idle_Clock --
    ----------------
 
-   function Idle_Clock return CPU_Time is
+   function Idle_Clock return Clock_Id is
    begin
-      return Clock (Idle_TM'Access);
+      return Idle_Clock_Desc'Access;
    end Idle_Clock;
 
    ----------------------
-   -- Initialize_Timer --
+   -- Initialize_Clock --
    ----------------------
 
-   procedure Initialize_Timer (TM : Timer_Id) is
+   procedure Initialize_Clock (Clock : Clock_Id) is
    begin
-      TM.Active_TM := TM;
-   end Initialize_Timer;
+      Clock.Active := Clock;
+   end Initialize_Clock;
 
    --------------------
    -- Initialize_TMU --
    --------------------
 
-   procedure Initialize_TMU (Environment_TM : Timer_Id) is
+   procedure Initialize_TMU (Environment_Clock : Clock_Id) is
+      Clock : Clock_Id;
    begin
-      --  Initialize environment thread timer
+      --  Initialize the clock of the environment thread
 
-      Initialize_Timer (Environment_TM);
+      Initialize_Clock (Environment_Clock);
 
-      --  Initialize pseudo thread timers
+      --  Initialize pseudo thread clock
 
-      Initialize_Timer (Idle_TM'Access);
+      Initialize_Clock (Idle_Clock_Desc'Access);
 
-      for I in Interrupt_TM'Range loop
-         declare
-            TM : constant Timer_Id := Interrupt_TM (I)'Access;
-         begin
-            Initialize_Timer (TM);
-            To_Timer (I - Interrupt_TM'First + 1) := TM;
-         end;
+      for I in Interrupt_Clock_Desc'Range loop
+         Clock := Interrupt_Clock_Desc (I)'Access;
+         Initialize_Clock (Clock);
+         To_Clock (I - Interrupt_Clock_Desc'First + 1) := Clock;
       end loop;
 
       --  Install compare handler
 
       Interrupts.Attach_Handler (Compare_Handler'Access, Peripherals.COMPARE);
 
-      --  Activate environment thread timer
+      --  Activate clock of environment thread
 
-      Stack (0) := Environment_TM;
+      Stack (0) := Environment_Clock;
 
-      Environment_TM.Active := True;
+      Environment_Clock.Running := True;
 
       CPU.Reset_Count (Max_Compare);
 
@@ -397,10 +366,10 @@ package body System.BB.TMU is
    ---------------------
 
    function Interrupt_Clock
-     (Priority : Interrupt_Priority) return CPU_Time
+     (Priority : Interrupt_Priority) return Clock_Id
    is
    begin
-      return Clock (Interrupt_TM (Priority)'Access);
+      return Interrupt_Clock_Desc (Priority)'Access;
    end Interrupt_Clock;
 
    ----------------
@@ -408,14 +377,14 @@ package body System.BB.TMU is
    ----------------
 
    procedure Leave_Idle is
-      TM : constant Timer_Id := Stack (0);
+      Clock : constant Clock_Id := Stack (0);
    begin
       pragma Assert (Top = 0);
-      pragma Assert (TM.Active_TM = Idle_TM'Access);
+      pragma Assert (Clock.Active = Idle_Clock_Desc'Access);
 
-      Swap_Timer (TM.Active_TM, TM);
+      Change_Clock (Clock.Active, Clock);
 
-      TM.Active_TM := TM;
+      Clock.Active := Clock;
 
    end Leave_Idle;
 
@@ -424,17 +393,17 @@ package body System.BB.TMU is
    ---------------------
 
    procedure Leave_Interrupt is
-      TM : constant Timer_Id := Stack (Top);
+      Clock : constant Clock_Id := Stack (Top);
    begin
       pragma Assert (Top > 0);
-      pragma Assert (TM.Active_TM = TM);
+      pragma Assert (Clock.Active = Clock);
 
       --  Set new top of stack
 
       Stack (Top) := null;
       Top         := Top - 1;
 
-      Swap_Timer (TM, Stack (Top).Active_TM);
+      Change_Clock (Clock, Stack (Top).Active);
 
    end Leave_Interrupt;
 
@@ -448,71 +417,75 @@ package body System.BB.TMU is
       CPU.Disable_Interrupts;
 
       declare
-         TM : constant Timer_Id := Stack (Top);
+         Clock : constant Clock_Id := Stack (Top);
       begin
-         pragma Assert (TM.Active_TM /= TM);
+         pragma Assert (Clock.Active /= Clock);
 
-         Swap_Timer (TM.Active_TM, TM);
+         Change_Clock (Clock.Active, Clock);
 
-         TM.Active_TM := TM;
+         Clock.Active := Clock;
       end;
 
       CPU.Restore_Interrupts;
 
    end Leave_Proxy;
 
-   -----------------
-   -- Set_Handler --
-   -----------------
+   ---------
+   -- Set --
+   ---------
 
-   procedure Set_Handler
+   procedure Set
      (TM      : Timer_Id;
-      Timeout : CPU_Time;
-      Handler : Timer_Handler;
-      Data    : System.Address)
+      Timeout : CPU_Time)
    is
    begin
-      pragma Assert (TM /= null);
-      pragma Assert (Handler /= null);
+      pragma Assert (TM.Clock /= null);
 
-      --  Set handler
+      --  Set timer
 
-      TM.Handler := Handler;
+      TM.Set := True;
       TM.Timeout := Timeout;
-      TM.Data    := Data;
 
       --  Adjust COMPARE if the timer is active
 
-      if TM.Active then
-         CPU.Adjust_Compare (Get_Compare (TM));
+      if TM.Clock.Running then
+         CPU.Adjust_Compare (Get_Compare (TM.Clock));
       end if;
 
-   end Set_Handler;
+   end Set;
 
-   ----------------
-   -- Swap_Timer --
-   ----------------
+   -------------
+   -- Time_Of --
+   -------------
 
-   procedure Swap_Timer (TM_A, TM_B : Timer_Id) is
-      Count : Word;
+   function Time_Of (Clock : Clock_Id) return CPU_Time is
+      B : CPU_Time;
+      C : Word;
+
    begin
 
-      pragma Assert (TM_A.Active and not TM_B.Active);
+      pragma Assert (Clock /= null);
 
-      --  TM_A is active, TM_B is being actived
+      --  If clock is not active return base time
 
-      TM_A.Active := False;
-      TM_B.Active := True;
+      if not Clock.Running then
+         return Clock.Base_Time;
+      end if;
 
-      --  Swap in counter for TM_B
+      --  Else the time of clock is sum of base time and count
 
-      CPU.Swap_Count (Get_Compare (TM_B), Count);
+      loop
 
-      --  Update base time for TM_A
+         B := Clock.Base_Time;
+         C := CPU.Get_Count;
 
-      TM_A.Base_Time := TM_A.Base_Time + CPU_Time (Count);
+         exit when B = Clock.Base_Time;
 
-   end Swap_Timer;
+      end loop;
+
+      return B + CPU_Time (C);
+
+   end Time_Of;
 
    --------------------
    -- Time_Remaining --
@@ -527,7 +500,7 @@ package body System.BB.TMU is
       loop
 
          Timeout := TM.Timeout;
-         Now     := Clock (TM);
+         Now     := Time_Of (TM.Clock);
 
          exit when Timeout = TM.Timeout;
 
@@ -547,9 +520,9 @@ package body System.BB.TMU is
    -- Thread_Clock --
    ------------------
 
-   function Thread_Clock (Id : Thread_Id) return CPU_Time is
+   function Thread_Clock (Id : Thread_Id) return Clock_Id is
    begin
-      return Clock (Id.TM'Access);
+      return Id.Clock'Access;
    end Thread_Clock;
 
 end System.BB.TMU;

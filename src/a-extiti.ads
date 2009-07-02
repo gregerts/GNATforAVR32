@@ -84,11 +84,11 @@ private
 
    type Timer (T : not null access constant
                Ada.Task_Identification.Task_Id) is tagged limited
-     record
-        Id      : System.BB.TMU.Timer_Id;
-        Handler : Timer_Handler;
+      record
+         Id      : System.BB.TMU.Timer_Id;
+         Handler : Timer_Handler;
         pragma Volatile (Handler);
-     end record;
+      end record;
 
    type Interrupt_Timer (I : System.Interrupt_Priority)
       is new Timer (Pseudo_Task_Id'Access) with null record;

@@ -89,7 +89,7 @@ package body Ada.Execution_Time is
       return CPU_Time
    is
    begin
-      return CPU_Time (STPO.Task_Clock (To_Task_Id (T)));
+      return CPU_Time (TMU.Time_Of (STPO.Task_Clock (To_Task_Id (T))));
    end Clock;
 
    ---------------------
@@ -101,7 +101,7 @@ package body Ada.Execution_Time is
       return CPU_Time
    is
    begin
-      return CPU_Time (TMU.Interrupt_Clock (Priority));
+      return CPU_Time (TMU.Time_Of (TMU.Interrupt_Clock (Priority)));
    end Interrupt_Clock;
 
    ----------------
@@ -110,7 +110,7 @@ package body Ada.Execution_Time is
 
    function Idle_Clock return CPU_Time is
    begin
-      return CPU_Time (TMU.Idle_Clock);
+      return CPU_Time (TMU.Time_Of (TMU.Idle_Clock));
    end Idle_Clock;
 
    ---------

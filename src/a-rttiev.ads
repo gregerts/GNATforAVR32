@@ -64,13 +64,12 @@ package Ada.Real_Time.Timing_Events is
       Cancelled : out Boolean);
 
    function Time_Of_Event (Event : Timing_Event) return Time;
-   pragma Inline (Time_Of_Event);
 
 private
 
    type Timing_Event is tagged limited
       record
-         Alarm   : aliased System.BB.Time.Alarm_Timer;
+         Alarm   : System.BB.Time.Alarm_Id;
          Handler : Timing_Event_Handler;
          pragma Volatile (Handler);
       end record;
