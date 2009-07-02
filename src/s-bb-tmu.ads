@@ -177,7 +177,10 @@ private
          --  executing code by proxy, otherwise to this timer.
 
          TM : Timer_Id;
-         --  Timer bound to this clock, or null if no timer is set
+         --  Timer bound to this clock, or null if no timer exists
+
+         Pending_TM : Timer_Id;
+         --  Same value as TM if this timer is set, null otherwise
 
       end record;
 
