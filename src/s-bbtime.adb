@@ -59,8 +59,16 @@ package body System.BB.Time is
    pragma Volatile (Base_Time);
    --  Base of clock (i.e. MSP), stored in memory
 
-   First_Alarm, Last_Alarm : Alarm_Id := null;
-   --  First and last alarm in queue
+   Last_Alarm : aliased Alarm_Descriptor := (Handler => null,
+                                             Data    => System.Null_Address,
+                                             Timeout => Time'Last,
+                                             Next    => null,
+                                             Prev    => null,
+                                             Set     => True);
+   --  Last alarm in queue
+
+   First_Alarm : Alarm_Id := Last_Alarm'Access;
+   --  First alarm in queue
 
    Pending_Alarm : Alarm_Id := null;
    --  Alarm corrensponding to the hardware timer if set
@@ -259,17 +267,6 @@ package body System.BB.Time is
 
    procedure Initialize_Timers is
    begin
-      --  Create sentinel and initialize alarm queue
-
-      Last_Alarm := new Alarm_Descriptor;
-
-      Clear (Last_Alarm);
-
-      Last_Alarm.Handler := null;
-      Last_Alarm.Timeout := Time'Last;
-      Last_Alarm.Set     := True;
-
-      First_Alarm := Last_Alarm;
 
       --  Install clock handler for both clock overflow and hardware
       --  alarm timer interrupts.
@@ -287,7 +284,7 @@ package body System.BB.Time is
      (Alarm   : Alarm_Id;
       Timeout : Time)
    is
-      Aux : Alarm_Id := Last_Alarm;
+      Aux : Alarm_Id := Last_Alarm'Access;
    begin
 
       --  The alarm has to be initialized and not be set
