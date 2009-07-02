@@ -168,6 +168,8 @@ package body System.BB.TMU is
 
          --  Clear timer and call handler
 
+         pragma Assert (TM.Handler /= null);
+
          TM.Set := False;
          TM.Timeout := CPU_Time'First;
          TM.Handler (TM.Data);
@@ -354,7 +356,6 @@ package body System.BB.TMU is
       --  Activate clock of environment thread
 
       Stack (0) := Environment_Clock;
-
       Environment_Clock.Running := True;
 
       CPU.Reset_Count (Max_Compare);
@@ -463,7 +464,6 @@ package body System.BB.TMU is
       C : Word;
 
    begin
-
       pragma Assert (Clock /= null);
 
       --  If clock is not active return base time
@@ -475,12 +475,9 @@ package body System.BB.TMU is
       --  Else the time of clock is sum of base time and count
 
       loop
-
          B := Clock.Base_Time;
          C := CPU.Get_Count;
-
          exit when B = Clock.Base_Time;
-
       end loop;
 
       return B + CPU_Time (C);
@@ -495,15 +492,12 @@ package body System.BB.TMU is
       Now, Timeout : CPU_Time;
    begin
 
-      --  Clock and timeout has to be consistent
+      --  Read timeout and clock
 
       loop
-
          Timeout := TM.Timeout;
          Now     := Time_Of (TM.Clock);
-
          exit when Timeout = TM.Timeout;
-
       end loop;
 
       --  TM.Timeout is CPU_Time'First when TM is not set
