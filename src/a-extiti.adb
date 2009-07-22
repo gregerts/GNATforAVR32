@@ -47,6 +47,7 @@ package body Ada.Execution_Time.Timers is
    package TMU renames System.BB.TMU;
 
    use type TMU.Timer_Id;
+   use type Ada.Task_Identification.Task_Id;
 
    type Timer_Access is access all Timer;
 
@@ -122,10 +123,7 @@ package body Ada.Execution_Time.Timers is
    ----------------
 
    procedure Initialize (TM : in out Timer'Class) is
-      use type Ada.Task_Identification.Task_Id;
-
       Clock : TMU.Clock_Id;
-
    begin
 
       pragma Assert (TM.Id = null);

@@ -61,15 +61,16 @@ package body Ada.Real_Time.Timing_Events is
 
    procedure Execute_Handler (Event_Address : System.Address) is
       Event : constant Timing_Event_Access := To_Access (Event_Address);
-      Handler : Timing_Event_Handler;
-
    begin
 
       pragma Assert (Event /= null and then Event.Handler /= null);
 
-      Handler := Event.Handler;
-      Event.Handler := null;
-      Handler (Event.all);
+      declare
+         Handler : constant Timing_Event_Handler := Event.Handler;
+      begin
+         Event.Handler := null;
+         Handler (Event.all);
+      end;
 
    end Execute_Handler;
 
@@ -166,11 +167,13 @@ package body Ada.Real_Time.Timing_Events is
 
    function Time_Of_Event (Event : Timing_Event) return Time is
    begin
-      if Event.Alarm /= null then
-         return Time (SBT.Time_Of_Alarm (Event.Alarm));
-      else
+
+      if Event.Alarm = null then
          return Time'First;
       end if;
+
+      return Time (SBT.Time_Of_Alarm (Event.Alarm));
+
    end Time_Of_Event;
 
 end Ada.Real_Time.Timing_Events;
