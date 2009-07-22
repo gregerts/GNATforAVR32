@@ -83,6 +83,10 @@ package body System.BB.TMU is
    procedure Change_Clock (Clock_A, Clock_B : Clock_Id);
    --  Change clock from Clk_A to Clk_B
 
+   procedure Clear (TM : Timer_Id);
+   pragma Inline_Always (Clear);
+   --  Clear the given timer
+
    procedure Compare_Handler (Id : Interrupts.Interrupt_ID);
    --  Handler for the COMPARE interrupt
 
@@ -107,15 +111,15 @@ package body System.BB.TMU is
 
       pragma Assert (TM /= null);
 
-      if TM.Clock.Pending_TM = TM then
+      if TM.Set then
 
-         TM.Timeout := CPU_Time'First;
+         --  Clear timer and adjust COMPARE if its clock is active
+
+         Clear (TM);
 
          if Is_Active (TM.Clock) then
             CPU.Adjust_Compare (Max_Compare);
          end if;
-
-         TM.Clock.Pending_TM := null;
 
       end if;
 
@@ -141,6 +145,16 @@ package body System.BB.TMU is
 
    end Change_Clock;
 
+   -----------
+   -- Clear --
+   -----------
+
+   procedure Clear (TM : Timer_Id) is
+   begin
+      TM.Timeout := CPU_Time'First;
+      TM.Set     := False;
+   end Clear;
+
    ---------------------
    -- Compare_Handler --
    ---------------------
@@ -152,7 +166,7 @@ package body System.BB.TMU is
       --  highest priority.
 
       Clock : constant Clock_Id := Stack (Top - 1).Active;
-      TM    : constant Timer_Id := Clock.Pending_TM;
+      TM    : constant Timer_Id := Clock.TM;
 
    begin
 
@@ -160,14 +174,12 @@ package body System.BB.TMU is
 
       --  Clear TM and call handler if it is non-null and has expired
 
-      if TM /= null and then TM.Timeout <= Clock.Base_Time then
+      if TM /= null and then TM.Set and then TM.Timeout <= Clock.Base_Time then
 
          pragma Assert (TM.Handler /= null);
 
-         TM.Timeout := CPU_Time'First;
+         Clear (TM);
          TM.Handler (TM.Data);
-
-         Clock.Pending_TM := null;
 
       end if;
 
@@ -206,14 +218,18 @@ package body System.BB.TMU is
       TM : Timer_Id := null;
    begin
 
-      if Clock.TM = null
-        and then Clock /= Interrupt_Clock (Interrupt_Priority'Last) then
+      if Clock = Interrupt_Clock (Interrupt_Priority'Last) then
+         return null;
+      end if;
+
+      if Clock.TM = null then
 
          TM := new Timer_Descriptor (Clock);
 
          TM.Handler := Handler;
          TM.Data    := Data;
-         TM.Timeout := CPU_Time'First;
+
+         Clear (TM);
 
          Clock.TM := TM;
 
@@ -292,10 +308,10 @@ package body System.BB.TMU is
 
    function Get_Compare (Clock : Clock_Id) return Word is
       B  : constant CPU_Time := Clock.Base_Time;
-      TM : constant Timer_Id := Clock.Pending_TM;
+      TM : constant Timer_Id := Clock.TM;
    begin
 
-      if TM = null then
+      if TM = null or else not TM.Set then
          return Max_Compare;
       elsif TM.Timeout > B then
          return Word (CPU_Time'Min (TM.Timeout - B, Max_Compare));
@@ -446,23 +462,16 @@ package body System.BB.TMU is
    is
    begin
 
-      --  TM cannot be null an the clock of TM cannot already be set
+      pragma Assert (TM /= null);
 
-      pragma Assert (TM /= null and then TM.Clock.Pending_TM = null);
-
-      --  Set timer
+      --  Set timer and adjust COMPARE if its clock is active
 
       TM.Timeout := Timeout;
-
-      --  Adjust COMPARE if the timer is active
+      TM.Set     := True;
 
       if Is_Active (TM.Clock) then
          CPU.Adjust_Compare (Get_Compare (TM.Clock));
       end if;
-
-      --  The clock of TM now has a pending timer
-
-      TM.Clock.Pending_TM := TM;
 
    end Set;
 

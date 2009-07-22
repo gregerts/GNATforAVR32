@@ -173,14 +173,11 @@ private
          --  Base time, updated when the clock is deactivated
 
          Active : Clock_Id;
-         --  Will point to clock of another thread if this thread is
-         --  executing code by proxy, otherwise to this timer.
+         --  Will point to another clock if executing code by proxy or
+         --  the idle loop, otherwise to this clock.
 
          TM : Timer_Id;
          --  Timer bound to this clock, or null if no timer exists
-
-         Pending_TM : Timer_Id;
-         --  Same value as TM if this timer is set, null otherwise
 
       end record;
 
@@ -189,8 +186,7 @@ private
    type Timer_Descriptor (Clock : Clock_Id) is
       record
          Handler : Timer_Handler;
-         --  Handler to be called when the timer expires or null if
-         --  timer not set.
+         --  Handler to be called when the timer expires
 
          Data : System.Address;
          --  Argument to be given when calling handler
