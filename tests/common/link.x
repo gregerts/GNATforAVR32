@@ -61,7 +61,7 @@ SECTIONS
    g-*(.bss .bss.*)
    *(COMMON)
    . = ALIGN(8);
-  } >INTRAM AT>FLASH
+  } >INTRAM AT>INTRAM
   . = ALIGN(8);
   _end = .;
 
@@ -92,7 +92,7 @@ SECTIONS
     *(.stack)
     . = 0x1000;
     _estack = .;
-  } >INTRAM AT>FLASH
+  } >INTRAM AT>INTRAM
 
   /* Other */
 
