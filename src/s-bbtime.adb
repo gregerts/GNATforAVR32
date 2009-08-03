@@ -59,11 +59,11 @@ package body System.BB.Time is
    pragma Volatile (Base_Time);
    --  Base of clock (i.e. MSP), stored in memory
 
-   Last_Alarm : aliased Alarm_Timer := (Timeout => Time'Last,
-                                        Handler => null,
-                                        Data    => Null_Address,
-                                        Next    => null,
-                                        Prev    => null);
+   Last_Alarm : aliased Alarm_Descriptor := (Timeout => Time'Last,
+                                             Handler => null,
+                                             Data    => Null_Address,
+                                             Next    => null,
+                                             Prev    => null);
    --  Last alarm in queue
 
    First_Alarm : Alarm_Id := Last_Alarm'Access;
@@ -94,7 +94,7 @@ package body System.BB.Time is
    --  Procedure to clear an alarm
 
    procedure Update_Alarm_Timer;
-   --  Procedure that updates the event timer
+   --  Procedure that updates the hardware alarm timer
 
    -------------------
    -- Alarm_Wrapper --

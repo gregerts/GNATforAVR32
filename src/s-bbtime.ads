@@ -86,14 +86,14 @@ package System.BB.Time is
    function Clock return Time;
    --  Get the number of ticks elapsed since startup
 
-   -----------------
-   -- Alarm_Timer --
-   -----------------
+   ----------------------
+   -- Alarm_Descriptor --
+   ----------------------
 
-   type Alarm_Timer is limited private;
-   pragma Preelaborable_Initialization (Alarm_Timer);
+   type Alarm_Descriptor is limited private;
+   pragma Preelaborable_Initialization (Alarm_Descriptor);
 
-   type Alarm_Id is access all Alarm_Timer;
+   type Alarm_Id is access all Alarm_Descriptor;
 
    type Alarm_Handler is access procedure (Data : System.Address);
 
@@ -113,7 +113,7 @@ package System.BB.Time is
 
 private
 
-   type Alarm_Timer is
+   type Alarm_Descriptor is
       record
          Timeout : Time;
          --  Timeout of alarm or Time'First if alarm is not set
@@ -130,6 +130,6 @@ private
 
       end record;
 
-   pragma Suppress_Initialization (Alarm_Timer);
+   pragma Suppress_Initialization (Alarm_Descriptor);
 
 end System.BB.Time;

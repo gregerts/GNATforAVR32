@@ -45,7 +45,9 @@ package body System.BB.TMU is
 
    subtype Word is CPU.Word;
 
-   type Interrupt_Timer_Array is array (Interrupt_Priority) of aliased Timer;
+   type Interrupt_Timer_Array is array (Interrupt_Priority)
+     of aliased Timer_Descriptor;
+
    pragma Suppress_Initialization (Interrupt_Timer_Array);
 
    subtype Timer_Index is Interrupts.Interrupt_Level;
@@ -60,7 +62,7 @@ package body System.BB.TMU is
    Max_Compare : constant := Word'Last / 2;
    --  Maximal value set to COMPARE register
 
-   Idle_TM : aliased Timer;
+   Idle_TM : aliased Timer_Descriptor;
    --  Timer of the pseudo idle thread
 
    Interrupt_TM : Interrupt_Timer_Array;

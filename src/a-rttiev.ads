@@ -70,7 +70,7 @@ private
 
    type Timing_Event is tagged limited
       record
-         Alarm   : aliased System.BB.Time.Alarm_Timer;
+         Alarm   : aliased System.BB.Time.Alarm_Descriptor;
          Handler : Timing_Event_Handler;
          pragma Volatile (Handler);
       end record;

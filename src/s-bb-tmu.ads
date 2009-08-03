@@ -65,13 +65,13 @@ package System.BB.TMU is
 
    type Thread_Id is not null access all System.BB.Threads.Thread_Descriptor;
 
-   ------------
-   -- Timer  --
-   ------------
+   -----------------------
+   -- Timer_Descriptor  --
+   -----------------------
 
-   type Timer is private;
+   type Timer_Descriptor is private;
 
-   type Timer_Id is access all Timer;
+   type Timer_Id is access all Timer_Descriptor;
 
    type Timer_Handler is access procedure (Data : System.Address);
 
@@ -159,7 +159,7 @@ package System.BB.TMU is
 
 private
 
-   type Timer is
+   type Timer_Descriptor is
       record
          Active_TM : Timer_Id;
          --  Will point to timer of another thread if this thread is
@@ -187,6 +187,6 @@ private
 
       end record;
 
-   pragma Suppress_Initialization (Timer);
+   pragma Suppress_Initialization (Timer_Descriptor);
 
 end System.BB.TMU;

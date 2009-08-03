@@ -90,7 +90,7 @@ package System.BB.Threads is
       --  counter, ...) are stored. This field supports context switches among
       --  threads.
 
-      TM : aliased System.BB.TMU.Timer;
+      TM : aliased System.BB.TMU.Timer_Descriptor;
       --  The one and only execution timer for the thread.
 
       ATCB : System.Address;
@@ -117,7 +117,7 @@ package System.BB.Threads is
       --  Points to the ready thread that is in the next position for
       --  execution.
 
-      Alarm : aliased System.BB.Time.Alarm_Timer;
+      Alarm : aliased System.BB.Time.Alarm_Descriptor;
       --  Alarm timer use to wakeup the thread
 
       State : Thread_States;
