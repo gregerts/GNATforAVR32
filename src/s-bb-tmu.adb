@@ -244,17 +244,12 @@ package body System.BB.TMU is
    procedure Context_Switch (Running, First : Thread_Id) is
    begin
 
-      --  Set bottom of stack to timer of first thread
+      --  Set bottom of stack to timer of first thread and swap to the
+      --  active timer of this thread.
 
       Stack (0) := First.TM'Access;
 
-      --  Swap active timers if not in interrupt
-
-      if Top = 0 then
-         Swap_Timer (Running.TM.Active_TM, First.TM.Active_TM);
-      else
-         Leave_Interrupt;
-      end if;
+      Swap_Timer (Running.TM.Active_TM, First.TM.Active_TM);
 
    end Context_Switch;
 

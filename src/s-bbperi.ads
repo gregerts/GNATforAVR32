@@ -127,6 +127,11 @@ package System.BB.Peripherals is
    pragma Inline (To_Level);
    --  Function returning the level of an interrupt ID.
 
+   function Get_Interrupt_ID
+     (Level : SBI.Interrupt_Level) return SBI.Interrupt_ID;
+   pragma Inline (Get_Interrupt_ID);
+   --  Function returning the ID of the pending interrupt.
+
    --  Constants defining the external interrupts
 
    SDRAMC  : constant := 58; --  Group 18
