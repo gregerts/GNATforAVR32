@@ -55,11 +55,6 @@ with System.BB.Threads;
 --           Get_ATCB
 --           Set_ATCB
 
-with System.BB.TMU;
---  Used for Thread_Clock
---           Interrupt_Clock
---           Idle_Clock
-
 with System.BB.Time;
 --  Used for Time
 --           Clock
