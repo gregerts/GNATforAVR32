@@ -88,7 +88,7 @@ package body System.BB.Time is
    --  Procedure to clear an alarm
 
    procedure Update_Alarm_Timer;
-   --  Procedure that updates the event timer
+   --  Procedure that updates the hardware alarm timer
 
    ------------
    -- Cancel --

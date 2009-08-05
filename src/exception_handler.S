@@ -41,24 +41,10 @@
 
 .macro INTERRUPT_HANDLER level
 
-	/* R8 R9 .. R12 LR PC SR are automatically saved on task stack */
-
 	/* Set global interrupt mask */
 	ssrf	SR_GM
 	nop
 	nop
-
-	/* Enable interrupt timer */	
-	mov	r12, \level
-	call	tmu_enter_interrupt	
-
-	/* Call get interrupt ID for level */	
-	mov	r12, \level	
-	call	get_interrupt_id
-
-	/* If interrupt ID is 0, return from handler */
-	cp.w	r12, 0
-	breq	0f
 
 	/* Load stack pointer for interrupt level from stack table */
 	lda.w	r8, interrupt_stack_table
@@ -68,10 +54,8 @@
 	/* Push task stack pointer on interrupt stack */
 	st.w	--sp, r9
 
-	/* Set R11 to level */
-	mov	r11, \level
-
-	/* Call interrupt_wrapper (interrupt, level) */
+	/* Call interrupt_wrapper (level) */
+	mov	r12, \level
 	call	interrupt_wrapper
 
 	/* Pop task stack pointer from interrupt stack */
@@ -83,15 +67,7 @@
 	cp.w	r12, 0
 	breq	0f
 	call	context_switch
-
-	/* Return from interrupt, restoring R8 .. R12 LR PC SR */
-	rete
-
-0:
-	/* Restore task timer */	
-	call	tmu_leave_interrupt	
-
-	/* Return from interrupt, restoring R8 .. R12 LR PC SR */
+0:	
 	rete
 .endm
 
