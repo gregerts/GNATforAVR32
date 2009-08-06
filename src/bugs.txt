@@ -1,0 +1,90 @@
+The following code:
+
+   type TC_Channel_Control_Register is
+      record
+         Clock_Enable     : Boolean;
+         Clock_Disable    : Boolean;
+         Software_Trigger : Boolean;
+         Reserved         : Reserved_29;
+      end record;
+
+   for TC_Channel_Control_Register use
+      record
+         Clock_Enable     at 0 range 31 .. 31;
+         Clock_Disable    at 0 range 30 .. 30;
+         Software_Trigger at 0 range 29 .. 29;
+         Reserved         at 0 range 0 .. 28;
+      end record;
+
+   type TC_Channel_Interface is
+      record
+         Control           : TC_Channel_Control_Register;
+         Mode              : TC_Channel_Mode_Register;
+         Reserved_A        : Reserved_32;
+         Reserved_B        : Reserved_32;
+         Counter           : TC_Counter_Value_Register;
+         RA                : TC_Counter_Value_Register;
+         RB                : TC_Counter_Value_Register;
+         RC                : TC_Counter_Value_Register;
+         Status            : TC_Channel_Status_Register;
+         Interrupt_Enable  : TC_Interrupt_Control_Register;
+         Interrupt_Disable : TC_Interrupt_Control_Register;
+         Interrupt_Mask    : TC_Interrupt_Control_Register;
+         pragma Atomic (Control);
+         pragma Atomic (Mode);
+         pragma Atomic (Counter);
+         pragma Atomic (RA);
+         pragma Atomic (RB);
+         pragma Atomic (RC);
+         pragma Atomic (Status);
+         pragma Atomic (Interrupt_Enable);
+         pragma Atomic (Interrupt_Disable);
+         pragma Atomic (Interrupt_Mask);
+      end record;
+
+   procedure Set_Alarm (Ticks : Timer_Interval) is
+      Control : constant TC_Channel_Control_Register :=
+        (Clock_Enable     => True,
+         Clock_Disable    => False,
+         Software_Trigger => True,
+         Reserved         => (others => False));
+   begin
+      Alarm.RC.Value := Ticks;
+      Alarm.Control  := Control;
+   end Set_Alarm;
+
+Results in this assembler code:
+
+.LFB10:
+	# args = 0, frame = 0, pretend = 0
+	# frame_needed = 0, leaf_function = 1
+	# uses_anonymous_args = 0
+	lda.w	r9, system__bb__peripherals__registers__alarm
+	mov	r11, 0
+	ld.w	r8, r9[0]
+	st.h	r8[30], r12
+	ld.w	r10, r9[0]
+	mov	r12, 1
+	ld.w	r8, r10[0]
+	bfins	r8, r11, 3, 29
+	st.w	r10[0], r8
+	ld.w	r9, r10[0]
+	bfins	r9, r12, 2, 1
+	st.w	r10[0], r9
+	ld.w	r8, r10[0]
+	bfins	r8, r11, 1, 1
+	st.w	r10[0], r8
+	ld.w	r9, r10[0]
+	bfins	r9, r12, 0, 1
+	st.w	r10[0], r9
+	retal	r12
+
+As seen there is some serious badness in this. While Alarm.Count.Value
+is written correctly the Alarm.Control value is written directly
+instead of the value being stored in the local Control first and then
+written in one operation. This causes failure in controlling the
+peripheral.
+
+The compiler seems to discard the Atomic flag that is applied to
+Alarm.Control. Ideally the compiler should have optimized the compound
+statement into a 32-bit constant and written this directly.

@@ -140,6 +140,9 @@ package body System.BB.Peripherals is
    function To_Channel_Mode_Register is
       new Ada.Unchecked_Conversion (Scaler_32, TC_Channel_Mode_Register);
 
+   function To_Channel_Control_Register is
+      new Ada.Unchecked_Conversion (Scaler_32, TC_Channel_Control_Register);
+
    function To_Interrupt_Control_Register is
       new Ada.Unchecked_Conversion (Scaler_32, TC_Interrupt_Control_Register);
 
@@ -412,14 +415,10 @@ package body System.BB.Peripherals is
 
    procedure Initialize_Timers is
 
-      Control : constant TC_Channel_Control_Register :=
-        (Clock_Enable     => True,
-         Clock_Disable    => False,
-         Software_Trigger => True,
-         Reserved         => (others => False));
-
       Mode      : TC_Channel_Mode_Register;
       Interrupt : TC_Interrupt_Control_Register;
+      Control   : TC_Channel_Control_Register;
+
    begin
       --------------------------
       -- Common mode settings --
@@ -447,10 +446,15 @@ package body System.BB.Peripherals is
       ----------------------
 
       Mode.Waveform_Select       := Up_No_Trigger;
+      Clock.Mode                 := Mode;
+
       Interrupt                  := To_Interrupt_Control_Register (0);
       Interrupt.Counter_Overflow := True;
-      Clock.Mode                 := Mode;
       Clock.Interrupt_Enable     := Interrupt;
+
+      Control                    := To_Channel_Control_Register (0);
+      Control.Clock_Enable       := True;
+      Control.Software_Trigger   := True;
       Clock.Control              := Control;
 
       ----------------------
@@ -460,9 +464,10 @@ package body System.BB.Peripherals is
       Mode.Waveform_Select    := Up_RC_Trigger;
       Mode.Stop_RC_Compare    := True;
       Mode.Disable_RC_Compare := True;
+      Alarm.Mode              := Mode;
+
       Interrupt               := To_Interrupt_Control_Register (0);
       Interrupt.RC_Compare    := True;
-      Alarm.Mode              := Mode;
       Alarm.Interrupt_Enable  := Interrupt;
 
    end Initialize_Timers;
@@ -472,14 +477,15 @@ package body System.BB.Peripherals is
    ---------------
 
    procedure Set_Alarm (Ticks : Timer_Interval) is
-      Control : constant TC_Channel_Control_Register :=
-        (Clock_Enable     => True,
-         Clock_Disable    => False,
-         Software_Trigger => True,
-         Reserved         => (others => False));
+      Control : TC_Channel_Control_Register;
    begin
-      Alarm.RC.Value := Ticks;
-      Alarm.Control  := Control;
+      Alarm.RC.Value           := Ticks;
+
+      Control                  := To_Channel_Control_Register (0);
+      Control.Clock_Enable     := True;
+      Control.Software_Trigger := True;
+      Alarm.Control            := Control;
+
    end Set_Alarm;
 
    ------------------
@@ -487,13 +493,12 @@ package body System.BB.Peripherals is
    ------------------
 
    procedure Cancel_Alarm is
-      Control : constant TC_Channel_Control_Register :=
-        (Clock_Enable     => False,
-         Clock_Disable    => True,
-         Software_Trigger => False,
-         Reserved         => (others => False));
+      Control : TC_Channel_Control_Register;
    begin
-      Alarm.Control := Control;
+      Control               := To_Channel_Control_Register (0);
+      Control.Clock_Disable := True;
+      Alarm.Control         := Control;
+
       Clear_Alarm_Interrupt;
    end Cancel_Alarm;
 
