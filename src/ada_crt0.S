@@ -42,6 +42,15 @@
 	.type _start, @function
 
 _start:
+	/* For some reason these four nops are needed to avoid a
+	 * mismatch between the LMA and VMA of the text section.
+	 *
+	 * This is a bug that needs to be sorted out! */
+	nop
+	nop
+	nop
+	nop
+
 	/* Jump to the BB runtime startup routine. */
 	lda.w   pc, _stext
 	.text
