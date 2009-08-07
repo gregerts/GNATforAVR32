@@ -57,14 +57,18 @@ package body System.BB.CPU_Primitives is
    use type SSE.Integer_Address;
    use type SSE.Storage_Offset;
 
+   procedure Trampoline;
+   pragma Import (Asm, Trampoline, "trampoline");
+
    ----------------
    -- Local data --
    ----------------
 
-   R12 : constant Range_Of_Context := 0;
-   SR  : constant Range_Of_Context := 1;
-   PC  : constant Range_Of_Context := 2;
-   SP  : constant Range_Of_Context := 3;
+   SR  : constant Range_Of_Context := 0;
+   PC  : constant Range_Of_Context := 1;
+   SP  : constant Range_Of_Context := 2;
+   R0  : constant Range_Of_Context := 10;
+   R1  : constant Range_Of_Context := 9;
 
    ------------------------
    -- Initialize_Context --
@@ -82,10 +86,11 @@ package body System.BB.CPU_Primitives is
    begin
 
       --  Initialize context of task
-      Buffer (R12) := Argument;
       Buffer (SR)  := SSE.To_Address (16#0041_0000#);
-      Buffer (PC)  := Program_Counter;
+      Buffer (PC)  := Trampoline'Address;
       Buffer (SP)  := Aligned_SP;
+      Buffer (R0)  := Program_Counter;
+      Buffer (R1)  := Argument;
 
    end Initialize_Context;
 
