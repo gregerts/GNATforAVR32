@@ -80,9 +80,6 @@ package body System.BB.TMU is
    -- Local subprograms --
    -----------------------
 
-   procedure Change_Clock (Clock_A, Clock_B : Clock_Id);
-   --  Change clock from Clk_A to Clk_B
-
    procedure Clear (TM : Timer_Id);
    pragma Inline_Always (Clear);
    --  Clear the given timer
@@ -101,6 +98,9 @@ package body System.BB.TMU is
    function Is_Active (Clock : Clock_Id) return Boolean;
    pragma Inline_Always (Is_Active);
    --  Returns true when the given clock is active (running)
+
+   procedure Swap_Clock (Clock_A, Clock_B : Clock_Id);
+   --  Swap clock from Clk_A to Clk_B
 
    ------------
    -- Cancel --
@@ -124,26 +124,6 @@ package body System.BB.TMU is
       end if;
 
    end Cancel;
-
-   ------------------
-   -- Change_Clock --
-   ------------------
-
-   procedure Change_Clock (Clock_A, Clock_B : Clock_Id) is
-      Count : Word;
-   begin
-
-      pragma Assert (Is_Active (Clock_A) and Clock_A /= Clock_B);
-
-      --  Swap in counter for TM_B
-
-      CPU.Swap_Count (Get_Compare (Clock_B), Count);
-
-      --  Update base time for TM_A
-
-      Clock_A.Base_Time := Clock_A.Base_Time + CPU_Time (Count);
-
-   end Change_Clock;
 
    -----------
    -- Clear --
@@ -197,7 +177,7 @@ package body System.BB.TMU is
 
       Stack (0) := First.Clock'Access;
 
-      Change_Clock (Running.Clock.Active, First.Clock.Active);
+      Swap_Clock (Running.Clock.Active, First.Clock.Active);
 
    end Context_Switch;
 
@@ -246,7 +226,7 @@ package body System.BB.TMU is
 
       Clock.Active := Idle_Clock_Desc'Access;
 
-      Change_Clock (Clock, Clock.Active);
+      Swap_Clock (Clock, Clock.Active);
 
    end Enter_Idle;
 
@@ -270,7 +250,7 @@ package body System.BB.TMU is
 
       --  Swap timer to new top of stack
 
-      Change_Clock (Clock_A, Clock_B);
+      Swap_Clock (Clock_A, Clock_B);
 
    end Enter_Interrupt;
 
@@ -290,7 +270,7 @@ package body System.BB.TMU is
 
          Clock.Active := Id.Clock'Access;
 
-         Change_Clock (Clock, Clock.Active);
+         Swap_Clock (Clock, Clock.Active);
       end;
 
       CPU.Restore_Interrupts;
@@ -399,7 +379,7 @@ package body System.BB.TMU is
       pragma Assert (Top = 0);
       pragma Assert (Clock.Active = Idle_Clock_Desc'Access);
 
-      Change_Clock (Clock.Active, Clock);
+      Swap_Clock (Clock.Active, Clock);
 
       Clock.Active := Clock;
 
@@ -420,7 +400,7 @@ package body System.BB.TMU is
       Stack (Top) := null;
       Top         := Top - 1;
 
-      Change_Clock (Clock, Stack (Top).Active);
+      Swap_Clock (Clock, Stack (Top).Active);
 
    end Leave_Interrupt;
 
@@ -438,7 +418,7 @@ package body System.BB.TMU is
       begin
          pragma Assert (Clock.Active /= Clock);
 
-         Change_Clock (Clock.Active, Clock);
+         Swap_Clock (Clock.Active, Clock);
 
          Clock.Active := Clock;
       end;
@@ -469,6 +449,26 @@ package body System.BB.TMU is
       end if;
 
    end Set;
+
+   ----------------
+   -- Swap_Clock --
+   ----------------
+
+   procedure Swap_Clock (Clock_A, Clock_B : Clock_Id) is
+      Count : Word;
+   begin
+
+      pragma Assert (Is_Active (Clock_A) and Clock_A /= Clock_B);
+
+      --  Swap in counter for TM_B
+
+      CPU.Swap_Count (Get_Compare (Clock_B), Count);
+
+      --  Update base time for TM_A
+
+      Clock_A.Base_Time := Clock_A.Base_Time + CPU_Time (Count);
+
+   end Swap_Clock;
 
    -------------
    -- Time_Of --
