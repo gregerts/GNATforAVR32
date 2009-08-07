@@ -63,8 +63,7 @@ package body System.BB.Time is
                                              Data    => System.Null_Address,
                                              Timeout => Time'Last,
                                              Next    => null,
-                                             Prev    => null,
-                                             Set     => True);
+                                             Prev    => null);
    --  Last alarm in queue
 
    First_Alarm : Alarm_Id := Last_Alarm'Access;
@@ -102,7 +101,7 @@ package body System.BB.Time is
 
       --  Nothing to be done if the alarm is not set
 
-      if not Alarm.Set then
+      if Alarm.Next = null then
          return;
       end if;
 
@@ -137,7 +136,6 @@ package body System.BB.Time is
       Alarm.Timeout := Time'First;
       Alarm.Next    := null;
       Alarm.Prev    := null;
-      Alarm.Set     := False;
    end Clear;
 
    -----------
@@ -222,7 +220,7 @@ package body System.BB.Time is
          declare
             Alarm : constant Alarm_Id := First_Alarm;
          begin
-            pragma Assert (Alarm.Set and Alarm.Handler /= null);
+            pragma Assert (Alarm.Handler /= null);
 
             First_Alarm      := Alarm.Next;
             First_Alarm.Prev := null;
@@ -289,11 +287,10 @@ package body System.BB.Time is
 
       --  The alarm has to be initialized and not be set
 
-      pragma Assert (Alarm.Handler /= null and not Alarm.Set);
+      pragma Assert (Alarm.Handler /= null and Alarm.Next = null);
 
       --  Set alarm timeout
 
-      Alarm.Set := True;
       Alarm.Timeout := Timeout;
 
       --  Search queue from end for element Aux where Aux.Prev = null

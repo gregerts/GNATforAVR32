@@ -132,9 +132,6 @@ private
          Next, Prev : Alarm_Id;
          --  Next and previous elements when in alarm queue
 
-         Set : Boolean;
-         --  True when the alarm is set
-
       end record;
 
    pragma Suppress_Initialization (Alarm_Descriptor);

@@ -61,6 +61,9 @@ package body System.BB.TMU is
    Max_Compare : constant := Word'Last / 2;
    --  Maximal value set to COMPARE register
 
+   Max_Timers : constant := 1;
+   --  Maxmal number of timers allowed for a clock
+
    Idle_Clock_Desc : aliased Clock_Descriptor;
    --  Clock of the pseudo idle thread
 
@@ -80,10 +83,6 @@ package body System.BB.TMU is
    -- Local subprograms --
    -----------------------
 
-   procedure Clear (TM : Timer_Id);
-   pragma Inline_Always (Clear);
-   --  Clear the given timer
-
    procedure Compare_Handler (Id : Interrupts.Interrupt_ID);
    --  Handler for the COMPARE interrupt
 
@@ -99,6 +98,10 @@ package body System.BB.TMU is
    pragma Inline_Always (Is_Active);
    --  Returns true when the given clock is active (running)
 
+   function Is_Set (TM : Timer_Id) return Boolean;
+   pragma Inline_Always (Is_Set);
+   --  Returns true when the given timer is set
+
    procedure Swap_Clock (Clock_A, Clock_B : Clock_Id);
    --  Swap clock from Clk_A to Clk_B
 
@@ -111,11 +114,12 @@ package body System.BB.TMU is
 
       pragma Assert (TM /= null);
 
-      if TM.Set then
+      if Is_Set (TM) then
 
          --  Clear timer and adjust COMPARE if its clock is active
 
-         Clear (TM);
+         TM.Timeout := CPU_Time'First;
+         TM.Clock.First_TM := null;
 
          if Is_Active (TM.Clock) then
             CPU.Adjust_Compare (Max_Compare);
@@ -124,16 +128,6 @@ package body System.BB.TMU is
       end if;
 
    end Cancel;
-
-   -----------
-   -- Clear --
-   -----------
-
-   procedure Clear (TM : Timer_Id) is
-   begin
-      TM.Timeout := CPU_Time'First;
-      TM.Set     := False;
-   end Clear;
 
    ---------------------
    -- Compare_Handler --
@@ -146,7 +140,7 @@ package body System.BB.TMU is
       --  highest priority.
 
       Clock : constant Clock_Id := Stack (Top - 1).Active;
-      TM    : constant Timer_Id := Clock.TM;
+      TM    : constant Timer_Id := Clock.First_TM;
 
    begin
 
@@ -154,11 +148,14 @@ package body System.BB.TMU is
 
       --  Clear TM and call handler if it is non-null and has expired
 
-      if TM /= null and then TM.Set and then TM.Timeout <= Clock.Base_Time then
+      if TM /= null and then TM.Timeout <= Clock.Base_Time then
 
+         pragma Assert (TM.Clock = Clock);
          pragma Assert (TM.Handler /= null);
 
-         Clear (TM);
+         TM.Timeout := CPU_Time'First;
+         TM.Clock.First_TM := null;
+
          TM.Handler (TM.Data);
 
       end if;
@@ -193,20 +190,15 @@ package body System.BB.TMU is
       TM : Timer_Id := null;
    begin
 
-      if Clock = Interrupt_Clock (Interrupt_Priority'Last) then
-         return null;
-      end if;
+      if Clock.Free > 0 then
 
-      if Clock.TM = null then
+         Clock.Free := Clock.Free - 1;
 
          TM := new Timer_Descriptor (Clock);
 
          TM.Handler := Handler;
          TM.Data    := Data;
-
-         Clear (TM);
-
-         Clock.TM := TM;
+         TM.Timeout := CPU_Time'First;
 
       end if;
 
@@ -283,10 +275,10 @@ package body System.BB.TMU is
 
    function Get_Compare (Clock : Clock_Id) return Word is
       B  : constant CPU_Time := Clock.Base_Time;
-      TM : constant Timer_Id := Clock.TM;
+      TM : constant Timer_Id := Clock.First_TM;
    begin
 
-      if TM = null or else not TM.Set then
+      if TM = null then
          return Max_Compare;
       elsif TM.Timeout > B then
          return Word (CPU_Time'Min (TM.Timeout - B, Max_Compare));
@@ -312,6 +304,7 @@ package body System.BB.TMU is
    procedure Initialize_Clock (Clock : Clock_Id) is
    begin
       Clock.Active := Clock;
+      Clock.Free   := Max_Timers;
    end Initialize_Clock;
 
    --------------------
@@ -324,7 +317,7 @@ package body System.BB.TMU is
 
       Initialize_Clock (Environment_Clock);
 
-      --  Initialize pseudo thread clock
+      --  Initialize pseudo task clocks
 
       Initialize_Clock (Idle_Clock_Desc'Access);
 
@@ -336,6 +329,11 @@ package body System.BB.TMU is
             To_Clock (I - Interrupt_Clock_Desc'First + 1) := Clock;
          end;
       end loop;
+
+      --  No timers allowed for idle timer and highest interrupt level
+
+      Idle_Clock_Desc.Free := 0;
+      Interrupt_Clock_Desc (Interrupt_Clock_Desc'Last).Free := 0;
 
       --  Install compare handler
 
@@ -368,6 +366,15 @@ package body System.BB.TMU is
    begin
       return Clock = Stack (Top).Active;
    end Is_Active;
+
+   ------------
+   -- Is_Set --
+   ------------
+
+   function Is_Set (TM : Timer_Id) return Boolean is
+   begin
+      return TM = TM.Clock.First_TM;
+   end Is_Set;
 
    ----------------
    -- Leave_Idle --
@@ -442,7 +449,7 @@ package body System.BB.TMU is
       --  Set timer and adjust COMPARE if its clock is active
 
       TM.Timeout := Timeout;
-      TM.Set     := True;
+      TM.Clock.First_TM := TM;
 
       if Is_Active (TM.Clock) then
          CPU.Adjust_Compare (Get_Compare (TM.Clock));
@@ -457,8 +464,7 @@ package body System.BB.TMU is
    procedure Swap_Clock (Clock_A, Clock_B : Clock_Id) is
       Count : Word;
    begin
-
-      pragma Assert (Is_Active (Clock_A) and Clock_A /= Clock_B);
+      pragma Assert (Clock_A /= Clock_B);
 
       --  Swap in counter for TM_B
 

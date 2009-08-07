@@ -77,7 +77,7 @@ package System.BB.TMU is
    -- Timer_Descriptor --
    ----------------------
 
-   type Timer_Descriptor (Clock : Clock_Id) is private;
+   type Timer_Descriptor (Clock : not null Clock_Id) is private;
 
    type Timer_Id is access all Timer_Descriptor;
 
@@ -176,14 +176,17 @@ private
          --  Will point to another clock if executing code by proxy or
          --  the idle loop, otherwise to this clock.
 
-         TM : Timer_Id;
-         --  Timer bound to this clock, or null if no timer exists
+         First_TM : Timer_Id;
+         --  First timer of this clock, or null if no active timer
+
+         Free : Natural;
+         --  Remaining number of timers allowed for this clock
 
       end record;
 
    pragma Suppress_Initialization (Clock_Descriptor);
 
-   type Timer_Descriptor (Clock : Clock_Id) is
+   type Timer_Descriptor (Clock : not null Clock_Id) is
       record
          Handler : Timer_Handler;
          --  Handler to be called when the timer expires
@@ -194,11 +197,6 @@ private
          Timeout : CPU_Time;
          --  Timeout of timer or CPU_Time'First if timer is not set
 
-         Set : Boolean;
-         --  True if the timer is set
-
       end record;
-
-   pragma Suppress_Initialization (Timer_Descriptor);
 
 end System.BB.TMU;
