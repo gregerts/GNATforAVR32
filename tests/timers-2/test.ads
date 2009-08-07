@@ -6,7 +6,7 @@ use Ada.Real_Time;
 use Ada.Real_Time.Timing_Events;
 use GPIO_Controller;
 
-package Raventest is
+package Test is
 
    ------------
    -- Worker --
@@ -27,4 +27,4 @@ package Raventest is
       Next : Time;
    end Worker;
 
-end Raventest;
+end Test;

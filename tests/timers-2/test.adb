@@ -1,7 +1,7 @@
 with GNAT.IO;
 with Error;
 
-package body Raventest is
+package body Test is
 
    TA, TB, TC, TD : Timing_Event;
 
@@ -62,4 +62,4 @@ begin
       D.Initialize (TD, Epoch);
    end;
 
-end Raventest;
+end Test;

@@ -1,7 +1,7 @@
 with GNAT.IO;
 with Error;
 
-package body Raventest is
+package body Test is
 
    TE : Timing_Event;
 
@@ -58,4 +58,4 @@ begin
 
    Worker.Initialize (Clock);
 
-end Raventest;
+end Test;
