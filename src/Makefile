@@ -39,7 +39,8 @@ s-bb-tmu.ads
 
 LIBGNAT_ASM_SRC = \
 context_switch.S \
-exception_handler.S
+exception_handler.S \
+trampoline.S
 
 LIBGNAT_OBJS = $(LIBGNAT_ADA_SRC:.ads=.o) $(LIBGNAT_ASM_SRC:.S=.o)
 LIBGNAT_ALIS = $(LIBGNAT_ADA_SRC:.ads=.ali)

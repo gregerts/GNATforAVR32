@@ -71,10 +71,10 @@ package System.BB.CPU_Primitives is
    -- Context management --
    ------------------------
 
-   Context_Buffer_Capacity : constant := 12;
+   Context_Buffer_Capacity : constant := 11;
    --  The task context is stored in the following order:
    --
-   --     R12 | SR | PC | SP | R7 | R6 | R5 | R4 | R3 | R2 | R1 | R0
+   --     SR | PC | SP | R7 | R6 | R5 | R4 | R3 | R2 | R1 | R0
 
    Context_Buffer_Size : constant :=
      Context_Buffer_Capacity * System.Word_Size;
