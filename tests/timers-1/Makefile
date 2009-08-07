@@ -1,5 +1,5 @@
 default: ada_crt0.o
-	gnatmake -P raventest
+	gnatmake -P test
 
 ada_crt0.o: ada_crt0.S avr32.h
 	avr32-gcc -c -g ada_crt0.S

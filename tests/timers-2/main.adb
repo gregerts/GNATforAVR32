@@ -1,5 +1,5 @@
 with Ada.Real_Time;
-with Raventest;
+with Test;
 
 procedure Main is
    use Ada.Real_Time;
