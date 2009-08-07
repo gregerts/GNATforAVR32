@@ -189,11 +189,20 @@ package body System.BB.Interrupts is
       Previous_Interrupt : constant Interrupt_ID :=
         Interrupt_Being_Handled;
 
-      Interrupt : Interrupt_ID;
+      Interrupt : constant Interrupt_ID :=
+        Peripherals.Get_Interrupt_ID (Level);
 
    begin
       --  This must be an external interrupt
       pragma Assert (Level > 0);
+
+      --  Return immediatly in case of false interrupt
+      if Interrupt = No_Interrupt then
+         return;
+      end if;
+
+      --  Store the interrupt being handled
+      Interrupt_Being_Handled := Interrupt;
 
       --  Enter this interrupt level
       TMU.Enter_Interrupt (Level);
@@ -203,24 +212,14 @@ package body System.BB.Interrupts is
       --  also the appropriate interrupt masking.
       Threads.Queues.Change_Priority (Self_Id, To_Priority (Level));
 
-      loop
+      --  Restore interrupts priort to calling handler
+      CPU_Primitives.Restore_Interrupts;
 
-         --  Get interrupt ID, exit loop when no interrupt
-         Interrupt :=  Peripherals.Get_Interrupt_ID (Level);
-         exit when Interrupt = No_Interrupt;
+      --  Call the user handler
+      Interrupt_Handlers_Table (Interrupt).all (Interrupt);
 
-         --  Store the interrupt being handled
-         Interrupt_Being_Handled := Interrupt;
-
-         --  Call the user handler with interrupt enabled
-         CPU_Primitives.Restore_Interrupts;
-         Interrupt_Handlers_Table (Interrupt).all (Interrupt);
-         CPU_Primitives.Disable_Interrupts;
-
-         --  Restore the interrupt that was previously handled.
-         Interrupt_Being_Handled := Previous_Interrupt;
-
-      end loop;
+      --  Restore interrupts
+      CPU_Primitives.Disable_Interrupts;
 
       --  Restore the software priority to the state before the
       --  interrupt. Interrupts are enabled by context switch or by
@@ -229,6 +228,9 @@ package body System.BB.Interrupts is
 
       --  Leave interrupt level
       TMU.Leave_Interrupt;
+
+      --  Restore the interrupt that was previously handled.
+      Interrupt_Being_Handled := Previous_Interrupt;
 
    end Interrupt_Wrapper;
 

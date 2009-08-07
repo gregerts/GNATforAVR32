@@ -367,11 +367,7 @@ package body System.BB.Peripherals is
                Interrupt := ADC + SBI.Interrupt_ID (Group - 15);
          end case;
       else
-         if Level = 4 then
-            Interrupt := COMPARE;
-         else
-            Interrupt := SBI.No_Interrupt;
-         end if;
+         Interrupt := SBI.No_Interrupt;
       end if;
 
       return Interrupt;
