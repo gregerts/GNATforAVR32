@@ -77,7 +77,7 @@ LIBGNARL_ALIS = $(LIBGNARL_SRC:.ads=.ali)
 ADA_SRC = $(LIBGNAT_ADA_SRC) $(LIBGNARL_SRC)
 
 # Compiler flags
-ADA_FLAGS = -O2 -gnatnpg -g
+ADA_FLAGS = -O2 -gnatanpg -g
 ASM_FLAGS =
 
 # Utils
