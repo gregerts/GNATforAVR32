@@ -105,7 +105,8 @@ package body System.BB.CPU_Primitives is
                "nop"            & ASCII.LF & ASCII.HT &
                "nop"            & ASCII.LF & ASCII.HT &
                "nop",
-               Volatile => True);
+               Volatile => True,
+               Clobber  => "memory");
    end Disable_Interrupts;
 
    ------------------------

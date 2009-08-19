@@ -111,6 +111,8 @@ package body System.BB.Protection is
       use type System.BB.Threads.Thread_Id;
       use type System.BB.Threads.Thread_States;
 
+      Self_Id : constant Threads.Thread_Id := Threads.Queues.Running_Thread;
+
    begin
 
       --  If there is nothing to execute (no tasks or interrupt handlers)
@@ -130,26 +132,29 @@ package body System.BB.Protection is
          --  so interrupt handling is performed normally. Note that the task
          --  is inserted in the queue but its state is not Runnable.
 
-         Threads.Queues.Insert (Threads.Queues.Running_Thread);
+         Threads.Queues.First_Thread := Self_Id;
 
          --  Wait until a task has been made ready to execute (including the
          --  one that has been temporarily added to the ready queue).
 
-         while Threads.Queues.First_Thread = Threads.Queues.Running_Thread
-           and then Threads.Queues.Running_Thread.State /= Threads.Runnable
-           and then Threads.Queues.Running_Thread.Next = Threads.Null_Thread_Id
          loop
             --  Allow all external interrupts for a while
 
             CPU_Primitives.Enable_Interrupts (0);
             CPU_Primitives.Disable_Interrupts;
+
+            --  Exit when this thread is runnable or another is ready
+
+            exit when Self_Id.State = Threads.Runnable;
+            exit when Self_Id.Next /= Threads.Null_Thread_Id;
+
          end loop;
 
          --  A task has been made ready to execute. We remove the one that was
          --  temporarily inserted in the ready queue, if needed.
 
-         if Threads.Queues.Running_Thread.State /= Threads.Runnable then
-            Threads.Queues.Extract (Threads.Queues.Running_Thread);
+         if Self_Id.State /= Threads.Runnable then
+            Threads.Queues.Extract (Self_Id);
          end if;
 
          --  Leave TMU idle mode
@@ -158,35 +163,19 @@ package body System.BB.Protection is
 
       end if;
 
-      --  We need to check whether a context switch is needed
+      --  Execute context switch if this thread is no longer first
 
-      if Context_Switch_Needed then
-         --  Perform a context switch because the currently executing thread
-         --  is blocked or it is no longer the one with the highest priority.
-
+      if Self_Id /= Threads.Queues.First_Thread then
          CPU_Primitives.Context_Switch;
       end if;
 
       --  Now we need to set the hardware interrupt masking level equal
       --  to the software priority of the task that is executing.
 
-      if Threads.Queues.Running_Thread.Active_Priority in
-        Interrupt_Priority'Range
-      then
-         --  We need to mask some interrupts because we are executing at
-         --  a hardware interrupt priority.
+      CPU_Primitives.Enable_Interrupts
+        (Any_Priority'Max (Self_Id.Active_Priority, Priority'Last)
+         - Priority'Last);
 
-         System.BB.CPU_Primitives.Enable_Interrupts
-           (Threads.Queues.Running_Thread.Active_Priority -
-            System.Interrupt_Priority'First + 1);
-
-      else
-         --  We are neither within an interrupt handler nor within task that
-         --  has a priority in the range of Interrupt_Priority, so that no
-         --  interrupt should be masked.
-
-         System.BB.CPU_Primitives.Enable_Interrupts (0);
-      end if;
    end Leave_Kernel;
 
    ----------------------------
