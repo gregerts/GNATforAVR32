@@ -12,7 +12,7 @@ package Task_States is
       record
          Tid : aliased Task_Id := Null_Task_Id;
          Budget : Time_Span := Time_Span_Last;
-         Recovery : Time_Span := Time_Span_Last;
+         Recovery : Time_Span := Time_Span_Zero;
       end record;
 
    procedure Initialize (S : in out Task_State) is abstract;
