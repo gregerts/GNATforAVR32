@@ -60,9 +60,6 @@ package Ada.Execution_Time is
      return CPU_Time;
    --  Non-standard function!
 
-   function Idle_Clock return CPU_Time;
-   --  Non-standard function!
-
    function "+"
      (Left  : CPU_Time;
       Right : Ada.Real_Time.Time_Span) return CPU_Time;
@@ -108,7 +105,6 @@ private
    pragma Import (Intrinsic, ">=");
 
    pragma Inline (Clock);
-   pragma Inline (Idle_Clock);
    pragma Inline (Interrupt_Clock);
    pragma Inline ("+");
    pragma Inline ("-");

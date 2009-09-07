@@ -288,15 +288,6 @@ package body System.BB.TMU is
 
    end Get_Compare;
 
-   ----------------
-   -- Idle_Clock --
-   ----------------
-
-   function Idle_Clock return Clock_Id is
-   begin
-      return Idle_Clock_Desc'Access;
-   end Idle_Clock;
-
    ----------------------
    -- Initialize_Clock --
    ----------------------

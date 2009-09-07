@@ -98,10 +98,6 @@ package System.BB.TMU is
    -- Clock operations --
    ----------------------
 
-   function Idle_Clock return Clock_Id;
-   pragma Inline_Always (Idle_Clock);
-   --  Returns the execution time clock for the pseudo idle thread
-
    function Interrupt_Clock
      (Priority : Interrupt_Priority) return Clock_Id;
    pragma Inline_Always (Interrupt_Clock);

@@ -104,15 +104,6 @@ package body Ada.Execution_Time is
       return CPU_Time (TMU.Time_Of (TMU.Interrupt_Clock (Priority)));
    end Interrupt_Clock;
 
-   ----------------
-   -- Idle_Clock --
-   ----------------
-
-   function Idle_Clock return CPU_Time is
-   begin
-      return CPU_Time (TMU.Time_Of (TMU.Idle_Clock));
-   end Idle_Clock;
-
    ---------
    -- "+" --
    ---------
