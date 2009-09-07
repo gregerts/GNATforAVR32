@@ -49,6 +49,10 @@ with System.Storage_Elements;
 --           To_Address
 --           To_Integer
 
+with Interfaces;
+--  Used for Unsigned_32
+--           Shift_Left
+
 package body System.BB.CPU_Primitives is
 
    package SMC renames System.Machine_Code;
@@ -103,10 +107,9 @@ package body System.BB.CPU_Primitives is
       SMC.Asm ("ssrf    16"     & ASCII.LF & ASCII.HT &
                "nop"            & ASCII.LF & ASCII.HT &
                "nop"            & ASCII.LF & ASCII.HT &
-               "nop"            & ASCII.LF & ASCII.HT &
                "nop",
-               Volatile => True,
-               Clobber  => "memory");
+               Clobber => "memory",
+               Volatile => True);
    end Disable_Interrupts;
 
    ------------------------
@@ -115,7 +118,9 @@ package body System.BB.CPU_Primitives is
 
    procedure Restore_Interrupts is
    begin
-      SMC.Asm ("csrf    16", Volatile => True);
+      SMC.Asm ("csrf    16",
+               Clobber => "memory",
+               Volatile => True);
    end Restore_Interrupts;
 
    ----------------------
@@ -125,24 +130,24 @@ package body System.BB.CPU_Primitives is
    procedure Enable_Interrupts
      (Level : System.BB.Interrupts.Interrupt_Level)
    is
-      use System.BB.Interrupts;
-
-      To_Mask : constant array (Interrupt_Level) of Word
-        := (2#00000#, 2#00010#, 2#00110#, 2#01110#, 2#11110#);
-
-      Mask : constant Word := To_Mask (Level);
-
+      use Interfaces;
+      Mask : Unsigned_32 := 1;
    begin
+
+      Mask := Shift_Left (Mask, Level);
+      Mask := Mask - 1;
+      Mask := Shift_Left (Mask, 1);
+
       SMC.Asm ("mfsr    r8, 0"         & ASCII.LF & ASCII.HT &
                "bfins   r8, %0, 16, 5" & ASCII.LF & ASCII.HT &
                "mtsr    0, r8"         & ASCII.LF & ASCII.HT &
                "nop"                   & ASCII.LF & ASCII.HT &
                "nop"                   & ASCII.LF & ASCII.HT &
-               "nop"                   & ASCII.LF & ASCII.HT &
                "nop",
-               Inputs => Word'Asm_Input ("r", Mask),
-               Clobber => "r8, cc",
+               Inputs => Unsigned_32'Asm_Input ("r", Mask),
+               Clobber => "r8, cc, memory",
                Volatile => True);
+
    end Enable_Interrupts;
 
    ---------------
