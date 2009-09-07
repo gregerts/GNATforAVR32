@@ -39,7 +39,6 @@
 --  implementation is *not* thread safe, and thus, explicit lock is required.
 
 with Ada.Exceptions;
-with System.BB.Protection;
 
 package body System.Memory is
 
@@ -60,11 +59,7 @@ package body System.Memory is
          Raise_Exception (Storage_Error'Identity);
       end if;
 
-      System.BB.Protection.Enter_Kernel;
-
       Result := c_malloc (size_t'Max (Size, 1));
-
-      System.BB.Protection.Leave_Kernel_No_Change;
 
       if Result = System.Null_Address then
          Raise_Exception (Storage_Error'Identity);
