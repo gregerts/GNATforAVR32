@@ -28,6 +28,11 @@ package body Execution_Time_Poller is
 
    end Poller;
 
+   task Idle_Task is
+      pragma Priority (Priority'First);
+      pragma Storage_Size (256);
+   end Idle_Task;
+
    ----------
    -- Data --
    ----------
@@ -164,7 +169,7 @@ package body Execution_Time_Poller is
                Task_Time (I) := Clock (Tasks (I));
             end loop;
 
-            Idle_Time := Idle_Clock;
+            Idle_Time := Clock (Idle_Task'Identity);
 
             Done := True;
 
@@ -177,5 +182,16 @@ package body Execution_Time_Poller is
       end Handler;
 
    end Poller;
+
+   ---------------
+   -- Idle_Task --
+   ---------------
+
+   task body Idle_Task is
+   begin
+      loop
+         null;
+      end loop;
+   end Idle_Task;
 
 end Execution_Time_Poller;
