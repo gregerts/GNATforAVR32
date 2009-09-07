@@ -143,6 +143,7 @@ package body System.BB.CPU_Primitives is
                "mtsr    0, r8"         & ASCII.LF & ASCII.HT &
                "nop"                   & ASCII.LF & ASCII.HT &
                "nop"                   & ASCII.LF & ASCII.HT &
+               "nop"                   & ASCII.LF & ASCII.HT &
                "nop",
                Inputs => Unsigned_32'Asm_Input ("r", Mask),
                Clobber => "r8, cc, memory",
