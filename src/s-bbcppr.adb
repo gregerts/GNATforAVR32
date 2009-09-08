@@ -106,7 +106,6 @@ package body System.BB.CPU_Primitives is
    begin
       SMC.Asm ("ssrf    16"     & ASCII.LF & ASCII.HT &
                "nop"            & ASCII.LF & ASCII.HT &
-               "nop"            & ASCII.LF & ASCII.HT &
                "nop",
                Clobber => "memory",
                Volatile => True);
@@ -131,23 +130,16 @@ package body System.BB.CPU_Primitives is
      (Level : System.BB.Interrupts.Interrupt_Level)
    is
       use Interfaces;
-      Mask : Unsigned_32 := 1;
+      Mask : constant Unsigned_32 := Shift_Left (2, Level) - 2;
    begin
-
-      Mask := Shift_Left (Mask, Level);
-      Mask := Mask - 1;
-      Mask := Shift_Left (Mask, 1);
-
       SMC.Asm ("mfsr    r8, 0"         & ASCII.LF & ASCII.HT &
                "bfins   r8, %0, 16, 5" & ASCII.LF & ASCII.HT &
                "mtsr    0, r8"         & ASCII.LF & ASCII.HT &
-               "nop"                   & ASCII.LF & ASCII.HT &
                "nop"                   & ASCII.LF & ASCII.HT &
                "nop",
                Inputs => Unsigned_32'Asm_Input ("r", Mask),
                Clobber => "r8, cc, memory",
                Volatile => True);
-
    end Enable_Interrupts;
 
    -------------------------
@@ -155,20 +147,18 @@ package body System.BB.CPU_Primitives is
    -------------------------
 
    procedure Wait_For_Interrupts is
+      use Interfaces;
+      Mask : constant Unsigned_32 := 0;
    begin
-      SMC.Asm ("mov     r9, 0"         & ASCII.LF & ASCII.HT &
-               "mfsr    r8, 0"         & ASCII.LF & ASCII.HT &
-               "bfins   r8, r9, 16, 5" & ASCII.LF & ASCII.HT &
+      SMC.Asm ("mfsr    r8, 0"         & ASCII.LF & ASCII.HT &
+               "bfins   r8, %0, 16, 5" & ASCII.LF & ASCII.HT &
                "mtsr    0, r8"         & ASCII.LF & ASCII.HT &
-               "nop"                   & ASCII.LF & ASCII.HT &
-               "nop"                   & ASCII.LF & ASCII.HT &
-               "nop"                   & ASCII.LF & ASCII.HT &
                "sleep   0"             & ASCII.LF & ASCII.HT &
                "ssrf    16"            & ASCII.LF & ASCII.HT &
                "nop"                   & ASCII.LF & ASCII.HT &
-               "nop"                   & ASCII.LF & ASCII.HT &
                "nop",
-               Clobber => "r8, r9, cc, memory",
+               Inputs => Unsigned_32'Asm_Input ("r", Mask),
+               Clobber => "r8, cc, memory",
                Volatile => True);
    end Wait_For_Interrupts;
 

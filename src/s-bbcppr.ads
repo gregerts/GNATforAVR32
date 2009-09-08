@@ -117,7 +117,8 @@ package System.BB.CPU_Primitives is
    --  Interrupts are unmasked if they are above the value given by Level
 
    procedure Wait_For_Interrupts;
-   --  Allow a interrupt to occur
+   pragma Inline_Always (Wait_For_Interrupts);
+   --  Sleep until one or more interrupts has occured
 
    ------------------------------
    -- COUNT / COMPARE handling --
