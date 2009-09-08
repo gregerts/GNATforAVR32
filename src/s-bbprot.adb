@@ -138,11 +138,11 @@ package body System.BB.Protection is
          --  one that has been temporarily added to the ready queue).
 
          loop
-            --  Wait for an interrupt
+            --  Wait for one or more interrupts
 
             CPU_Primitives.Wait_For_Interrupts;
 
-            --  Exit when this thread is runnable or another is ready
+            --  Exit when this thread is runnable or another thread is ready
 
             exit when Self_Id.State = Threads.Runnable;
             exit when Self_Id.Next /= Threads.Null_Thread_Id;
@@ -172,8 +172,7 @@ package body System.BB.Protection is
       --  to the software priority of the task that is executing.
 
       CPU_Primitives.Enable_Interrupts
-        (Any_Priority'Max (Self_Id.Active_Priority, Priority'Last)
-         - Priority'Last);
+        (Integer'Max (Integer (Self_Id.Active_Priority) - Priority'Last, 0));
 
    end Leave_Kernel;
 
