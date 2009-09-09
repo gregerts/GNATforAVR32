@@ -72,6 +72,12 @@ package body System.BB.Protection is
    --  executing is no longer the highest priority one. This function can
    --  also be called by the interrupt handlers' epilogue.
 
+   ----------------
+   -- Local data --
+   ----------------
+
+   Nesting : Integer := 0;
+
    ------------------
    -- Enter_Kernel --
    ------------------
@@ -82,6 +88,7 @@ package body System.BB.Protection is
       --  kernel data. This way, external interrupts cannot be raised.
 
       CPU_Primitives.Disable_Interrupts;
+      Nesting := Nesting + 1;
    end Enter_Kernel;
 
    ---------------------------
@@ -114,6 +121,14 @@ package body System.BB.Protection is
       Self_Id : constant Threads.Thread_Id := Threads.Queues.Running_Thread;
 
    begin
+
+      --  Only leave kernel if nesting is 0
+
+      Nesting := Nesting - 1;
+
+      if Nesting > 0 then
+         return;
+      end if;
 
       --  If there is nothing to execute (no tasks or interrupt handlers)
       --  then we just wait until there is something to do. It means that we
@@ -182,8 +197,15 @@ package body System.BB.Protection is
 
    procedure Leave_Kernel_No_Change is
    begin
+
       pragma Assert (not Context_Switch_Needed);
-      CPU_Primitives.Restore_Interrupts;
+
+      Nesting := Nesting - 1;
+
+      if Nesting = 0 then
+         CPU_Primitives.Restore_Interrupts;
+      end if;
+
    end Leave_Kernel_No_Change;
 
 end System.BB.Protection;
