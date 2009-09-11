@@ -342,7 +342,7 @@ package body System.BB.Peripherals is
       --  number of leading zeros in request register from 32.
       Aux := Requests (Group);
 
-      SMC.Asm ("clz %1, %0",
+      SMC.Asm ("clz %0, %1",
                Inputs => Scaler_32'Asm_Input ("r", Aux),
                Outputs => Scaler_32'Asm_Output ("=r", Aux));
 
