@@ -12,7 +12,8 @@ package Test is
    -- Worker --
    ------------
 
-   protected type Worker (Pin    : Natural;
+   protected type Worker (Port   : Port_Id;
+                          Pin    : Natural;
                           Period : Natural) is
 
       pragma Priority (System.Interrupt_Priority'Last);
