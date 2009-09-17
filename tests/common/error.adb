@@ -25,8 +25,8 @@ package body Error is
 
       --  Set LED 6 to RED to indicate error.
 
-      Set_Pin   (Port_B, 21);
-      Clear_Pin (Port_B, 22);
+      Clear_Pin (Port_B, 21);
+      Set_Pin   (Port_B, 22);
 
       --  Output error message
 
@@ -49,11 +49,10 @@ begin
 
    --  Configure LED 6 as GPIO pin.
 
-   Configure_GPIO (Port_B, Range_To_Mask (21, 22));
+   Configure_GPIO (Port_B, Range_To_Mask (21, 22), True);
 
    --  Set LED 6 to GREEN to indicate normal operation.
 
-   Clear_Pin (Port_B, 21);
-   Set_Pin   (Port_B, 22);
+   Set_Pin (Port_B, 21);
 
 end Error;

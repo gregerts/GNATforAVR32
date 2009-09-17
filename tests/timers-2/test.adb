@@ -16,40 +16,31 @@ package body Test is
          Epoch : Time)
       is
       begin
-
          Next := Epoch;
-
          Event.Set_Handler (Next, Handler'Access);
-
       end Initialize;
 
       procedure Handler (Event : in out Timing_Event) is
       begin
-
          Next := Next + Milliseconds (Period);
-
-         Toggle_Pin (Port_B, Pin);
-
+         Toggle_Pin (Port, Pin);
          Event.Set_Handler (Next, Handler'Access);
-
       end Handler;
 
    end Worker;
 
    --  Workers
 
-   A : Worker (27,  125);
-   B : Worker (28,  250);
-   C : Worker (29,  500);
-   D : Worker (30, 1000);
+   A : Worker (Port_B, 27, 1000);
+   B : Worker (Port_B, 28,  500);
+   C : Worker (Port_B, 29,  250);
+   D : Worker (Port_B, 30,  125);
 
 begin
 
    --  Configure GPIO pins for LEDs
 
-   Configure_GPIO (Port_B, Range_To_Mask (27, 30));
-
-   Clear_Pins (Port_B, Range_To_Mask (27, 30));
+   Configure_GPIO (Port_B, Range_To_Mask (27, 30), True);
 
    --  Set up first execution of timers
 

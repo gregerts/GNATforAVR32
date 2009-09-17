@@ -12,9 +12,8 @@ project Test is
 
   package Compiler is
      for Default_Switches ("Ada")
-       use ("-gnatn",
---            "-gnatw.X",
---            "-nostartfiles",
+       use ("-gnatan",
+            "-g",
             "-O2");
   end Compiler;
 
@@ -24,9 +23,6 @@ project Test is
             "--LINK=avr32-gcc",
             "-nostartfiles",
 	    "ada_crt0.o",
---  	      "-T../common/link.x",
---            "-D0",
---            "-d1k",
             "-march=avr32elf",
             "-mpart=uc3a0512es");
   end Linker;

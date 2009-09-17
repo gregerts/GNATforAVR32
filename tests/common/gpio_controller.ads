@@ -1,124 +1,99 @@
+with System, Interfaces;
+use Interfaces;
+
 package GPIO_Controller is
 
-   subtype Port_Number is Natural range 0 .. 4;
+   type Port_Interface is limited private;
 
-   Port_A : constant := 0;
-   Port_B : constant := 1;
-   Port_C : constant := 2;
-   Port_X : constant := 3;
+   type Port_Id is not null access all Port_Interface;
+
+   Port_A : constant Port_Id;
+   Port_B : constant Port_Id;
+   Port_C : constant Port_Id;
+   Port_X : constant Port_Id;
 
    subtype Pin_Number is Natural range 0 .. 31;
+   subtype Pin_Mask   is Unsigned_32;
 
-   type Pin_Mask is private;
-
-   type Pin_Peripheral is (Peripheral_A,
-                           Peripheral_B,
-                           Peripheral_C);
-
-   type Pin_Edge is (Both, Rising, Falling);
-
-   type Pin_Config is
-      record
-         Open_Drain : Boolean  := False;
-         Pull_Up    : Boolean  := False;
-         Deglitch   : Boolean  := False;
-         Interrupt  : Boolean  := False;
-         Edge       : Pin_Edge := Both;
-      end record;
-
-   Default_Config : constant Pin_Config
-     := (False, False, False, False, Both);
+   type Pin_Peripheral is (Peripheral_A, Peripheral_B, Peripheral_C);
+   type Pin_Edge       is (Both, Rising, Falling);
 
    procedure Configure_GPIO
-     (Port   : in Port_Number;
-      Pin    : in Pin_Number;
-      Config : in Pin_Config := Default_Config);
-
-   procedure Configure_GPIO
-     (Port   : in Port_Number;
-      Mask   : in Pin_Mask;
-      Config : in Pin_Config := Default_Config);
+     (Port       : Port_Id;
+      Mask       : Pin_Mask;
+      Output     : Boolean := False;
+      Open_Drain : Boolean := False;
+      Pull_Up    : Boolean := False);
 
    procedure Configure_Peripheral
-     (Port       : in Port_Number;
-      Pin        : in Pin_Number;
-      Peripheral : in Pin_Peripheral);
-
-   procedure Configure_Peripheral
-     (Port       : in Port_Number;
-      Mask       : in Pin_Mask;
-      Peripheral : in Pin_Peripheral);
+     (Port       : Port_Id;
+      Mask       : Pin_Mask;
+      Peripheral : Pin_Peripheral);
 
    procedure Enable_Interrupt
-     (Port : in Port_Number;
-      Pin  : in Pin_Number;
-      Edge : in Pin_Edge);
-
-   procedure Enable_Interrupt
-     (Port : in Port_Number;
-      Mask : in Pin_Mask;
-      Edge : in Pin_Edge);
+     (Port     : Port_Id;
+      Mask     : Pin_Mask;
+      Edge     : Pin_Edge := Both;
+      Deglitch : Boolean  := False);
 
    procedure Disable_Interrupt
-     (Port : in Port_Number;
-      Pin  : in Pin_Number);
-
-   procedure Disable_Interrupt
-     (Port : in Port_Number;
-      Mask : in Pin_Mask);
+     (Port : Port_Id;
+      Mask : Pin_Mask);
 
    function Get_Pin_Value
-     (Port : Port_Number;
+     (Port : Port_Id;
       Pin  : Pin_Number)
      return Boolean;
 
    function Get_Pin_Output_Value
-     (Port : Port_Number;
+     (Port : Port_Id;
       Pin  : Pin_Number)
      return Boolean;
 
    procedure Set_Pin
-     (Port  : in Port_Number;
-      Pin   : in Pin_Number);
+     (Port  : Port_Id;
+      Pin   : Pin_Number);
 
    procedure Set_Pins
-     (Port  : in Port_Number;
-      Mask  : in Pin_Mask);
+     (Port  : Port_Id;
+      Mask  : Pin_Mask);
 
    procedure Clear_Pin
-     (Port : in Port_Number;
-      Pin  : in Pin_Number);
+     (Port : Port_Id;
+      Pin  : Pin_Number);
 
    procedure Clear_Pins
-     (Port : in Port_Number;
-      Mask : in Pin_Mask);
+     (Port : Port_Id;
+      Mask : Pin_Mask);
 
    procedure Toggle_Pin
-     (Port : in Port_Number;
-      Pin  : in Pin_Number);
+     (Port : Port_Id;
+      Pin  : Pin_Number);
 
    procedure Toggle_Pins
-     (Port : in Port_Number;
-      Mask : in Pin_Mask);
+     (Port : Port_Id;
+      Mask : Pin_Mask);
 
    function Pin_To_Mask (Pin : Pin_Number) return Pin_Mask;
-   pragma Inline (Pin_To_Mask);
 
    function Range_To_Mask (From, To : Pin_Number) return Pin_Mask;
-   pragma Inline (Range_To_Mask);
+
 
 private
 
-   type Pin_Array is array (Pin_Number) of Boolean;
-   pragma Pack (Pin_Array);
-   for Pin_Array'Size use 32;
+   pragma Inline (Set_Pin);
+   pragma Inline (Set_Pins);
+   pragma Inline (Clear_Pin);
+   pragma Inline (Clear_Pins);
+   pragma Inline (Toggle_Pin);
+   pragma Inline (Toggle_Pins);
 
-   type Pin_Mask is mod 2 ** 32;
-   for Pin_Mask'Size use 32;
+   pragma Inline_Always (Pin_To_Mask);
+   pragma Inline_Always (Range_To_Mask);
 
    type Pin_Control_Register is
       record
-         RW     : Pin_Array;
+         RW     : Pin_Mask;
          Set    : Pin_Mask;
          Clear  : Pin_Mask;
          Toggle : Pin_Mask;
@@ -128,19 +103,9 @@ private
          pragma Atomic (Toggle);
       end record;
 
-   for Pin_Control_Register use
-      record
-         RW     at 0 range 0 .. 31;
-         Set    at 4 range 0 .. 31;
-         Clear  at 8 range 0 .. 31;
-         Toggle at 12 range 0 .. 31;
-      end record;
-
-   for Pin_Control_Register'Size use 4 * 32;
-
    pragma Suppress_Initialization (Pin_Control_Register);
 
-   type GPIO_Port_Interface is
+   type Port_Interface is limited
       record
          GPIO_Enable                  : Pin_Control_Register;
          Peripheral_Mux_0             : Pin_Control_Register;
@@ -161,6 +126,21 @@ private
          Interrupt_Flag_Enable        : Pin_Control_Register;
       end record;
 
-   pragma Suppress_Initialization (GPIO_Port_Interface);
+   pragma Suppress_Initialization (Port_Interface);
+
+   PA : aliased Port_Interface;
+   PB : aliased Port_Interface;
+   PC : aliased Port_Interface;
+   PX : aliased Port_Interface;
+
+   for PA'Address use System'To_Address (16#FFFF_1000#);
+   for PB'Address use System'To_Address (16#FFFF_1100#);
+   for PC'Address use System'To_Address (16#FFFF_1200#);
+   for PX'Address use System'To_Address (16#FFFF_1300#);
+
+   Port_A : constant Port_Id := PA'Access;
+   Port_B : constant Port_Id := PB'Access;
+   Port_C : constant Port_Id := PC'Access;
+   Port_X : constant Port_Id := PX'Access;
 
 end GPIO_Controller;
