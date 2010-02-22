@@ -23,8 +23,9 @@ project Test is
             "--LINK=avr32-gcc",
             "-nostartfiles",
 	    "ada_crt0.o",
-            "-march=avr32elf",
-            "-mpart=uc3a0512es");
+	    "-march=avr32elf",
+            "-mpart=uc3a0512es",
+	    "-L/usr/avr32/lib");
   end Linker;
 
 end Test;
