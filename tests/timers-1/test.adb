@@ -15,8 +15,8 @@ package body Test is
       begin
          Next := Epoch;
 
-         Set_Pin (Port_B, 27);
-         Clear_Pins (Port_B, Range_To_Mask (28, 30));
+         Clear_Pin (Port_B, 27);
+         Set_Pins (Port_B, Range_To_Mask (28, 30));
 
          Set_Handler (TE, Next, Handler'Access);
 
@@ -52,7 +52,7 @@ begin
 
    --  Configure GPIO pins for LEDs
 
-   Configure_GPIO (Port_B, Range_To_Mask (27, 30));
+   Configure_GPIO (Port_B, Range_To_Mask (27, 30), Output => True);
 
    --  Configure interrupt line as peripheral
 

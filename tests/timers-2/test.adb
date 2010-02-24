@@ -40,7 +40,7 @@ begin
 
    --  Configure GPIO pins for LEDs
 
-   Configure_GPIO (Port_B, Range_To_Mask (27, 30), True);
+   Configure_GPIO (Port_B, Range_To_Mask (27, 30), Output => True);
 
    --  Set up first execution of timers
 
