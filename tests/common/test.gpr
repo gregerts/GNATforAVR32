@@ -24,8 +24,7 @@ project Test is
             "-nostartfiles",
 	    "ada_crt0.o",
 	    "-march=avr32elf",
-            "-mpart=uc3a0512es",
-	    "-L/usr/avr32/lib");
+            "-mpart=uc3a0512");
   end Linker;
 
 end Test;
