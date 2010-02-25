@@ -338,7 +338,7 @@ package body System.BB.Time is
       Handler : Alarm_Handler;
       Data    : System.Address)
    is
-      Aux : Alarm_Id := Last_Alarm'Access;
+      Aux : Alarm_Id := First_Alarm;
    begin
 
       pragma Assert (Alarm.Handler = null);
@@ -350,34 +350,34 @@ package body System.BB.Time is
       Alarm.Handler := Handler;
       Alarm.Data    := Data;
 
-      --  Search queue from end for element Aux where Aux.Prev = null
-      --  (first in queue) or Aux.Prev.Timeout <= Alarm.Timeout
+      --  Check if this alarm is to be first in queue
 
-      while Aux.Prev /= null and then Aux.Prev.Timeout > Timeout loop
-         Aux := Aux.Prev;
-      end loop;
+      if Timeout < Aux.Timeout then
 
-      --  Insert before Aux (always before Last_Alarm)
-
-      Alarm.Next := Aux;
-      Alarm.Prev := Aux.Prev;
-      Aux.Prev   := Alarm;
-
-      --  If Alarm.Prev is null then Alarm is first in queue
-
-      if Alarm.Prev = null then
-
-         pragma Assert (Aux = First_Alarm);
-
-         --  Set First_Alarm to Alarm and update alarm timer
+         --  Insert alarm first
 
          First_Alarm := Alarm;
+
+         Alarm.Next := Aux;
+         Aux.Prev := Alarm;
 
          Update_Alarm_Timer;
 
       else
 
+         --  Search for element Aux where Aux.Timeout > Timeout
+
+         loop
+            Aux := Aux.Next;
+            exit when Timeout < Aux.Timeout;
+         end loop;
+
+         --  Insert before Aux (always before Last_Alarm)
+
+         Alarm.Next := Aux;
+         Alarm.Prev := Aux.Prev;
          Alarm.Prev.Next := Alarm;
+         Aux.Prev := Alarm;
 
       end if;
 

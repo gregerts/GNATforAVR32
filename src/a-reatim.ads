@@ -108,7 +108,7 @@ private
 
    Time_First : constant Time := Time'First;
 
-   Time_Last  : constant Time := Time'Last;
+   Time_Last  : constant Time := Time'Last - 1;
 
    type Time_Span is new System.OS_Interface.Time_Span;
 
