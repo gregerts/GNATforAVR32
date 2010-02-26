@@ -141,31 +141,9 @@ package body System.BB.Time is
             Handler (Data);
          end;
 
-         --  Read clock and update base time if there is a pending
-         --  clock interrupt in order to avoid unecessary interrupts.
+         --  Read clock and get first event from queue
 
-         declare
-            B : Time           := Base_Time;
-            C : Timer_Interval := Peripherals.Read_Clock;
-
-         begin
-
-            if Peripherals.Pending_Clock then
-
-               B := B + Clock_Period;
-               C := Peripherals.Read_Clock;
-
-               Base_Time := B;
-
-               Peripherals.Clear_Clock_Interrupt;
-
-            end if;
-
-            Now := B + Time (C);
-         end;
-
-         --  Get first event from queue, may have been updated
-
+         Now := Clock;
          Alarm := First_Alarm;
 
          exit when Alarm.Timeout > Now;
@@ -260,8 +238,14 @@ package body System.BB.Time is
       --  interrupt may have occured after reading B and C.
 
       if Peripherals.Pending_Clock then
+
          B := B + Clock_Period;
          C := Peripherals.Read_Clock;
+
+         Base_Time := B;
+
+         Peripherals.Clear_Clock_Interrupt;
+
       end if;
 
       return B + Time (C);
@@ -273,7 +257,7 @@ package body System.BB.Time is
    -------------------
 
    procedure Clock_Handler (Interrupt : Interrupts.Interrupt_ID) is
-      Base      : constant Time := Base_Time + Clock_Period;
+      Base : constant Time := Base_Time + Clock_Period;
       Now, Diff : Time;
 
    begin
@@ -301,9 +285,10 @@ package body System.BB.Time is
 
          --  Set timer if the alarm is within a clock period
 
-         if Diff < Clock_Period then
+         Pending_Alarm := Diff < Clock_Period;
+
+         if Pending_Alarm then
             Peripherals.Set_Alarm (Peripherals.Timer_Interval (Diff));
-            Pending_Alarm := True;
          end if;
 
       end if;
@@ -350,35 +335,25 @@ package body System.BB.Time is
       Alarm.Handler := Handler;
       Alarm.Data    := Data;
 
+      --  Search for element Aux where Aux.Timeout > Timeout
+
+      while Aux.Timeout <= Timeout loop
+            Aux := Aux.Next;
+      end loop;
+
+      --  Insert before Aux (always before Last_Alarm)
+
+      Alarm.Next := Aux;
+      Alarm.Prev := Aux.Prev;
+      Aux.Prev := Alarm;
+
       --  Check if this alarm is to be first in queue
 
-      if Timeout < Aux.Timeout then
-
-         --  Insert alarm first
-
+      if Alarm.Prev = null then
          First_Alarm := Alarm;
-
-         Alarm.Next := Aux;
-         Aux.Prev := Alarm;
-
          Update_Alarm_Timer;
-
       else
-
-         --  Search for element Aux where Aux.Timeout > Timeout
-
-         loop
-            Aux := Aux.Next;
-            exit when Timeout < Aux.Timeout;
-         end loop;
-
-         --  Insert before Aux (always before Last_Alarm)
-
-         Alarm.Next := Aux;
-         Alarm.Prev := Aux.Prev;
          Alarm.Prev.Next := Alarm;
-         Aux.Prev := Alarm;
-
       end if;
 
    end Set_Handler;
@@ -425,9 +400,10 @@ package body System.BB.Time is
 
       --  Set timer if alarm is within a clock period
 
-      if Diff < Clock_Period then
+      Pending_Alarm := Diff < Clock_Period;
+
+      if Pending_Alarm then
          Peripherals.Set_Alarm (Timer_Interval (Diff));
-         Pending_Alarm := True;
       end if;
 
    end Update_Alarm_Timer;
