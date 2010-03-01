@@ -64,7 +64,8 @@ for i = 1:128
   save(sprintf("test-%d.dat", i),
        "timers", "t",
        "data", "set", "cancelled", "expired",
-       "d_min", "d_max", "d_mean" ,"d_svar");
+       "d_min", "d_max", "d_mean" ,"d_svar",
+       "util", "u_min", "u_max", "u_mean");
 
   printf(" Done %f [s]\n", t);
 
