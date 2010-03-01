@@ -81,7 +81,7 @@ ADA_FLAGS = -O2 -gnatnpg -g
 ASM_FLAGS =
 
 # Utils
-CC	    = avr32-gcc
+CC	    = /usr/local/bin/avr32-gcc
 BIN	    = avr32-objcopy
 SIZE	    = avr32-size
 AS          = avr32-as
