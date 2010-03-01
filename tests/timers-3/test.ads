@@ -12,8 +12,7 @@ package Test is
    package T_Random is new Quick_Random (A, B);
    use T_Random;
 
-   type Stat is (Set, Cancelled, Expired,
-                 D_Min, D_Max, D_Sum, D_Sum_2);
+   type Stat is (Set, Cancelled, Expired, D_Min, D_Max, D_Sum, TT, ET);
 
    type Count is mod 2**64;
    for Stat'Size use 64;
@@ -46,8 +45,9 @@ package Test is
 
    type Test_Event is new Timing_Event with
       record
-         Next  : Time;
+         Next : Time;
          Other : access Test_Event;
+         Gen : aliased Generator;
       end record;
 
    procedure Set (Event : in out Test_Event);
@@ -55,8 +55,6 @@ package Test is
    function D (Event : Test_Event) return Count;
 
    Timers : array (1 .. N) of aliased Test_Event;
-
-   Gen : aliased Generator;
 
    ---------
    -- Run --

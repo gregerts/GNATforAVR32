@@ -1,13 +1,21 @@
 with Ada.Unchecked_Conversion;
+with Ada.Execution_Time;
+with System;
 with GNAT.IO;
 with Utilities;
+with Seeds;
 
 use GNAT.IO;
+use Ada.Execution_Time;
+use System;
 use Utilities;
+use Seeds;
 
 package body Test is
 
+   function To_Count is new Ada.Unchecked_Conversion (Time, Count);
    function To_Count is new Ada.Unchecked_Conversion (Time_Span, Count);
+   function To_Count is new Ada.Unchecked_Conversion (CPU_Time, Count);
 
    procedure Put is new Put_Hex (Count);
 
@@ -41,17 +49,18 @@ package body Test is
 
          S (D_Min)   := Count'Min (D, S (D_Min));
          S (D_Max)   := Count'Max (D, S (D_Max));
-         S (D_Sum)   := S (D_Sum)   + D;
-         S (D_Sum_2) := S (D_Sum_2) + D*D;
+         S (D_Sum)   := S (D_Sum) + D;
          S (Expired) := S (Expired) + 1;
 
          if S (Expired) < Count (M) then
 
             This.Other.Cancel_Handler (C);
 
-            pragma Assert (C);
+            if C then
+               S (Cancelled) := S (Cancelled) + 1;
+            end if;
 
-            S (Cancelled) := S (Cancelled) + 1;
+            This.Other.Next := This.Next;
 
             This.Set;
             This.Other.Set;
@@ -69,6 +78,9 @@ package body Test is
                end if;
 
             end loop;
+
+            S (TT) := To_Count (Ada.Real_Time.Clock) - S (TT);
+            S (ET) := To_Count (Interrupt_Clock (Interrupt_Priority'Last)) - S (ET);
 
             Done := True;
 
@@ -92,6 +104,8 @@ package body Test is
          S := (Set   => Count (N),
                D_Min => Count'Last,
                D_Max => Count'First,
+               TT => To_Count (First),
+               ET => To_Count (Interrupt_Clock (Interrupt_Priority'Last)),
                others => 0);
 
          Done := False;
@@ -116,8 +130,7 @@ package body Test is
    procedure Set (Event : in out Test_Event)
    is
    begin
-      Event.Next := Event.Next + Microseconds (Random (Gen'Access));
-
+      Event.Next := Event.Next + Microseconds (Random (Event.Gen'Access));
       Event.Set_Handler (Event.Next, Statistics.Handler'Access);
    end Set;
 
@@ -141,8 +154,6 @@ package body Test is
       SA : Stat_Access;
    begin
 
-      Reset (Gen, 2*A + 3*B + 5*N + 7*M);
-
       for I in Timers'Range loop
 
          if I mod 2 = 1 then
@@ -150,6 +161,8 @@ package body Test is
          else
             Timers (I).Other := Timers (I - 1)'Access;
          end if;
+
+         Reset (Timers (I).Gen, Seed (I));
 
       end loop;
 

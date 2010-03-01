@@ -3,13 +3,13 @@
 C = 32/60e6;
 
 a =    0;
-b = 3000;
+b =  600;
 m = 1000;
 n =  100;
 
 report = fopen("report.txt", "w");
 
-for i = 1:256
+for i = 1:128
 
   timers = 2*i;
   
@@ -35,16 +35,28 @@ for i = 1:256
 
   d_min  = C * min(data(:,4));
   d_max  = C * max(data(:,5));
-  d_mean = C * mean(data(:,6)) / m;
-  d_var  = C^2 * sum(data(:,7)) / (n - 1) - n / (n - 1) * d_mean^2;
+
+  x = C * data(:,6) / m;
+
+  d_mean = mean(x);
+  d_var  = var(x);
   d_svar = sqrt(d_var);
 
+  util = data(:,8) ./ (32 * data(:,7));
+
+  u_min = min(util);
+  u_max = max(util);
+  u_mean = mean(util);
+
   fprintf(report, "%d %d %d %d ", a, b*i, timers, m);
-  fprintf(report, "%d %d %d ", set, cancelled, expired);
+  fprintf(report, "%d ", set - (cancelled + expired));
   fprintf(report, "%8.4e ", d_min);
   fprintf(report, "%8.4e ", d_max)
   fprintf(report, "%8.4e ", d_mean);
   fprintf(report, "%8.4e ", d_svar);
+  fprintf(report, "%8.4e ", u_min);
+  fprintf(report, "%8.4e ", u_max)
+  fprintf(report, "%8.4e ", u_mean);
   fprintf(report, "%8.4f\n", t);
 
   fflush(report);
