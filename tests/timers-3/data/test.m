@@ -9,7 +9,12 @@ n =  100;
 
 report = fopen("report.txt", "w");
 
-for i = 1:128
+range = 1:128;
+select = [1 2 4 8 16 32 64 128];
+
+r = zeros(max(range), 7);
+
+for i = range
 
   timers = 2*i;
   
@@ -48,6 +53,14 @@ for i = 1:128
   u_max = max(util);
   u_mean = mean(util);
 
+  r(i,1) = timers;
+  r(i,2) = 1e6*d_min;
+  r(i,3) = 1e6*d_max;
+  r(i,4) = 1e6*d_mean;
+  r(i,5) = u_min;
+  r(i,6) = u_max;
+  r(i,7) = u_mean;
+
   fprintf(report, "%d %d %d %d ", a, b*i, timers, m);
   fprintf(report, "%d ", set - (cancelled + expired));
   fprintf(report, "%8.4e ", d_min);
@@ -72,3 +85,36 @@ for i = 1:128
 endfor
 
 fclose (report);
+
+%% Create tabel to use in report
+
+tabel = fopen("tabel.txt", "w");
+
+for i = select
+  fprintf(tabel, "    %d &\n    %g & %g & %g &\n    %g & %g & %g \\\\\n\n", r(i,:));
+endfor;
+
+fclose(tabel);
+
+% Create figures to use in report
+
+figure(1);
+plot(r(:,1),r(:,2:4));
+xlim([0 max(r(:,1))]);
+xlabel("T");
+ylabel("Overhead [us]");
+print -deps -solid -FTimes:14 plot-te-1.eps
+print -deps -solid -mono -FTimes:14 plot-te-1-mono.eps
+
+figure(2);
+plot(r(:,1),r(:,5:7));
+xlim([0 max(r(:,1))]);
+xlabel("T");
+ylabel("Utilization");
+print -deps -solid -FTimes:14 plot-te-2.eps
+print -deps -solid -mono -FTimes:14 plot-te-2-mono.eps
+
+system("epstopdf plot-te-1.eps");
+system("epstopdf plot-te-1-mono.eps");
+system("epstopdf plot-te-2.eps");
+system("epstopdf plot-te-2-mono.eps");
