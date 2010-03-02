@@ -89,6 +89,10 @@ package body System.BB.Time is
    procedure Clock_Handler (Interrupt : Interrupts.Interrupt_ID);
    --  Handler for the clock interrupt
 
+   procedure Internal_Clock (Now : out Time);
+   pragma Inline_Always (Internal_Clock);
+   --  Procedure to get internal clock, may update base time
+
    procedure Clear (Alarm : Alarm_Id);
    pragma Inline_Always (Clear);
    --  Procedure to clear an alarm
@@ -143,7 +147,8 @@ package body System.BB.Time is
 
          --  Read clock and get first event from queue
 
-         Now := Clock;
+         Internal_Clock (Now);
+
          Alarm := First_Alarm;
 
          exit when Alarm.Timeout > Now;
@@ -233,19 +238,12 @@ package body System.BB.Time is
          exit when B = Base_Time;
       end loop;
 
-      --  If a clock interrupt is pending the task has to have the
-      --  highest priority or is executing within kernel. The
-      --  interrupt may have occured after reading B and C.
+      --  A clock interrupt may be pending if we are executing with
+      --  highest interrupt priority.
 
       if Peripherals.Pending_Clock then
-
          B := B + Clock_Period;
          C := Peripherals.Read_Clock;
-
-         Base_Time := B;
-
-         Peripherals.Clear_Clock_Interrupt;
-
       end if;
 
       return B + Time (C);
@@ -257,7 +255,7 @@ package body System.BB.Time is
    -------------------
 
    procedure Clock_Handler (Interrupt : Interrupts.Interrupt_ID) is
-      Base : constant Time := Base_Time + Clock_Period;
+      B : constant Time := Base_Time + Clock_Period;
       Now, Diff : Time;
 
    begin
@@ -269,13 +267,13 @@ package body System.BB.Time is
 
       --  The clock timer has overflowed
 
-      Base_Time := Base;
+      Base_Time := B;
 
       if not Pending_Alarm then
 
          --  Find time remaining to first alarm
 
-         Now := Base + Time (Peripherals.Read_Clock);
+         Now := B + Time (Peripherals.Read_Clock);
 
          if First_Alarm.Timeout > Now then
             Diff := First_Alarm.Timeout - Now;
@@ -312,6 +310,31 @@ package body System.BB.Time is
         (Alarm_Wrapper'Access, System.BB.Peripherals.TC_1);
 
    end Initialize_Timers;
+
+   --------------------
+   -- Internal_Clock --
+   --------------------
+
+   procedure Internal_Clock (Now : out Time) is
+      B : Time := Base_Time;
+      C : Timer_Interval := Peripherals.Read_Clock;
+
+   begin
+
+      if Peripherals.Pending_Clock then
+
+         Peripherals.Clear_Clock_Interrupt;
+
+         B := B + Clock_Period;
+         C := Peripherals.Read_Clock;
+
+         Base_Time := B;
+
+      end if;
+
+      Now := B + Time (C);
+
+   end Internal_Clock;
 
    -----------------
    -- Set_Handler --
@@ -383,14 +406,11 @@ package body System.BB.Time is
 
       --  Cancel any pending alarm
 
-      if Pending_Alarm then
-         Peripherals.Cancel_Alarm;
-         Pending_Alarm := False;
-      end if;
+      Peripherals.Cancel_Alarm;
 
       --  Find time remaining to first alarm
 
-      Now := Clock;
+      Internal_Clock (Now);
 
       if First_Alarm.Timeout > Now then
          Diff := First_Alarm.Timeout - Now;
