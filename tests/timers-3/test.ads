@@ -6,19 +6,22 @@ use Ada.Real_Time;
 use Ada.Real_Time.Timing_Events;
 
 generic
-   A, B, M : Natural;
+   A, B, C, M : Natural;
 package Test is
 
    package T_Random is new Quick_Random (A, B);
    use T_Random;
 
-   type Stat is (Set, Cancelled, Expired, D_Min, D_Max, D_Sum, TT, ET);
+   type Stat is (Expired, D_Min, D_Max, D_Sum);
 
    type Count is mod 2**64;
    for Stat'Size use 64;
 
    type Stat_Array is array (Stat) of Count;
    type Stat_Access is access all Stat_Array;
+
+   type Hist_Array is array (0 .. 31) of Count;
+   type Hist_Access is access all Hist_Array;
 
    ----------------
    -- Statistics --
@@ -32,10 +35,12 @@ package Test is
 
       procedure Start;
 
-      entry Wait (SA : out Stat_Access);
+      entry Wait (SA : out Stat_Access;
+                  HA : out Hist_Access);
 
    private
       S : aliased Stat_Array;
+      H : aliased Hist_Array;
       Done : Boolean := False;
    end Statistics;
 

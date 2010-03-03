@@ -32,6 +32,7 @@ package body Test is
       procedure Handler (Event : in out Timing_Event) is
          This : access Test_Event;
          D : Count;
+         I : Integer;
       begin
 
          pragma Assert (not Done);
@@ -42,18 +43,19 @@ package body Test is
          This := Test_Event (Timing_Event'Class (Event))'Access;
 
          D := This.D;
+         I := Integer'Min (H'Last, ((H'Last + 1) * Integer(D)) / C);
+
+         H (I) := H (I) + 1;
+
+         S (Expired) := S (Expired) + 1;
 
          S (D_Min)   := Count'Min (D, S (D_Min));
          S (D_Max)   := Count'Max (D, S (D_Max));
          S (D_Sum)   := S (D_Sum) + D;
-         S (Expired) := S (Expired) + 1;
 
          if S (Expired) < Count (M) then
             This.Set;
-            S (Set) := S (Set) + 1;
          else
-            S (TT) := To_Count (Ada.Real_Time.Clock) - S (TT);
-            S (ET) := To_Count (Interrupt_Clock (Interrupt_Priority'Last)) - S (ET);
             Done := True;
          end if;
 
@@ -70,12 +72,11 @@ package body Test is
          T.Next := First;
          T.Set;
 
-         S := (Set   => 1,
-               D_Min => Count'Last,
+         S := (D_Min => Count'Last,
                D_Max => Count'First,
-               TT => To_Count (First),
-               ET => To_Count (Interrupt_Clock (Interrupt_Priority'Last)),
                others => 0);
+
+         H := (others => 0);
 
          Done := False;
 
@@ -85,9 +86,11 @@ package body Test is
       -- Wait --
       ----------
 
-      entry Wait (SA : out Stat_Access) when Done is
+      entry Wait (SA : out Stat_Access;
+                  HA : out Hist_Access) when Done is
       begin
          SA := S'Access;
+         HA := H'Access;
       end Wait;
 
    end Statistics;
@@ -121,6 +124,7 @@ package body Test is
 
    procedure Run is
       SA : Stat_Access;
+      HA : Hist_Access;
    begin
 
       Reset (T.Gen, Seed (1));
@@ -132,19 +136,27 @@ package body Test is
 
          Statistics.Start;
 
-         Statistics.Wait (SA);
+         Statistics.Wait (SA, HA);
 
          for I in Stat loop
 
             Put (SA (I));
+            Put (':');
 
-            if I = Stat'Last then
+         end loop;
+
+         for I in Hist_Array'Range loop
+
+            Put (HA (I));
+
+            if I = Hist_Array'Last then
                New_Line;
             else
                Put (':');
             end if;
 
          end loop;
+
 
       end loop;
 
