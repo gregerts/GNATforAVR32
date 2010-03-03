@@ -6,7 +6,7 @@ use Ada.Real_Time;
 use Ada.Real_Time.Timing_Events;
 
 generic
-   A, B, N, M : Natural;
+   A, B, M : Natural;
 package Test is
 
    package T_Random is new Quick_Random (A, B);
@@ -46,7 +46,6 @@ package Test is
    type Test_Event is new Timing_Event with
       record
          Next : Time;
-         Other : access Test_Event;
          Gen : aliased Generator;
       end record;
 
@@ -54,7 +53,7 @@ package Test is
 
    function D (Event : Test_Event) return Count;
 
-   Timers : array (1 .. N) of aliased Test_Event;
+   T : Test_Event;
 
    ---------
    -- Run --

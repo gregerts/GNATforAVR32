@@ -30,12 +30,8 @@ package body Test is
       -------------
 
       procedure Handler (Event : in out Timing_Event) is
-
          This : access Test_Event;
-
          D : Count;
-         C : Boolean;
-
       begin
 
          pragma Assert (not Done);
@@ -53,37 +49,12 @@ package body Test is
          S (Expired) := S (Expired) + 1;
 
          if S (Expired) < Count (M) then
-
-            This.Other.Cancel_Handler (C);
-
-            if C then
-               S (Cancelled) := S (Cancelled) + 1;
-            end if;
-
-            This.Other.Next := This.Next;
-
             This.Set;
-            This.Other.Set;
-
-            S (Set) := S (Set) + 2;
-
+            S (Set) := S (Set) + 1;
          else
-
-            for I in Timers'Range loop
-
-               Timers (I).Cancel_Handler (C);
-
-               if C then
-                  S (Cancelled) := S (Cancelled) + 1;
-               end if;
-
-            end loop;
-
             S (TT) := To_Count (Ada.Real_Time.Clock) - S (TT);
             S (ET) := To_Count (Interrupt_Clock (Interrupt_Priority'Last)) - S (ET);
-
             Done := True;
-
          end if;
 
       end Handler;
@@ -96,12 +67,10 @@ package body Test is
          First : constant Time := Clock + Milliseconds (100);
       begin
 
-         for I in Timers'Range loop
-            Timers (I).Next := First;
-            Timers (I).Set;
-         end loop;
+         T.Next := First;
+         T.Set;
 
-         S := (Set   => Count (N),
+         S := (Set   => 1,
                D_Min => Count'Last,
                D_Max => Count'First,
                TT => To_Count (First),
@@ -154,17 +123,7 @@ package body Test is
       SA : Stat_Access;
    begin
 
-      for I in Timers'Range loop
-
-         if I mod 2 = 1 then
-            Timers (I).Other := Timers (I + 1)'Access;
-         else
-            Timers (I).Other := Timers (I - 1)'Access;
-         end if;
-
-         Reset (Timers (I).Gen, Seed (I));
-
-      end loop;
+      Reset (T.Gen, Seed (1));
 
       New_Line;
       Put_Line ("SYNC");
