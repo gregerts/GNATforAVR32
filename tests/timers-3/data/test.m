@@ -2,14 +2,12 @@
 
 C = 32/60e6;
 
-a =    0;
-b =  200;
-m = 1000;
-n = 1000;
+a = 250;
+b = 750;
+m = 100;
+n = 100000;
 
 report = fopen("report.txt", "w");
-
-timers = 1;
   
 printf("Test: ");
 
@@ -26,42 +24,25 @@ system("make -C ../ install -s --no-print-directory 2> /dev/null");
 
 [data, t] = receive(n);
 
-set       = sum(data(:,1));
-cancelled = sum(data(:,2));
-expired   = sum(data(:,3));
+o = C * data(:,1);
+x = C * data(:,2);
 
-d_min  = C * min(data(:,4));
-d_max  = C * max(data(:,5));
+o_min  = min(o);
+o_max  = max(o);
+o_mean = mean(o);
+o_var  = var(o);
+o_svar = sqrt(o_var);
 
-x = C * data(:,6) / m;
-
-d_mean = mean(x);
-d_var  = var(x);
-d_svar = sqrt(d_var);
-
-util = data(:,8) ./ (32 * data(:,7));
-
-u_min = min(util);
-u_max = max(util);
-u_mean = mean(util);
-
-fprintf(report, "%d %d %d %d ", a, b, m);
-fprintf(report, "%d ", set - (cancelled + expired));
-fprintf(report, "%8.4e ", d_min);
-fprintf(report, "%8.4e ", d_max)
-fprintf(report, "%8.4e ", d_mean);
-fprintf(report, "%8.4e ", d_svar);
-fprintf(report, "%8.4e ", u_min);
-fprintf(report, "%8.4e ", u_max)
-fprintf(report, "%8.4e ", u_mean);
+fprintf(report, "%d %d %d ", a, b, m);
+fprintf(report, "%8.4e ", o_min);
+fprintf(report, "%8.4e ", o_max)
+fprintf(report, "%8.4e ", o_mean);
+fprintf(report, "%8.4e ", o_svar);
 fprintf(report, "%8.4f\n", t);
 
 fflush(report);
 
-save("test-1.dat", "t",
-     "data", "set", "cancelled", "expired",
-     "d_min", "d_max", "d_mean" ,"d_svar",
-     "util", "u_min", "u_max", "u_mean");
+save("test.dat", "data", "o", "x", "t");
 
 printf(" Done %f [s]\n", t);
 
