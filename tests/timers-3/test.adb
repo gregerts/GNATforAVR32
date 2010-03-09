@@ -1,23 +1,41 @@
-with Ada.Unchecked_Conversion;
-with Ada.Execution_Time;
-with System;
-with GNAT.IO;
-with Utilities;
-with Seeds;
-
-use GNAT.IO;
-use Ada.Execution_Time;
-use System;
-use Utilities;
-use Seeds;
+with Ada.Unchecked_Conversion, GNAT.IO, Utilities;
+use GNAT.IO, Utilities;
 
 package body Test is
 
+   -----------------
+   -- Definitions --
+   -----------------
+
    function To_Count is new Ada.Unchecked_Conversion (Time, Count);
    function To_Count is new Ada.Unchecked_Conversion (Time_Span, Count);
-   function To_Count is new Ada.Unchecked_Conversion (CPU_Time, Count);
 
-   procedure Put is new Put_Hex (Count);
+   procedure Put is new Put_Hex (Data);
+
+   T : Test_Event;
+
+   ---------
+   -- Set --
+   ---------
+
+   procedure Set (Event : in out Test_Event) is
+   begin
+      Event.X := Random (Event.Gen'Access);
+      Event.Next := Event.Next + Microseconds (Event.X);
+      Event.Set_Handler (Event.Next, Statistics.Handler'Access);
+   end Set;
+
+   --------------
+   -- Overhead --
+   --------------
+
+   function Overhead (Event : Test_Event) return Count is
+      Now : constant Time := Clock;
+   begin
+      pragma Assert (Now >= Event.Next);
+
+      return To_Count (Now - Event.Next);
+   end Overhead;
 
    ----------------
    -- Statistics --
@@ -30,12 +48,8 @@ package body Test is
       -------------
 
       procedure Handler (Event : in out Timing_Event) is
-
-         This : access Test_Event;
-
-         D : Count;
-         C : Boolean;
-
+         T : access Test_Event;
+         O : Count;
       begin
 
          pragma Assert (not Done);
@@ -43,47 +57,20 @@ package body Test is
          pragma Assert (Event.Current_Handler = null);
          pragma Assert (Timing_Event'Class (Event) in Test_Event);
 
-         This := Test_Event (Timing_Event'Class (Event))'Access;
+         T := Test_Event (Timing_Event'Class (Event))'Access;
 
-         D := This.D;
+         O := T.Overhead;
 
-         S (D_Min)   := Count'Min (D, S (D_Min));
-         S (D_Max)   := Count'Max (D, S (D_Max));
-         S (D_Sum)   := S (D_Sum) + D;
-         S (Expired) := S (Expired) + 1;
+         D (L, 1) := Data (O);
+         D (L, 2) := Data (T.X);
+         D (L, 3) := Data (To_Count (T.Next) mod 2**16);
 
-         if S (Expired) < Count (M) then
+         L := L + 1;
 
-            This.Other.Cancel_Handler (C);
-
-            if C then
-               S (Cancelled) := S (Cancelled) + 1;
-            end if;
-
-            This.Other.Next := This.Next;
-
-            This.Set;
-            This.Other.Set;
-
-            S (Set) := S (Set) + 2;
-
+         if L <= Data_Array'Last then
+            T.Set;
          else
-
-            for I in Timers'Range loop
-
-               Timers (I).Cancel_Handler (C);
-
-               if C then
-                  S (Cancelled) := S (Cancelled) + 1;
-               end if;
-
-            end loop;
-
-            S (TT) := To_Count (Ada.Real_Time.Clock) - S (TT);
-            S (ET) := To_Count (Interrupt_Clock (Interrupt_Priority'Last)) - S (ET);
-
             Done := True;
-
          end if;
 
       end Handler;
@@ -93,20 +80,12 @@ package body Test is
       -----------
 
       procedure Start is
-         First : constant Time := Clock + Milliseconds (100);
       begin
 
-         for I in Timers'Range loop
-            Timers (I).Next := First;
-            Timers (I).Set;
-         end loop;
+         L := Data_Array'First;
 
-         S := (Set   => Count (N),
-               D_Min => Count'Last,
-               D_Max => Count'First,
-               TT => To_Count (First),
-               ET => To_Count (Interrupt_Clock (Interrupt_Priority'Last)),
-               others => 0);
+         T.Next := Clock + Milliseconds (500);
+         T.Set;
 
          Done := False;
 
@@ -116,55 +95,22 @@ package body Test is
       -- Wait --
       ----------
 
-      entry Wait (SA : out Stat_Access) when Done is
+      entry Wait (DA : out Data_Access) when Done is
       begin
-         SA := S'Access;
+         DA := D'Access;
       end Wait;
 
    end Statistics;
-
-   ---------
-   -- Set --
-   ---------
-
-   procedure Set (Event : in out Test_Event)
-   is
-   begin
-      Event.Next := Event.Next + Microseconds (Random (Event.Gen'Access));
-      Event.Set_Handler (Event.Next, Statistics.Handler'Access);
-   end Set;
-
-   -------
-   -- D --
-   -------
-
-   function D (Event : Test_Event) return Count is
-      T : constant Time := Clock;
-   begin
-      pragma Assert (T >= Event.Next);
-
-      return To_Count (T - Event.Next);
-   end D;
 
    ---------
    -- Run --
    ---------
 
    procedure Run is
-      SA : Stat_Access;
+      DA : Data_Access;
    begin
 
-      for I in Timers'Range loop
-
-         if I mod 2 = 1 then
-            Timers (I).Other := Timers (I + 1)'Access;
-         else
-            Timers (I).Other := Timers (I - 1)'Access;
-         end if;
-
-         Reset (Timers (I).Gen, Seed (I));
-
-      end loop;
+      Reset (T.Gen, 1);
 
       New_Line;
       Put_Line ("SYNC");
@@ -172,19 +118,15 @@ package body Test is
       loop
 
          Statistics.Start;
+         Statistics.Wait (DA);
 
-         Statistics.Wait (SA);
-
-         for I in Stat loop
-
-            Put (SA (I));
-
-            if I = Stat'Last then
-               New_Line;
-            else
-               Put (':');
-            end if;
-
+         for I in Data_Array'Range (1) loop
+            Put (DA (I, 1));
+            Put (':');
+            Put (DA (I, 2));
+            Put (':');
+            Put (DA (I, 3));
+            New_Line;
          end loop;
 
       end loop;
