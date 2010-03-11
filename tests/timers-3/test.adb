@@ -7,35 +7,47 @@ package body Test is
    -- Definitions --
    -----------------
 
+   package T_Random is new Quick_Random (A, B);
+   use T_Random;
+
+   type Count is mod 2**64;
+   for Count'Size use 64;
+
+   type Data is mod 2**16;
+   for Data'Size use 16;
+
+   type Data_Array is array (1 .. N, 1 .. 3) of Data;
+   type Data_Access is access all Data_Array;
+
    function To_Count is new Ada.Unchecked_Conversion (Time, Count);
    function To_Count is new Ada.Unchecked_Conversion (Time_Span, Count);
 
    procedure Put is new Put_Hex (Data);
 
-   T : Test_Event;
+   ----------------
+   -- Statistics --
+   ----------------
 
-   ---------
-   -- Set --
-   ---------
+   protected Statistics is
 
-   procedure Set (Event : in out Test_Event) is
-   begin
-      Event.X := Random (Event.Gen'Access);
-      Event.Next := Event.Next + Microseconds (Event.X);
-      Event.Set_Handler (Event.Next, Statistics.Handler'Access);
-   end Set;
+      pragma Priority (System.Interrupt_Priority'Last);
 
-   --------------
-   -- Overhead --
-   --------------
+      procedure Handler (Event : in out Timing_Event);
 
-   function Overhead (Event : Test_Event) return Count is
-      Now : constant Time := Clock;
-   begin
-      pragma Assert (Now >= Event.Next);
+      procedure Start;
 
-      return To_Count (Now - Event.Next);
-   end Overhead;
+      entry Wait (DA : out Data_Access);
+
+   private
+      T : Timing_Event;
+      L : Integer;
+      X : Integer;
+      D : aliased Data_Array;
+      Gen : aliased Generator;
+      Next : Time;
+      Done : Boolean := False;
+      First : Boolean := True;
+   end Statistics;
 
    ----------------
    -- Statistics --
@@ -48,27 +60,24 @@ package body Test is
       -------------
 
       procedure Handler (Event : in out Timing_Event) is
-         T : access Test_Event;
-         O : Count;
+         Now : constant Time := Clock;
       begin
 
          pragma Assert (not Done);
          pragma Assert (Event.Time_Of_Event = Time_First);
          pragma Assert (Event.Current_Handler = null);
-         pragma Assert (Timing_Event'Class (Event) in Test_Event);
+         pragma Assert (Next <= Now);
 
-         T := Test_Event (Timing_Event'Class (Event))'Access;
-
-         O := T.Overhead;
-
-         D (L, 1) := Data (O);
-         D (L, 2) := Data (T.X);
-         D (L, 3) := Data (To_Count (T.Next) mod 2**16);
+         D (L, 1) := Data (To_Count (Now - Next));
+         D (L, 2) := Data (X);
+         D (L, 3) := Data (To_Count (Next) mod 2**16);
 
          L := L + 1;
 
          if L <= Data_Array'Last then
-            T.Set;
+            X := Random (Gen'Access);
+            Next := Next + Microseconds (X);
+            T.Set_Handler (Next, Handler'Access);
          else
             Done := True;
          end if;
@@ -82,10 +91,16 @@ package body Test is
       procedure Start is
       begin
 
+         if First then
+            Reset (Gen, 1);
+            First := False;
+         end if;
+
          L := Data_Array'First;
 
-         T.Next := Clock + Milliseconds (500);
-         T.Set;
+         X := Random (Gen'Access);
+         Next := Clock + Microseconds (10_000 + X);
+         T.Set_Handler (Next, Handler'Access);
 
          Done := False;
 
@@ -110,8 +125,6 @@ package body Test is
       DA : Data_Access;
    begin
 
-      Reset (T.Gen, 1);
-
       New_Line;
       Put_Line ("SYNC");
 
@@ -121,12 +134,14 @@ package body Test is
          Statistics.Wait (DA);
 
          for I in Data_Array'Range (1) loop
-            Put (DA (I, 1));
-            Put (':');
-            Put (DA (I, 2));
-            Put (':');
-            Put (DA (I, 3));
-            New_Line;
+            for J in Data_Array'Range (2) loop
+               Put (DA (I, J));
+               if J < Data_Array'Last (2) then
+                  Put (':');
+               else
+                  New_Line;
+               end if;
+            end loop;
          end loop;
 
       end loop;
