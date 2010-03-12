@@ -966,10 +966,10 @@ package System.BB.Peripherals.Registers is
    ---------------------
 
    Clock : aliased TC_Channel_Interface;
-   for Clock'Address use Timer_Counter_2_Address;
+   for Clock'Address use Timer_Counter_1_Address;
 
    Alarm : aliased TC_Channel_Interface;
-   for Alarm'Address use Timer_Counter_1_Address;
+   for Alarm'Address use Timer_Counter_2_Address;
 
    --------------------
    -- GPIO Pin Array --

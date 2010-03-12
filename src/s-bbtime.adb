@@ -52,6 +52,10 @@ package body System.BB.Time is
    -- Local definitions --
    -----------------------
 
+   Alarm_Interrupt : constant := System.BB.Peripherals.TC_2;
+   Clock_Interrupt : constant := System.BB.Peripherals.TC_1;
+   --  Interrupt ID's for alarm and clock interrupt
+
    Clock_Period : constant := 2 ** Timer_Interval'Size;
    --  Period between clock overflows
 
@@ -113,7 +117,7 @@ package body System.BB.Time is
       --  Make sure we are handling the right interrupt and there is
       --  an event pending.
 
-      pragma Assert (Interrupt = System.BB.Peripherals.TC_1);
+      pragma Assert (Interrupt = Clock_Interrupt);
       pragma Assert (Pending_Alarm);
       pragma Assert (Alarm /= null);
       pragma Assert (Alarm.Timeout <= Clock);
@@ -261,7 +265,7 @@ package body System.BB.Time is
    begin
       --  Check that we are in the right handler
 
-      pragma Assert (Interrupt = System.BB.Peripherals.TC_2);
+      pragma Assert (Interrupt = Clock_Interrupt);
 
       Peripherals.Clear_Clock_Interrupt;
 
@@ -299,15 +303,11 @@ package body System.BB.Time is
 
    procedure Initialize_Timers is
    begin
-      --  Install clock handler
 
-      Interrupts.Attach_Handler
-        (Clock_Handler'Access, System.BB.Peripherals.TC_2);
+      --  Install clock and alarm interrupt handlers
 
-      --  Install alarm handler
-
-      Interrupts.Attach_Handler
-        (Alarm_Wrapper'Access, System.BB.Peripherals.TC_1);
+      Interrupts.Attach_Handler (Clock_Handler'Access, Clock_Interrupt);
+      Interrupts.Attach_Handler (Alarm_Wrapper'Access, Alarm_Interrupt);
 
    end Initialize_Timers;
 
