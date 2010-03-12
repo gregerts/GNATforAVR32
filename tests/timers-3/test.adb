@@ -16,7 +16,7 @@ package body Test is
    type Data is mod 2**16;
    for Data'Size use 16;
 
-   type Data_Array is array (1 .. N, 1 .. 3) of Data;
+   type Data_Array is array (1 .. N, 1 .. 4) of Data;
    type Data_Access is access all Data_Array;
 
    function To_Count is new Ada.Unchecked_Conversion (Time, Count);
@@ -63,14 +63,13 @@ package body Test is
          Now : constant Time := Clock;
       begin
 
-         pragma Assert (not Done);
-         pragma Assert (Event.Time_Of_Event = Time_First);
-         pragma Assert (Event.Current_Handler = null);
          pragma Assert (Next <= Now);
+         pragma Assert (To_Count (Now - Next) < 2**16);
 
          D (L, 1) := Data (To_Count (Now - Next));
          D (L, 2) := Data (X);
          D (L, 3) := Data (To_Count (Next) mod 2**16);
+         D (L, 4) := D (L, 1) xor D (L, 2) xor D (L, 3);
 
          L := L + 1;
 
@@ -99,7 +98,7 @@ package body Test is
          L := Data_Array'First;
 
          X := Random (Gen'Access);
-         Next := Clock + Microseconds (10_000 + X);
+         Next := Clock + Microseconds (1000 + X);
          T.Set_Handler (Next, Handler'Access);
 
          Done := False;
