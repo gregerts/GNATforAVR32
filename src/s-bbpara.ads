@@ -101,7 +101,7 @@ package System.BB.Parameters is
    -- USART I / 0 channel --
    -------------------------
 
-   USART_Baudrate : constant := 57600;
+   USART_Baudrate : constant := 115200;
 
    ------------
    -- Stacks --
