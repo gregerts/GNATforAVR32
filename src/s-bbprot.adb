@@ -138,10 +138,9 @@ package body System.BB.Protection is
          --  one that has been temporarily added to the ready queue).
 
          loop
-            --  Allow all external interrupts for a while
+            --  Wait for an interrupt
 
-            CPU_Primitives.Enable_Interrupts (0);
-            CPU_Primitives.Disable_Interrupts;
+            CPU_Primitives.Wait_For_Interrupts;
 
             --  Exit when this thread is runnable or another is ready
 
@@ -184,6 +183,7 @@ package body System.BB.Protection is
 
    procedure Leave_Kernel_No_Change is
    begin
+      pragma Assert (not Context_Switch_Needed);
       CPU_Primitives.Restore_Interrupts;
    end Leave_Kernel_No_Change;
 

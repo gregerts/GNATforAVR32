@@ -143,13 +143,34 @@ package body System.BB.CPU_Primitives is
                "mtsr    0, r8"         & ASCII.LF & ASCII.HT &
                "nop"                   & ASCII.LF & ASCII.HT &
                "nop"                   & ASCII.LF & ASCII.HT &
-               "nop"                   & ASCII.LF & ASCII.HT &
                "nop",
                Inputs => Unsigned_32'Asm_Input ("r", Mask),
                Clobber => "r8, cc, memory",
                Volatile => True);
 
    end Enable_Interrupts;
+
+   -------------------------
+   -- Wait_For_Interrupts --
+   -------------------------
+
+   procedure Wait_For_Interrupts is
+   begin
+      SMC.Asm ("mov     r9, 0"         & ASCII.LF & ASCII.HT &
+               "mfsr    r8, 0"         & ASCII.LF & ASCII.HT &
+               "bfins   r8, r9, 16, 5" & ASCII.LF & ASCII.HT &
+               "mtsr    0, r8"         & ASCII.LF & ASCII.HT &
+               "nop"                   & ASCII.LF & ASCII.HT &
+               "nop"                   & ASCII.LF & ASCII.HT &
+               "nop"                   & ASCII.LF & ASCII.HT &
+               "sleep   0"             & ASCII.LF & ASCII.HT &
+               "ssrf    16"            & ASCII.LF & ASCII.HT &
+               "nop"                   & ASCII.LF & ASCII.HT &
+               "nop"                   & ASCII.LF & ASCII.HT &
+               "nop",
+               Clobber => "r8, r9, cc, memory",
+               Volatile => True);
+   end Wait_For_Interrupts;
 
    ---------------
    -- Get_Count --
