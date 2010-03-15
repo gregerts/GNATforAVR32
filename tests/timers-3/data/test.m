@@ -2,60 +2,48 @@
 
 C = 32/60e6;
 
-a =    0;
-b = 3000;
-m = 1000;
-n =  100;
+a = 250;
+b = 750;
+m = 100;
+n = 100000;
 
 report = fopen("report.txt", "w");
-
-for i = 1:256
-
-  timers = 2*i;
   
-  printf("Test %d: ", i);
+printf("Test: ");
 
-  file = fopen("../test_instance.ads", "w");
+file = fopen("../test_instance.ads", "w");
 
-  fprintf(file, "with Test;\n");
-  fprintf(file, "\n");
-  fprintf(file, "package Test_Instance is new Test (%d, %d, %d, %d);\n",
-	  a, b*i, timers, m);
+fprintf(file, "with Test;\n");
+fprintf(file, "\n");
+fprintf(file, "package Test_Instance is new Test (%d, %d, %d);\n", a, b, m);
 
-  fclose(file);
+fclose(file);
 
-  system("make -C ../         -s --no-print-directory 2> /dev/null");
-  system("make -C ../ install -s --no-print-directory 2> /dev/null");
+system("make -C ../         -s --no-print-directory 2> /dev/null");
+system("make -C ../ install -s --no-print-directory 2> /dev/null");
 
-  [data, t] = receive(n);
+[data, t] = receive(n);
 
-  set       = sum(data(:,1));
-  cancelled = sum(data(:,2));
-  expired   = sum(data(:,3));
+o = C * data(:,1);
+x = C * data(:,2);
 
-  d_min  = C * min(data(:,4));
-  d_max  = C * max(data(:,5));
-  d_mean = C * mean(data(:,6)) / m;
-  d_var  = C^2 * sum(data(:,7)) / (n - 1) - n / (n - 1) * d_mean^2;
-  d_svar = sqrt(d_var);
+o_min  = min(o);
+o_max  = max(o);
+o_mean = mean(o);
+o_var  = var(o);
+o_svar = sqrt(o_var);
 
-  fprintf(report, "%d %d %d %d ", a, b*i, timers, m);
-  fprintf(report, "%d %d %d ", set, cancelled, expired);
-  fprintf(report, "%8.4e ", d_min);
-  fprintf(report, "%8.4e ", d_max)
-  fprintf(report, "%8.4e ", d_mean);
-  fprintf(report, "%8.4e ", d_svar);
-  fprintf(report, "%8.4f\n", t);
+fprintf(report, "%d %d %d ", a, b, m);
+fprintf(report, "%8.4e ", o_min);
+fprintf(report, "%8.4e ", o_max)
+fprintf(report, "%8.4e ", o_mean);
+fprintf(report, "%8.4e ", o_svar);
+fprintf(report, "%8.4f\n", t);
 
-  fflush(report);
+fflush(report);
 
-  save(sprintf("test-%d.dat", i),
-       "timers", "t",
-       "data", "set", "cancelled", "expired",
-       "d_min", "d_max", "d_mean" ,"d_svar");
+save("test.dat", "data", "o", "x", "t");
 
-  printf(" Done %f [s]\n", t);
-
-endfor
+printf(" Done %f [s]\n", t);
 
 fclose (report);

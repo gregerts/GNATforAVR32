@@ -504,7 +504,7 @@ package body System.BB.Peripherals is
 
    function Pending_Clock return Boolean is
    begin
-      return Requests (14) > 3;
+      return (Requests (14) and 2) > 0;
    end Pending_Clock;
 
    ----------------
