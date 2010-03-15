@@ -96,7 +96,7 @@ CHMOD       = chmod
 
 # ------------------------------------------	
 
-all: gnat.adc libgnat.a libgnarl.a
+all: gnat.adc libgnat.a libgnarl.a ada_crt0.o
 
 gnat.adc:
 	echo "pragma Profile (Ravenscar);" > gnat.adc
@@ -108,6 +108,9 @@ libgnat.a: $(LIBGNAT_OBJS) $(LIBGNAT_ALIS)
 libgnarl.a: $(LIBGNARL_OBJS) $(LIBGNARL_ALIS)
 	$(AR) cr $@ $(LIBGNARL_OBJS)
 	$(RANLIB) $@
+
+ada_crt0.o: ada_crt0.S
+	$(CC) -c ada_crt0.S
 
 s-traceb.ali s-traceb.o: s-traceb.adb s-traceb.ads
 	$(CC) -c $(ADA_FLAGS) -fno-optimize-sibling-calls s-traceb.adb
@@ -142,6 +145,8 @@ install:
 	$(CHMOD) a-wx $(INSTALL_DIR)/adainclude/*.adb
 	$(CHMOD) a-wx $(INSTALL_DIR)/adalib/*.a
 	$(CHMOD) a-wx $(INSTALL_DIR)/adalib/*.ali
+	$(CP) -r ada_crt0.o $(INSTALL_DIR)
+	$(CP) -r *.x $(INSTALL_DIR)
 
 clean:
 	$(RM) *.o
