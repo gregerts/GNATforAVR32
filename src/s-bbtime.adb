@@ -282,46 +282,32 @@ package body System.BB.Time is
      (Alarm   : Alarm_Id;
       Timeout : Time)
    is
-      Aux : Alarm_Id := Last_Alarm'Access;
+      Aux : Alarm_Id := First_Alarm;
    begin
-
-      --  The alarm has to be initialized and not be set
-
-      pragma Assert (Alarm.Handler /= null and Alarm.Next = null);
 
       --  Set alarm timeout
 
       Alarm.Timeout := Timeout;
 
-      --  Search queue from end for element Aux where Aux.Prev = null
-      --  (first in queue) or Aux.Prev.Timeout <= Alarm.Timeout
+      --  Search for element Aux where Aux.Timeout > Timeout
 
-      while Aux.Prev /= null and then Aux.Prev.Timeout > Timeout loop
-         Aux := Aux.Prev;
+      while Aux.Timeout <= Timeout loop
+            Aux := Aux.Next;
       end loop;
 
       --  Insert before Aux (always before Last_Alarm)
 
       Alarm.Next := Aux;
       Alarm.Prev := Aux.Prev;
-      Aux.Prev   := Alarm;
+      Aux.Prev := Alarm;
 
-      --  If Alarm.Prev is null then Alarm is first in queue
+      --  Check if this alarm is to be first in queue
 
       if Alarm.Prev = null then
-
-         pragma Assert (Aux = First_Alarm);
-
-         --  Set First_Alarm to Alarm and update alarm timer
-
          First_Alarm := Alarm;
-
          Update_Alarm_Timer;
-
       else
-
          Alarm.Prev.Next := Alarm;
-
       end if;
 
    end Set;
