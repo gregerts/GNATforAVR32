@@ -90,24 +90,27 @@ package System.BB.TMU is
    -- Operations --
    ----------------
 
-   function Acquire_Interrupt_Timer
-     (Priority : Interrupt_Priority) return Timer_Id;
-   --  Acquire the timer of the given interrupt priority, returns null
+   procedure Acquire_Interrupt_Timer
+     (Priority : Interrupt_Priority;
+      Handler  : Timer_Handler;
+      Data     : System.Address;
+      TM       : out Timer_Id);
+   --  Initialize timer of the given interrupt priority, returns null
    --  if the timer is already acquired.
 
-   function Acquire_Thread_Timer (Id : Thread_Id) return Timer_Id;
-   --  Acquire the timer of the given thread, returns null if the
-   --  timer is already acquired.
+   procedure Acquire_Thread_Timer
+     (Id      : Thread_Id;
+      Handler : Timer_Handler;
+      Data    : System.Address;
+      TM      : out Timer_Id);
+   --  Initialize timer of the given thread, returns null if the timer
+   --  is already acquired.
 
    procedure Cancel_Handler (TM : Timer_Id);
    --  Cancels handler of TM
 
    function Clock (TM : Timer_Id) return CPU_Time;
    --  Get execution time of the given timer
-
-   function Idle_Clock return CPU_Time;
-   pragma Inline (Idle_Clock);
-   --  Returns the execution time used by the pseudo idle thread
 
    function Interrupt_Clock
      (Priority : Interrupt_Priority) return CPU_Time;
@@ -117,9 +120,7 @@ package System.BB.TMU is
 
    procedure Set_Handler
      (TM      : Timer_Id;
-      Timeout : CPU_Time;
-      Handler : Timer_Handler;
-      Data    : System.Address);
+      Timeout : CPU_Time);
    --  Sets the timer, may overwrite an already pending timeout
 
    function Thread_Clock (Id : Thread_Id) return CPU_Time;
@@ -179,11 +180,9 @@ private
          Data : System.Address;
          --  Argument to be given when calling handler
 
-         Active : Boolean;
-         --  Flag indicating if the timer is active (running)
-
-         Acquired : Boolean;
-         --  Flag indicating if the timer is acquired
+         Acquired, Active, Set : Boolean;
+         --  Flags indicating if the timer is acquired, active
+         --  (running) and set, respectivly.
 
       end record;
 

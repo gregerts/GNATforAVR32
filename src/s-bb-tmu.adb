@@ -81,9 +81,6 @@ package body System.BB.TMU is
    -- Local subprograms --
    -----------------------
 
-   function Acquire (TM : Timer_Id) return Timer_Id;
-   --  Acquires a timer, returns null if already acquired
-
    procedure Compare_Handler (Id : Interrupts.Interrupt_ID);
    --  Handler for the COMPARE interrupt
 
@@ -101,37 +98,28 @@ package body System.BB.TMU is
    procedure Swap_Timer (TM_A, TM_B : Timer_Id);
    --  Swap timer from TM_A to TM_B
 
-   -------------
-   -- Acquire --
-   -------------
-
-   function Acquire (TM : Timer_Id) return Timer_Id is
-      TM_R : Timer_Id := null;
-   begin
-
-      if not TM.Acquired then
-         TM.Acquired := True;
-         TM_R := TM;
-      end if;
-
-      return TM_R;
-
-   end Acquire;
-
    ----------------------------
    -- Aquire_Interrupt_Timer --
    ----------------------------
 
-   function Acquire_Interrupt_Timer
-     (Priority : Interrupt_Priority) return Timer_Id
+   procedure Acquire_Interrupt_Timer
+     (Priority : Interrupt_Priority;
+      Handler  : Timer_Handler;
+      Data     : System.Address;
+      TM       : out Timer_Id)
    is
    begin
+      pragma Assert (Handler /= null);
+
       --  Timer for the highest interrupt level is not supported
 
-      if Priority < Interrupt_Priority'Last then
-         return Acquire (Interrupt_TM (Priority)'Access);
+      if Priority < Interrupt_Priority'Last
+        and then Interrupt_TM (Priority).Handler = null then
+         TM := Interrupt_TM (Priority)'Access;
+         TM.Handler := Handler;
+         TM.Data := Data;
       else
-         return null;
+         TM := null;
       end if;
 
    end Acquire_Interrupt_Timer;
@@ -140,9 +128,23 @@ package body System.BB.TMU is
    -- Acquire_Thread_Timer --
    --------------------------
 
-   function Acquire_Thread_Timer (Id : Thread_Id) return Timer_Id is
+   procedure Acquire_Thread_Timer
+     (Id      : Thread_Id;
+      Handler : Timer_Handler;
+      Data    : System.Address;
+      TM      : out Timer_Id)
+   is
    begin
-      return Acquire (Id.TM'Access);
+      pragma Assert (Handler /= null);
+
+      if Id.TM.Handler = null then
+         TM := Id.TM'Access;
+         TM.Handler := Handler;
+         TM.Data := Data;
+      else
+         TM := null;
+      end if;
+
    end Acquire_Thread_Timer;
 
    --------------------
@@ -154,11 +156,9 @@ package body System.BB.TMU is
 
       pragma Assert (TM /= null);
 
-      if TM.Handler /= null then
+      if TM.Set then
 
          TM.Timeout := CPU_Time'First;
-         TM.Handler := null;
-         TM.Data    := Null_Address;
 
          if TM.Active then
             CPU.Adjust_Compare (Max_Compare);
@@ -220,18 +220,12 @@ package body System.BB.TMU is
 
       --  Check if the timer is set and has expired
 
-      if TM.Handler /= null and then TM.Timeout <= TM.Base_Time then
+      if TM.Set and then TM.Timeout <= TM.Base_Time then
 
-         declare
-            Handler : constant Timer_Handler  := TM.Handler;
-            Data    : constant System.Address := TM.Data;
-         begin
-            TM.Timeout := CPU_Time'First;
-            TM.Handler := null;
-            TM.Data    := Null_Address;
+         TM.Timeout := CPU_Time'First;
+         TM.Set     := False;
 
-            Handler (Data);
-         end;
+         TM.Handler (TM.Data);
 
       end if;
 
@@ -329,7 +323,7 @@ package body System.BB.TMU is
       B : constant CPU_Time := TM.Base_Time;
    begin
 
-      if TM.Handler = null then
+      if not TM.Set then
          return Max_Compare;
       elsif TM.Timeout > B then
          return Word (CPU_Time'Min (TM.Timeout - B, Max_Compare));
@@ -338,15 +332,6 @@ package body System.BB.TMU is
       end if;
 
    end Get_Compare;
-
-   ----------------
-   -- Idle_Clock --
-   ----------------
-
-   function Idle_Clock return CPU_Time is
-   begin
-      return Clock (Idle_TM'Access);
-   end Idle_Clock;
 
    ----------------------
    -- Initialize_Timer --
@@ -469,19 +454,16 @@ package body System.BB.TMU is
 
    procedure Set_Handler
      (TM      : Timer_Id;
-      Timeout : CPU_Time;
-      Handler : Timer_Handler;
-      Data    : System.Address)
+      Timeout : CPU_Time)
    is
    begin
       pragma Assert (TM /= null);
-      pragma Assert (Handler /= null);
+      pragma Assert (TM.Handler /= null);
 
       --  Set handler
 
-      TM.Handler := Handler;
       TM.Timeout := Timeout;
-      TM.Data    := Data;
+      TM.Set := True;
 
       --  Adjust COMPARE if the timer is active
 

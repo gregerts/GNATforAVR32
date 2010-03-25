@@ -244,9 +244,15 @@ package body System.Task_Primitives.Operations is
    -- Acquire_Task_Timer --
    ------------------------
 
-   function Acquire_Task_Timer (T : ST.Task_Id) return TMU.Timer_Id is
+   procedure Acquire_Task_Timer
+     (T       : ST.Task_Id;
+      Handler : System.BB.TMU.Timer_Handler;
+      Data    : System.Address;
+      TM      : out System.BB.TMU.Timer_Id)
+   is
    begin
-      return TMU.Acquire_Thread_Timer (TMU.Thread_Id (T.Common.LL.Thread));
+      TMU.Acquire_Thread_Timer
+        (TMU.Thread_Id (T.Common.LL.Thread), Handler, Data, TM);
    end Acquire_Task_Timer;
 
    ----------------

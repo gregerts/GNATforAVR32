@@ -130,9 +130,15 @@ package body Ada.Execution_Time.Timers is
       Protection.Enter_Kernel;
 
       if TM in Interrupt_Timer'Class then
-         TM.Id := TMU.Acquire_Interrupt_Timer (Interrupt_Timer (TM).I);
+         TMU.Acquire_Interrupt_Timer (Interrupt_Timer (TM).I,
+                                      Execute_Handler'Access,
+                                      TM'Address,
+                                      TM.Id);
       else
-         TM.Id := STPO.Acquire_Task_Timer (To_Task_Id (TM.T.all));
+         STPO.Acquire_Task_Timer (To_Task_Id (TM.T.all),
+                                  Execute_Handler'Access,
+                                  TM'Address,
+                                  TM.Id);
       end if;
 
       Protection.Leave_Kernel_No_Change;
@@ -182,10 +188,7 @@ package body Ada.Execution_Time.Timers is
       TM.Handler := Handler;
 
       if Handler /= null then
-         TMU.Set_Handler (TM.Id,
-                          TMU.CPU_Time (At_Time),
-                          Execute_Handler'Access,
-                          TM'Address);
+         TMU.Set_Handler (TM.Id, TMU.CPU_Time (At_Time));
       else
          TMU.Cancel_Handler (TM.Id);
       end if;
