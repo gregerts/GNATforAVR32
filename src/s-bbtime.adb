@@ -52,6 +52,10 @@ package body System.BB.Time is
    -- Local definitions --
    -----------------------
 
+   Alarm_Interrupt : constant := Peripherals.TC_2;
+   Clock_Interrupt : constant := Peripherals.TC_1;
+   --  Clock and alarm interrupts
+
    Clock_Period : constant := 2 ** Timer_Interval'Size;
    --  Period between clock overflows
 
@@ -179,8 +183,8 @@ package body System.BB.Time is
 
       --  Make sure we are handling the right interrupt
 
-      pragma Assert (Interrupt = Peripherals.TC_1
-                       or Interrupt = Peripherals.TC_2);
+      pragma Assert (Interrupt = Alarm_Interrupt
+                       or Interrupt = Clock_Interrupt);
 
       --  Clear alarm interrupt, possible pending alarm is handled
 
@@ -269,8 +273,8 @@ package body System.BB.Time is
       --  Install clock handler for both clock overflow and hardware
       --  alarm timer interrupts.
 
-      Interrupts.Attach_Handler (Clock_Handler'Access, Peripherals.TC_1);
-      Interrupts.Attach_Handler (Clock_Handler'Access, Peripherals.TC_2);
+      Interrupts.Attach_Handler (Clock_Handler'Access, Alarm_Interrupt);
+      Interrupts.Attach_Handler (Clock_Handler'Access, Clock_Interrupt);
 
    end Initialize_Timers;
 

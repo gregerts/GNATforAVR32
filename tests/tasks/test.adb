@@ -1,5 +1,5 @@
-with GNAT.IO, Epoch_Support, Short_Random, Utilities, Error;
-use Epoch_Support, Short_Random, Utilities;
+with GNAT.IO, Epoch_Support, Short_Random, Seeds, Utilities, Error;
+use Epoch_Support, Short_Random, Seeds, Utilities;
 
 package body Test is
 
@@ -12,17 +12,17 @@ package body Test is
       Next : Time := Epoch;
    begin
 
-      Reset (Gen, Pri);
+      Reset (Gen, Seed (Pri));
 
       loop
 
          delay until Next;
 
-         Set_Pin (Port_B, Pin);
+         Clear_Pin (Port_B, Pin);
 
          Busy_Wait (Random (Gen'Access) / 2);
 
-         Clear_Pin (Port_B, Pin);
+         Set_Pin (Port_B, Pin);
 
          Next := Clock + Microseconds (4 * Random (Gen'Access));
 
@@ -41,7 +41,7 @@ begin
 
    --  Configure GPIO pins for LEDs
 
-   Configure_GPIO (Port_B, Range_To_Mask (27, 30));
+   Configure_GPIO (Port_B, Range_To_Mask (27, 30), Output => True);
 
    Clear_Pins (Port_B, Range_To_Mask (27, 30));
 

@@ -68,6 +68,9 @@ package System.BB.Peripherals.Registers is
    type Scaler_6 is mod 2 ** 6;
    for Scaler_6'Size use 6;
 
+   type Scaler_7 is mod 2 ** 7;
+   for Scaler_7'Size use 7;
+
    type Scaler_8 is mod 2 ** 8;
    for Scaler_8'Size use 8;
 
@@ -83,96 +86,11 @@ package System.BB.Peripherals.Registers is
    type Scaler_16 is mod 2 ** 16;
    for Scaler_16'Size use 16;
 
+   type Scaler_24 is mod 2 ** 24;
+   for Scaler_24'Size use 24;
+
    type Scaler_32 is mod 2 ** 32;
    for Scaler_32'Size use 32;
-
-   type Reserved_1 is array (0 .. 0) of Boolean;
-   for Reserved_1'Size use 1;
-   pragma Pack (Reserved_1);
-
-   type Reserved_2 is array (0 .. 1) of Boolean;
-   for Reserved_2'Size use 2;
-   pragma Pack (Reserved_2);
-
-   type Reserved_3 is array (0 .. 2) of Boolean;
-   for Reserved_3'Size use 3;
-   pragma Pack (Reserved_3);
-
-   type Reserved_4 is array (0 .. 3) of Boolean;
-   for Reserved_4'Size use 4;
-   pragma Pack (Reserved_4);
-
-   type Reserved_5 is array (0 .. 4) of Boolean;
-   for Reserved_5'Size use 5;
-   pragma Pack (Reserved_5);
-
-   type Reserved_7 is array (0 .. 6) of Boolean;
-   for Reserved_7'Size use 7;
-   pragma Pack (Reserved_7);
-
-   type Reserved_8 is array (0 .. 7) of Boolean;
-   for Reserved_8'Size use 8;
-   pragma Pack (Reserved_8);
-
-   type Reserved_12 is array (0 .. 11) of Boolean;
-   for Reserved_12'Size use 12;
-   pragma Pack (Reserved_12);
-
-   type Reserved_13 is array (0 .. 12) of Boolean;
-   for Reserved_13'Size use 13;
-   pragma Pack (Reserved_13);
-
-   type Reserved_16 is array (0 .. 15) of Boolean;
-   for Reserved_16'Size use 16;
-   pragma Pack (Reserved_16);
-
-   type Reserved_20 is array (0 .. 19) of Boolean;
-   for Reserved_20'Size use 20;
-   pragma Pack (Reserved_20);
-
-   type Reserved_21 is array (0 .. 20) of Boolean;
-   for Reserved_21'Size use 21;
-   pragma Pack (Reserved_21);
-
-   type Reserved_22 is array (0 .. 21) of Boolean;
-   for Reserved_22'Size use 22;
-   pragma Pack (Reserved_22);
-
-   type Reserved_23 is array (0 .. 22) of Boolean;
-   for Reserved_23'Size use 23;
-   pragma Pack (Reserved_23);
-
-   type Reserved_24 is array (0 .. 23) of Boolean;
-   for Reserved_24'Size use 24;
-   pragma Pack (Reserved_24);
-
-   type Reserved_25 is array (0 .. 24) of Boolean;
-   for Reserved_25'Size use 25;
-   pragma Pack (Reserved_25);
-
-   type Reserved_26 is array (0 .. 25) of Boolean;
-   for Reserved_26'Size use 26;
-   pragma Pack (Reserved_26);
-
-   type Reserved_28 is array (0 .. 27) of Boolean;
-   for Reserved_28'Size use 28;
-   pragma Pack (Reserved_28);
-
-   type Reserved_29 is array (0 .. 28) of Boolean;
-   for Reserved_29'Size use 29;
-   pragma Pack (Reserved_29);
-
-   type Reserved_30 is array (0 .. 29) of Boolean;
-   for Reserved_30'Size use 30;
-   pragma Pack (Reserved_30);
-
-   type Reserved_31 is array (0 .. 30) of Boolean;
-   for Reserved_31'Size use 31;
-   pragma Pack (Reserved_31);
-
-   type Reserved_32 is array (0 .. 31) of Boolean;
-   for Reserved_32'Size use 32;
-   pragma Pack (Reserved_32);
 
    --------------------------------------------
    --  Addresses of memory mapped registers  --
@@ -223,18 +141,20 @@ package System.BB.Peripherals.Registers is
 
    type Main_Clock_Control_Register is
       record
-         Main_Clock_Select   : Scaler_2;
-         Enable_Oscillator_0 : Boolean;
-         Enable_Oscillator_1 : Boolean;
-         Reserved            : Reserved_28;
+         Clock_Select : Scaler_2  := 0;
+         Enable_Osc_0 : Boolean   := False;
+         Enable_Osc_1 : Boolean   := False;
+         Unused_A     : Scaler_12 := 0;
+         Unused_B     : Scaler_16 := 0;
       end record;
 
    for Main_Clock_Control_Register use
       record
-         Main_Clock_Select   at 0 range 30 .. 31;
-         Enable_Oscillator_0 at 0 range 29 .. 29;
-         Enable_Oscillator_1 at 0 range 28 .. 28;
-         Reserved            at 0 range 0 .. 27;
+         Clock_Select at 0 range 30 .. 31;
+         Enable_Osc_0 at 0 range 29 .. 29;
+         Enable_Osc_1 at 0 range 28 .. 28;
+         Unused_A     at 0 range 16 .. 27;
+         Unused_B     at 0 range 0 .. 15;
       end record;
 
    for Main_Clock_Control_Register'Size use 32;
@@ -247,139 +167,143 @@ package System.BB.Peripherals.Registers is
 
    type Clock_Select_Register is
       record
-         CPU_Select : Scaler_3;
-         Reserved_A : Reserved_4;
-         CPU_Divide : Boolean;
+         CPU_Select : Scaler_3 := 0;
+         Unused_A   : Scaler_4 := 0;
+         CPU_Div    : Boolean  := False;
 
-         HSB_Select : Scaler_3;
-         Reserved_B : Reserved_4;
-         HSB_Divide : Boolean;
+         HSB_Select : Scaler_3 := 0;
+         Unused_B   : Scaler_4 := 0;
+         HSB_Div    : Boolean  := False;
 
-         PBA_Select : Scaler_3;
-         Reserved_C : Reserved_4;
-         PBA_Divide : Boolean;
+         PBA_Select : Scaler_3 := 0;
+         Unused_C   : Scaler_4 := 0;
+         PBA_Div    : Boolean  := False;
 
-         PBB_Select : Scaler_3;
-         Reserved_D : Reserved_4;
-         PBB_Divide : Boolean;
+         PBB_Select : Scaler_3 := 0;
+         Unused_D   : Scaler_4 := 0;
+         PBB_Div    : Boolean  := False;
       end record;
 
    for Clock_Select_Register use
       record
          CPU_Select at 0 range 29 .. 31;
-         Reserved_A at 0 range 25 .. 28;
-         CPU_Divide at 0 range 24 .. 24;
+         Unused_A   at 0 range 25 .. 28;
+         CPU_Div    at 0 range 24 .. 24;
 
          HSB_Select at 0 range 21 .. 23;
-         Reserved_B at 0 range 17 .. 20;
-         HSB_Divide at 0 range 16 .. 16;
+         Unused_B   at 0 range 17 .. 20;
+         HSB_Div    at 0 range 16 .. 16;
 
          PBA_Select at 0 range 13 .. 15;
-         Reserved_C at 0 range 9 .. 12;
-         PBA_Divide at 0 range 8 .. 8;
+         Unused_C   at 0 range 9 .. 12;
+         PBA_Div    at 0 range 8 .. 8;
 
          PBB_Select at 0 range 5 .. 7;
-         Reserved_D at 0 range 1 .. 4;
-         PBB_Divide at 0 range 0 .. 0;
+         Unused_D   at 0 range 1 .. 4;
+         PBB_Div    at 0 range 0 .. 0;
       end record;
 
    for Clock_Select_Register'Size use 32;
 
    pragma Suppress_Initialization (Clock_Select_Register);
 
-   ---------------------------------
-   -- Oscillator Control Register --
-   ---------------------------------
+   --------------------------
+   -- PPL Control Register --
+   --------------------------
 
    type PPL_Control_Register is
       record
-         Enable         : Boolean;
-         Oscillator     : Scaler_1;
-         Options        : Scaler_3;
-         Reserved_A     : Reserved_3;
-         Division       : Scaler_4;
-         Reserved_B     : Reserved_4;
-         Multiplication : Scaler_4;
-         Reserved_C     : Reserved_4;
-         Count          : Scaler_6;
-         Reserved_D     : Reserved_2;
+         Enable   : Boolean  := False;
+         Osc      : Scaler_1 := 0;
+         Options  : Scaler_3 := 0;
+         Unused_A : Scaler_3 := 0;
+         Div      : Scaler_4 := 0;
+         Unused_B : Scaler_4 := 0;
+         Mult     : Scaler_4 := 0;
+         Unused_C : Scaler_4 := 0;
+         Count    : Scaler_6 := 0;
+         Unused_D : Scaler_2 := 0;
       end record;
 
    for PPL_Control_Register use
       record
-         Enable         at 0 range 31 .. 31;
-         Oscillator     at 0 range 30 .. 30;
-         Options        at 0 range 27 .. 29;
-         Reserved_A     at 0 range 24 .. 26;
-         Division       at 0 range 20 .. 23;
-         Reserved_B     at 0 range 16 .. 19;
-         Multiplication at 0 range 12 .. 15;
-         Reserved_C     at 0 range 8 .. 11;
-         Count          at 0 range 2 .. 7;
-         Reserved_D     at 0 range 0 .. 1;
+         Enable    at 0 range 31 .. 31;
+         Osc       at 0 range 30 .. 30;
+         Options   at 0 range 27 .. 29;
+         Unused_A  at 0 range 24 .. 26;
+         Div       at 0 range 20 .. 23;
+         Unused_B  at 0 range 16 .. 19;
+         Mult      at 0 range 12 .. 15;
+         Unused_C  at 0 range 8 .. 11;
+         Count     at 0 range 2 .. 7;
+         Unused_D  at 0 range 0 .. 1;
       end record;
 
    for PPL_Control_Register'Size use 32;
 
    pragma Suppress_Initialization (PPL_Control_Register);
 
-   ---------------------------------
-   -- Oscillator Control Register --
-   ---------------------------------
+   --------------------------
+   -- Osc Control Register --
+   --------------------------
 
-   type Oscillator_Control_Register is
+   type Osc_Control_Register is
       record
-         Mode       : Scaler_3;
-         Reserved_A : Reserved_5;
-         Startup    : Scaler_3;
-         Reserved_B : Reserved_21;
+         Mode       : Scaler_3  := 0;
+         Unused_A   : Scaler_5  := 0;
+         Startup    : Scaler_3  := 0;
+         Unused_B   : Scaler_5  := 0;
+         Unused_C   : Scaler_16 := 0;
       end record;
 
-   for Oscillator_Control_Register use
+   for Osc_Control_Register use
       record
          Mode       at 0 range 29 .. 31;
-         Reserved_A at 0 range 24 .. 28;
+         Unused_A   at 0 range 24 .. 28;
          Startup    at 0 range 21 .. 23;
-         Reserved_B at 0 range 0 .. 20;
+         Unused_B   at 0 range 16 .. 20;
+         Unused_C   at 0 range 0 .. 15;
       end record;
 
-   for Oscillator_Control_Register'Size use 32;
+   for Osc_Control_Register'Size use 32;
 
-   pragma Suppress_Initialization (Oscillator_Control_Register);
+   pragma Suppress_Initialization (Osc_Control_Register);
 
-   --------------------------------
-   -- Oscillator Status Register --
-   --------------------------------
+   -------------------------
+   -- Osc Status Register --
+   -------------------------
 
-   type Oscillator_Status_Register is
+   type Osc_Status_Register is
       record
-         Lock_PPL_0          : Boolean;
-         Lock_PPL_1          : Boolean;
-         Reserved_A          : Reserved_3;
-         Clock_Ready         : Boolean;
-         Mask_Ready          : Boolean;
-         Oscillator_0_Ready  : Boolean;
-         Oscillator_1_Ready  : Boolean;
-         Oscillator_32_Ready : Boolean;
-         Reserved_B          : Reserved_22;
+         Lock_PPL_0   : Boolean   := False;
+         Lock_PPL_1   : Boolean   := False;
+         Unused_A     : Scaler_3  := 0;
+         Clock_Ready  : Boolean   := False;
+         Mask_Ready   : Boolean   := False;
+         Osc_0_Ready  : Boolean   := False;
+         Osc_1_Ready  : Boolean   := False;
+         Osc_32_Ready : Boolean   := False;
+         Unused_B     : Scaler_6  := 0;
+         Unused_C     : Scaler_16 := 0;
       end record;
 
-   for Oscillator_Status_Register use
+   for Osc_Status_Register use
       record
-         Lock_PPL_0          at 0 range 31 .. 31;
-         Lock_PPL_1          at 0 range 30 .. 30;
-         Reserved_A          at 0 range 27 .. 29;
-         Clock_Ready         at 0 range 26 .. 26;
-         Mask_Ready          at 0 range 25 .. 25;
-         Oscillator_0_Ready  at 0 range 24 .. 24;
-         Oscillator_1_Ready  at 0 range 23 .. 23;
-         Oscillator_32_Ready at 0 range 22 .. 22;
-         Reserved_B          at 0 range 0 .. 21;
+         Lock_PPL_0   at 0 range 31 .. 31;
+         Lock_PPL_1   at 0 range 30 .. 30;
+         Unused_A     at 0 range 27 .. 29;
+         Clock_Ready  at 0 range 26 .. 26;
+         Mask_Ready   at 0 range 25 .. 25;
+         Osc_0_Ready  at 0 range 24 .. 24;
+         Osc_1_Ready  at 0 range 23 .. 23;
+         Osc_32_Ready at 0 range 22 .. 22;
+         Unused_B     at 0 range 16 .. 21;
+         Unused_C     at 0 range 0 .. 15;
       end record;
 
-   for Oscillator_Status_Register'Size use 32;
+   for Osc_Status_Register'Size use 32;
 
-   pragma Suppress_Initialization (Oscillator_Status_Register);
+   pragma Suppress_Initialization (Osc_Status_Register);
 
    -----------------------------
    -- Power Manager Interface --
@@ -387,38 +311,38 @@ package System.BB.Peripherals.Registers is
 
    type Power_Manager_Interface is
       record
-         Main_Clock_Control    : Main_Clock_Control_Register;
-         Clock_Select          : Clock_Select_Register;
-         CPU_Mask              : Scaler_32;
-         HSB_Mask              : Scaler_32;
-         PBA_Mask              : Scaler_32;
-         PBB_Mask              : Scaler_32;
-         Reserved_A            : Reserved_32;
-         Reserved_B            : Reserved_32;
-         PPL_0_Control         : PPL_Control_Register;
-         PPL_1_Control         : PPL_Control_Register;
-         Oscillator_0_Control  : Oscillator_Control_Register;
-         Oscillator_1_Control  : Oscillator_Control_Register;
-         Unused_C              : Scaler_32;
-         Reserved_C            : Reserved_32;
-         Reserved_D            : Reserved_32;
-         Reserved_E            : Reserved_32;
-         Interrupt_Enable      : Scaler_32;
-         Interrupt_Disable     : Scaler_32;
-         Interrupt_Mask        : Scaler_32;
-         Interrupt_Status      : Scaler_32;
-         Interrupt_Clear       : Scaler_32;
-         Status                : Oscillator_Status_Register;
-         pragma Atomic (Main_Clock_Control);
+         Main              : Main_Clock_Control_Register;
+         Clock_Select      : Clock_Select_Register;
+         CPU_Mask          : Scaler_32;
+         HSB_Mask          : Scaler_32;
+         PBA_Mask          : Scaler_32;
+         PBB_Mask          : Scaler_32;
+         Unused_A          : Scaler_32;
+         Unused_B          : Scaler_32;
+         PPL_0             : PPL_Control_Register;
+         PPL_1             : PPL_Control_Register;
+         Osc_0             : Osc_Control_Register;
+         Osc_1             : Osc_Control_Register;
+         Unused_C          : Scaler_32;
+         Unused_D          : Scaler_32;
+         Unused_E          : Scaler_32;
+         Unused_F          : Scaler_32;
+         Interrupt_Enable  : Scaler_32;
+         Interrupt_Disable : Scaler_32;
+         Interrupt_Mask    : Scaler_32;
+         Interrupt_Status  : Scaler_32;
+         Interrupt_Clear   : Scaler_32;
+         Status            : Osc_Status_Register;
+         pragma Atomic (Main);
          pragma Atomic (Clock_Select);
          pragma Atomic (CPU_Mask);
          pragma Atomic (HSB_Mask);
          pragma Atomic (PBA_Mask);
          pragma Atomic (PBB_Mask);
-         pragma Atomic (PPL_0_Control);
-         pragma Atomic (PPL_1_Control);
-         pragma Atomic (Oscillator_0_Control);
-         pragma Atomic (Oscillator_1_Control);
+         pragma Atomic (PPL_0);
+         pragma Atomic (PPL_1);
+         pragma Atomic (Osc_0);
+         pragma Atomic (Osc_1);
          pragma Atomic (Interrupt_Enable);
          pragma Atomic (Interrupt_Disable);
          pragma Atomic (Interrupt_Mask);
@@ -429,44 +353,29 @@ package System.BB.Peripherals.Registers is
 
    pragma Suppress_Initialization (Power_Manager_Interface);
 
-   -------------------
-   -- Power Manager --
-   -------------------
-
-   Power_Manager : aliased Power_Manager_Interface;
-   for Power_Manager'Address use Power_Manager_Address;
-
    ----------------------------
    -- Flash Control Register --
    ----------------------------
 
    type Flash_Control_Register is
       record
-         Ready_Interrupt         : Boolean;
-         Reserved_A              : Reserved_1;
-         Lock_Error_Interrupt    : Boolean;
-         Program_Error_Interrupt : Boolean;
-         Reserved_B              : Reserved_2;
-         Wait_State              : Boolean;
-         Reserved_C              : Reserved_1;
-         Sense_Amplifier         : Boolean;
-         Reserved_D              : Reserved_23;
+         Unused_A   : Scaler_6  := 0;
+         Wait_State : Boolean   := False;
+         Unused_B   : Scaler_1  := 0;
+         Unused_C   : Scaler_24 := 0;
       end record;
 
    for Flash_Control_Register use
       record
-         Ready_Interrupt         at 0 range 31 .. 31;
-         Reserved_A              at 0 range 30 .. 30;
-         Lock_Error_Interrupt    at 0 range 29 .. 29;
-         Program_Error_Interrupt at 0 range 28 .. 28;
-         Reserved_B              at 0 range 26 .. 27;
-         Wait_State              at 0 range 25 .. 25;
-         Reserved_C              at 0 range 24 .. 24;
-         Sense_Amplifier         at 0 range 23 .. 23;
-         Reserved_D              at 0 range  0 .. 22;
+         Unused_A   at 0 range 26 .. 31;
+         Wait_State at 0 range 25 .. 25;
+         Unused_B   at 0 range 24 .. 24;
+         Unused_C   at 0 range 0 .. 23;
       end record;
 
    for Flash_Control_Register'Size use 32;
+
+   pragma Suppress_Initialization (Flash_Control_Register);
 
    ---------------------
    -- Flash interface --
@@ -478,12 +387,7 @@ package System.BB.Peripherals.Registers is
          pragma Atomic (Control);
       end record;
 
-   ------------
-   -- Flash  --
-   ------------
-
-   Flash : Flash_Interface;
-   for Flash'Address use Flash_Address;
+   pragma Suppress_Initialization (Flash_Interface);
 
    --------------------------------
    -- Interrupt Request Register --
@@ -501,28 +405,21 @@ package System.BB.Peripherals.Registers is
    pragma Atomic_Components (Interrupt_Request_Array);
    pragma Suppress_Initialization (Interrupt_Request_Array);
 
-   --------------
-   -- Requests --
-   --------------
-
-   Requests : aliased Interrupt_Request_Array;
-   for Requests'Address use Interrupt_Request_Address;
-
    ---------------------------------
    -- Interrupt Priority Register --
    ---------------------------------
 
    type Interrupt_Priority_Register is
       record
-         Autovector : Scaler_14;
-         Reserved   : Reserved_16;
-         Level      : Scaler_2;
+         Autovector : Scaler_14 := 0;
+         Unused     : Scaler_16 := 0;
+         Level      : Scaler_2  := 0;
       end record;
 
    for Interrupt_Priority_Register use
       record
          Autovector at 0 range 18 .. 31;
-         Reserved   at 0 range 2 .. 17;
+         Unused     at 0 range 2 .. 17;
          Level      at 0 range 0 .. 1;
       end record;
 
@@ -540,13 +437,6 @@ package System.BB.Peripherals.Registers is
    pragma Atomic_Components (Interrupt_Priority_Array);
    pragma Suppress_Initialization (Interrupt_Priority_Array);
 
-   ----------------
-   -- Priorities --
-   ----------------
-
-   Priorities : aliased Interrupt_Priority_Array;
-   for Priorities'Address use Interrupt_Priority_Address;
-
    ---------------------------------
    -- Interrupt Cause Register --
    ---------------------------------
@@ -554,13 +444,15 @@ package System.BB.Peripherals.Registers is
    type Interrupt_Cause_Register is
       record
          Cause    : Scaler_6;
-         Reserved : Reserved_26;
+         Unused_A : Scaler_2;
+         Unused_B : Scaler_24;
       end record;
 
    for Interrupt_Cause_Register use
       record
          Cause    at 0 range 26 .. 31;
-         Reserved at 0 range 0 .. 25;
+         Unused_A at 0 range 24 .. 25;
+         Unused_B at 0 range 0 .. 23;
       end record;
 
    for Interrupt_Cause_Register'Size use 32;
@@ -577,41 +469,32 @@ package System.BB.Peripherals.Registers is
    pragma Atomic_Components (Interrupt_Cause_Array);
    pragma Suppress_Initialization (Interrupt_Cause_Array);
 
-   ------------
-   -- Causes --
-   ------------
-
-   Causes : aliased Interrupt_Cause_Array;
-   for Causes'Address use Interrupt_Cause_Address;
-
    ----------------------------
    -- USART Control Register --
    ----------------------------
 
    type USART_Control_Register is
       record
-         Reserved_A   : Reserved_2;
-         Reset_RX     : Boolean;
-         Reset_TX     : Boolean;
-         Enable_RX    : Boolean;
-         Disable_RX   : Boolean;
-         Enable_TX    : Boolean;
-         Disable_TX   : Boolean;
-         Reset_Status : Boolean;
-         Reserved_B   : Reserved_23;
+         Unused_A   : Scaler_2  := 0;
+         Reset_RX   : Boolean   := False;
+         Reset_TX   : Boolean   := False;
+         Enable_RX  : Boolean   := False;
+         Disable_RX : Boolean   := False;
+         Enable_TX  : Boolean   := False;
+         Disable_TX : Boolean   := False;
+         Unused_B   : Scaler_24 := 0;
       end record;
 
    for USART_Control_Register use
       record
-         Reserved_A   at 0 range 30 .. 31;
-         Reset_RX     at 0 range 29 .. 29;
-         Reset_TX     at 0 range 28 .. 28;
-         Enable_RX    at 0 range 27 .. 27;
-         Disable_RX   at 0 range 26 .. 26;
-         Enable_TX    at 0 range 25 .. 25;
-         Disable_TX   at 0 range 24 .. 24;
-         Reset_Status at 0 range 23 .. 23;
-         Reserved_B   at 0 range 0 .. 22;
+         Unused_A   at 0 range 30 .. 31;
+         Reset_RX   at 0 range 29 .. 29;
+         Reset_TX   at 0 range 28 .. 28;
+         Enable_RX  at 0 range 27 .. 27;
+         Disable_RX at 0 range 26 .. 26;
+         Enable_TX  at 0 range 25 .. 25;
+         Disable_TX at 0 range 24 .. 24;
+         Unused_B   at 0 range 0 .. 23;
       end record;
 
    for USART_Control_Register'Size use 32;
@@ -624,18 +507,18 @@ package System.BB.Peripherals.Registers is
 
    type USART_Mode_Register is
       record
-         Mode         : Scaler_4;
-         Clock_Select : Scaler_2;
-         Charlength   : Scaler_2;
-         Synchronous  : Boolean;
-         Parity       : Scaler_3;
-         Stopbits     : Scaler_2;
-         Channel_Mode : Scaler_2;
-         Bit_Order    : Boolean;
-         Charlength_9 : Boolean;
-         Clock_Output : Boolean;
-         Oversampling : Boolean;
-         Reserved     : Reserved_12;
+         Mode         : Scaler_4  := 0;
+         Clock_Select : Scaler_2  := 0;
+         Charlength   : Scaler_2  := 0;
+         Synchronous  : Boolean   := False;
+         Parity       : Scaler_3  := 0;
+         Stopbits     : Scaler_2  := 0;
+         Channel_Mode : Scaler_2  := 0;
+         Bit_Order    : Boolean   := False;
+         Charlength_9 : Boolean   := False;
+         Clock_Output : Boolean   := False;
+         Oversampling : Boolean   := False;
+         Unused       : Scaler_12 := 0;
       end record;
 
    for USART_Mode_Register use
@@ -651,7 +534,7 @@ package System.BB.Peripherals.Registers is
          Charlength_9 at 0 range 14 .. 14;
          Clock_Output at 0 range 13 .. 13;
          Oversampling at 0 range 12 .. 12;
-         Reserved     at 0 range 0 .. 11;
+         Unused       at 0 range 0 .. 11;
       end record;
 
    for USART_Mode_Register'Size use 32;
@@ -666,14 +549,16 @@ package System.BB.Peripherals.Registers is
       record
          RX_Ready : Boolean;
          TX_Ready : Boolean;
-         Reserved : Reserved_30;
+         Unused_A : Scaler_6;
+         Unused_B : Scaler_24;
       end record;
 
    for USART_Status_Register use
       record
          RX_Ready at 0 range 31 .. 31;
          TX_Ready at 0 range 30 .. 30;
-         Reserved at 0 range 0 .. 29;
+         Unused_A at 0 range 24 .. 29;
+         Unused_B at 0 range 0 .. 23;
       end record;
 
    for USART_Status_Register'Size use 32;
@@ -686,14 +571,14 @@ package System.BB.Peripherals.Registers is
 
    type USART_Holding_Register is
       record
-         Char : Character;
-         Reserved : Reserved_24;
+         Char   : Character;
+         Unused : Scaler_24;
       end record;
 
    for USART_Holding_Register use
       record
-         Char     at 0 range 24 .. 31;
-         Reserved at 0 range 0 .. 23;
+         Char   at 0 range 24 .. 31;
+         Unused at 0 range 0 .. 23;
       end record;
 
    for USART_Holding_Register'Size use 32;
@@ -706,16 +591,18 @@ package System.BB.Peripherals.Registers is
 
    type USART_Baudrate_Register is
       record
-         Clock_Divider   : Scaler_16;
-         Fractional_Part : Scaler_3;
-         Reserved        : Reserved_13;
+         Clock_Divider   : Scaler_16 := 0;
+         Fractional_Part : Scaler_3  := 0;
+         Unused_A        : Scaler_5  := 0;
+         Unused_B        : Scaler_8  := 0;
       end record;
 
    for USART_Baudrate_Register use
       record
          Clock_Divider   at 0 range 16 .. 31;
          Fractional_Part at 0 range 13 .. 15;
-         Reserved        at 0 range 0 .. 12;
+         Unused_A        at 0 range 8 .. 12;
+         Unused_B        at 0 range 0 .. 7;
       end record;
 
    for USART_Baudrate_Register'Size use 32;
@@ -750,23 +637,17 @@ package System.BB.Peripherals.Registers is
 
    pragma Suppress_Initialization (USART_Channel_Interface);
 
-   -----------
-   -- USART --
-   -----------
-
-   USART : aliased USART_Channel_Interface;
-   for USART'Address use USART_Channel_1_Address;
-
    ------------------------------
    -- Channel Control Register --
    ------------------------------
 
    type TC_Channel_Control_Register is
       record
-         Clock_Enable     : Boolean;
-         Clock_Disable    : Boolean;
-         Software_Trigger : Boolean;
-         Reserved         : Reserved_29;
+         Clock_Enable     : Boolean   := False;
+         Clock_Disable    : Boolean   := False;
+         Software_Trigger : Boolean   := False;
+         Unused_A         : Scaler_5  := 0;
+         Unused_B         : Scaler_24 := 0;
       end record;
 
    for TC_Channel_Control_Register use
@@ -774,7 +655,8 @@ package System.BB.Peripherals.Registers is
          Clock_Enable     at 0 range 31 .. 31;
          Clock_Disable    at 0 range 30 .. 30;
          Software_Trigger at 0 range 29 .. 29;
-         Reserved         at 0 range 0 .. 28;
+         Unused_A         at 0 range 24 .. 28;
+         Unused_B         at 0 range 0 .. 23;
       end record;
 
    for TC_Channel_Control_Register'Size use 32;
@@ -787,46 +669,28 @@ package System.BB.Peripherals.Registers is
 
    type TC_Channel_Mode_Register is
       record
-         Clock_Select           : Scaler_3;
-         Clock_Invert           : Boolean;
-         Burst_Select           : Scaler_2;
-         Stop_RC_Compare        : Boolean;
-         Disable_RC_Compare     : Boolean;
-         Ext_Event_Edge         : Scaler_2;
-         Ext_Event_Select       : Scaler_2;
-         Ext_Event_Enable       : Boolean;
-         Waveform_Select        : Scaler_2;
-         Wave_Mode              : Boolean;
-         RA_Compare_Effect_TIOA : Scaler_2;
-         RC_Compare_Effect_TIOA : Scaler_2;
-         Ext_Event_Effect_TIOA  : Scaler_2;
-         SW_Trigger_Effect_TIOA : Scaler_2;
-         RB_Compare_Effect_TIOB : Scaler_2;
-         RC_Compare_Effect_TIOB : Scaler_2;
-         Ext_Event_Effect_TIOB  : Scaler_2;
-         SW_Trigger_Effect_TIOB : Scaler_2;
+         Clock_Select        : Scaler_3  := 0;
+         Clock_Invert        : Boolean   := False;
+         Burst_Select        : Scaler_2  := 0;
+         Stop_RC_Compare     : Boolean   := False;
+         Disable_RC_Compare  : Boolean   := False;
+         Unused_A            : Scaler_5  := 0;
+         Waveform_Select     : Scaler_2  := 0;
+         Wave_Mode           : Boolean   := False;
+         Unused_B            : Scaler_16 := 0;
       end record;
 
    for TC_Channel_Mode_Register use
       record
-         Clock_Select           at 0 range 29 .. 31;
-         Clock_Invert           at 0 range 28 .. 28;
-         Burst_Select           at 0 range 26 .. 27;
-         Stop_RC_Compare        at 0 range 25 .. 25;
-         Disable_RC_Compare     at 0 range 24 .. 24;
-         Ext_Event_Edge         at 0 range 22 .. 23;
-         Ext_Event_Select       at 0 range 20 .. 21;
-         Ext_Event_Enable       at 0 range 19 .. 19;
-         Waveform_Select        at 0 range 17 .. 18;
-         Wave_Mode              at 0 range 16 .. 16;
-         RA_Compare_Effect_TIOA at 0 range 14 .. 15;
-         RC_Compare_Effect_TIOA at 0 range 12 .. 13;
-         Ext_Event_Effect_TIOA  at 0 range 10 .. 11;
-         SW_Trigger_Effect_TIOA at 0 range 8 .. 9;
-         RB_Compare_Effect_TIOB at 0 range 6 .. 7;
-         RC_Compare_Effect_TIOB at 0 range 4 .. 5;
-         Ext_Event_Effect_TIOB  at 0 range 2 .. 3;
-         SW_Trigger_Effect_TIOB at 0 range 0 .. 1;
+         Clock_Select       at 0 range 29 .. 31;
+         Clock_Invert       at 0 range 28 .. 28;
+         Burst_Select       at 0 range 26 .. 27;
+         Stop_RC_Compare    at 0 range 25 .. 25;
+         Disable_RC_Compare at 0 range 24 .. 24;
+         Unused_A           at 0 range 19 .. 23;
+         Waveform_Select    at 0 range 17 .. 18;
+         Wave_Mode          at 0 range 16 .. 16;
+         Unused_B           at 0 range 0 .. 15;
       end record;
 
    for TC_Channel_Mode_Register'Size use 32;
@@ -839,19 +703,15 @@ package System.BB.Peripherals.Registers is
 
    type TC_Channel_Status_Register is
       record
-         Counter_Overflow : Boolean;
-         Load_Overrun     : Boolean;
-         RA_Compare       : Boolean;
-         RB_Compare       : Boolean;
-         RC_Compare       : Boolean;
-         RA_Loading       : Boolean;
-         RB_Loading       : Boolean;
-         Ext_Trigger      : Boolean;
-         Reserved_A       : Reserved_8;
-         Clock_Enabled    : Boolean;
-         TIOA_Mirror      : Boolean;
-         TIOB_Mirror      : Boolean;
-         Reserved_B       : Reserved_13;
+         Counter_Overflow : Boolean   := False;
+         Load_Overrun     : Boolean   := False;
+         RA_Compare       : Boolean   := False;
+         RB_Compare       : Boolean   := False;
+         RC_Compare       : Boolean   := False;
+         RA_Loading       : Boolean   := False;
+         RB_Loading       : Boolean   := False;
+         Ext_Trigger      : Boolean   := False;
+         Unused           : Scaler_24 := 0;
       end record;
 
    for TC_Channel_Status_Register use
@@ -864,11 +724,7 @@ package System.BB.Peripherals.Registers is
          RA_Loading       at 0 range 26 .. 26;
          RB_Loading       at 0 range 25 .. 25;
          Ext_Trigger      at 0 range 24 .. 24;
-         Reserved_A       at 0 range 16 .. 23;
-         Clock_Enabled    at 0 range 15 .. 15;
-         TIOA_Mirror      at 0 range 14 .. 14;
-         TIOB_Mirror      at 0 range 13 .. 13;
-         Reserved_B       at 0 range 0 .. 12;
+         Unused           at 0 range 0 .. 23;
       end record;
 
    for TC_Channel_Status_Register'Size use 32;
@@ -881,15 +737,15 @@ package System.BB.Peripherals.Registers is
 
    type TC_Interrupt_Control_Register is
       record
-         Counter_Overflow : Boolean;
-         Load_Overrun     : Boolean;
-         RA_Compare       : Boolean;
-         RB_Compare       : Boolean;
-         RC_Compare       : Boolean;
-         RA_Loading       : Boolean;
-         RB_Loading       : Boolean;
-         Ext_Trigger      : Boolean;
-         Reserved         : Reserved_24;
+         Counter_Overflow : Boolean   := False;
+         Load_Overrun     : Boolean   := False;
+         RA_Compare       : Boolean   := False;
+         RB_Compare       : Boolean   := False;
+         RC_Compare       : Boolean   := False;
+         RA_Loading       : Boolean   := False;
+         RB_Loading       : Boolean   := False;
+         Ext_Trigger      : Boolean   := False;
+         Unused           : Scaler_24 := 0;
       end record;
 
    for TC_Interrupt_Control_Register use
@@ -902,7 +758,7 @@ package System.BB.Peripherals.Registers is
          RA_Loading       at 0 range 26 .. 26;
          RB_Loading       at 0 range 25 .. 25;
          Ext_Trigger      at 0 range 24 .. 24;
-         Reserved         at 0 range 0 .. 23;
+         Unused           at 0 range 0 .. 23;
       end record;
 
    for TC_Interrupt_Control_Register'Size use 32;
@@ -915,14 +771,14 @@ package System.BB.Peripherals.Registers is
 
    type TC_Counter_Value_Register is
       record
-         Value    : Timer_Interval;
-         Reserved : Reserved_16;
+         Value  : Timer_Interval;
+         Unused : Scaler_16;
       end record;
 
    for TC_Counter_Value_Register use
       record
-         Value    at 0 range 16 .. 31;
-         Reserved at 0 range 0 .. 15;
+         Value  at 0 range 16 .. 31;
+         Unused at 0 range 0 .. 15;
       end record;
 
    for TC_Counter_Value_Register'Size use 32;
@@ -937,8 +793,8 @@ package System.BB.Peripherals.Registers is
       record
          Control           : TC_Channel_Control_Register;
          Mode              : TC_Channel_Mode_Register;
-         Reserved_A        : Reserved_32;
-         Reserved_B        : Reserved_32;
+         Unused_A          : Scaler_32;
+         Unused_B          : Scaler_32;
          Counter           : TC_Counter_Value_Register;
          RA                : TC_Counter_Value_Register;
          RB                : TC_Counter_Value_Register;
@@ -960,16 +816,6 @@ package System.BB.Peripherals.Registers is
       end record;
 
    pragma Suppress_Initialization (TC_Channel_Interface);
-
-   ---------------------
-   -- Clock and Alarm --
-   ---------------------
-
-   Clock : aliased TC_Channel_Interface;
-   for Clock'Address use Timer_Counter_1_Address;
-
-   Alarm : aliased TC_Channel_Interface;
-   for Alarm'Address use Timer_Counter_2_Address;
 
    --------------------
    -- GPIO Pin Array --
@@ -1011,15 +857,5 @@ package System.BB.Peripherals.Registers is
       end record;
 
    pragma Suppress_Initialization (GPIO_Port_Interface);
-
-   ------------------
-   -- GPIO A and B --
-   ------------------
-
-   GPIO_Port_A : aliased GPIO_Port_Interface;
-   for GPIO_Port_A'Address use GPIO_Port_A_Address;
-
-   GPIO_Port_B : aliased GPIO_Port_Interface;
-   for GPIO_Port_B'Address use GPIO_Port_B_Address;
 
 end System.BB.Peripherals.Registers;

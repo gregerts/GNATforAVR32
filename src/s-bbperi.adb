@@ -82,18 +82,52 @@ package body System.BB.Peripherals is
    -- Constants used for configurating registers --
    ------------------------------------------------
 
-   Select_Oscillator_0     : constant := 1;
-   Select_PPL_0            : constant := 2;
-   Oscillator_Mode_Crystal : constant := 1;
-   Parity_None             : constant := 4;
-   Charlength_8            : constant := 3;
-   Stopbits_1              : constant := 0;
-   Timer_Clock_2           : constant := 1;
-   Timer_Clock_3           : constant := 2;
-   Timer_Clock_4           : constant := 3;
-   Timer_Clock_5           : constant := 4;
-   Up_No_Trigger           : constant := 0;
-   Up_RC_Trigger           : constant := 2;
+   Select_Osc_0     : constant := 1;
+   Select_PPL_0     : constant := 2;
+   Osc_Mode_Crystal : constant := 1;
+   Parity_None      : constant := 4;
+   Charlength_8     : constant := 3;
+   Stopbits_1       : constant := 0;
+   Timer_Clock_2    : constant := 1;
+   Timer_Clock_3    : constant := 2;
+   Timer_Clock_4    : constant := 3;
+   Timer_Clock_5    : constant := 4;
+   Up_No_Trigger    : constant := 0;
+   Up_RC_Trigger    : constant := 2;
+
+   ---------------
+   -- Registers --
+   ---------------
+
+   Power_Manager : aliased Power_Manager_Interface;
+   for Power_Manager'Address use Power_Manager_Address;
+
+   Flash : Flash_Interface;
+   for Flash'Address use Flash_Address;
+
+   Requests : aliased Interrupt_Request_Array;
+   for Requests'Address use Interrupt_Request_Address;
+
+   Priorities : aliased Interrupt_Priority_Array;
+   for Priorities'Address use Interrupt_Priority_Address;
+
+   Causes : aliased Interrupt_Cause_Array;
+   for Causes'Address use Interrupt_Cause_Address;
+
+   USART : aliased USART_Channel_Interface;
+   for USART'Address use USART_Channel_1_Address;
+
+   Clock : aliased TC_Channel_Interface;
+   for Clock'Address use Timer_Counter_1_Address;
+
+   Alarm : aliased TC_Channel_Interface;
+   for Alarm'Address use Timer_Counter_2_Address;
+
+   GPIO_Port_A : aliased GPIO_Port_Interface;
+   for GPIO_Port_A'Address use GPIO_Port_A_Address;
+
+   GPIO_Port_B : aliased GPIO_Port_Interface;
+   for GPIO_Port_B'Address use GPIO_Port_B_Address;
 
    -----------------------
    -- Local definitions --
@@ -133,28 +167,6 @@ package body System.BB.Peripherals is
    pragma Inline (To_Mask);
    --  Makes a mask out of a pin.
 
-   --------------------------
-   -- Conversion functions --
-   --------------------------
-
-   function To_Channel_Mode_Register is
-      new Ada.Unchecked_Conversion (Scaler_32, TC_Channel_Mode_Register);
-
-   function To_Channel_Control_Register is
-      new Ada.Unchecked_Conversion (Scaler_32, TC_Channel_Control_Register);
-
-   function To_Interrupt_Control_Register is
-      new Ada.Unchecked_Conversion (Scaler_32, TC_Interrupt_Control_Register);
-
-   function To_Control_Register is
-      new Ada.Unchecked_Conversion (Scaler_32, USART_Control_Register);
-
-   function To_Mode_Register is
-      new Ada.Unchecked_Conversion (Scaler_32, USART_Mode_Register);
-
-   function To_Baudrate_Register is
-      new Ada.Unchecked_Conversion (Scaler_32, USART_Baudrate_Register);
-
    ----------------------
    -- Initialize_Board --
    ----------------------
@@ -177,12 +189,8 @@ package body System.BB.Peripherals is
 
    procedure Initialize_Power_Manager is
 
-      Oscillator_Control : Oscillator_Control_Register;
-      Main_Clock_Control : Main_Clock_Control_Register;
-      PPL_Control        : PPL_Control_Register;
-      Flash_Control      : Flash_Control_Register;
-      Clock_Select       : Clock_Select_Register;
-      Peripheral_Select  : Scaler_3;
+      Main : Main_Clock_Control_Register := Power_Manager.Main;
+      Peripheral : Scaler_3;
 
       pragma Warnings (Off, SBP.Flash_Wait_State);
       pragma Warnings (Off, SBP.Clock_Multiplication);
@@ -192,29 +200,20 @@ package body System.BB.Peripherals is
 
       --  Enable Oscillator 0
 
-      Oscillator_Control := Power_Manager.Oscillator_0_Control;
+      Power_Manager.Osc_0 :=
+        (Mode => Osc_Mode_Crystal, Startup => 4, others => <>);
 
-      Oscillator_Control.Mode    := Oscillator_Mode_Crystal;
-      Oscillator_Control.Startup := 4;
+      Main.Enable_Osc_0 := True;
+      Power_Manager.Main := Main;
 
-      Power_Manager.Oscillator_0_Control := Oscillator_Control;
-
-      Main_Clock_Control := Power_Manager.Main_Clock_Control;
-
-      Main_Clock_Control.Enable_Oscillator_0 := True;
-      Main_Clock_Control.Enable_Oscillator_1 := False;
-
-      Power_Manager.Main_Clock_Control := Main_Clock_Control;
-
-      while not Power_Manager.Status.Oscillator_0_Ready loop
+      while not Power_Manager.Status.Osc_0_Ready loop
          null;
       end loop;
 
       --  Switch to Oscillator 0
 
-      Main_Clock_Control.Main_Clock_Select := Select_Oscillator_0;
-
-      Power_Manager.Main_Clock_Control := Main_Clock_Control;
+      Main.Clock_Select := Select_Osc_0;
+      Power_Manager.Main := Main;
 
       --  Setup PBA and PBB clock scaling
 
@@ -222,34 +221,31 @@ package body System.BB.Peripherals is
 
          case SBP.Peripheral_Division is
             when 2 =>
-               Peripheral_Select := 0;
+               Peripheral := 0;
             when 4 =>
-               Peripheral_Select := 1;
+               Peripheral := 1;
             when 8 =>
-               Peripheral_Select := 2;
+               Peripheral := 2;
             when 16 =>
-               Peripheral_Select := 3;
+               Peripheral := 3;
             when 32 =>
-               Peripheral_Select := 4;
+               Peripheral := 4;
             when 64 =>
-               Peripheral_Select := 5;
+               Peripheral := 5;
             when 128 =>
-               Peripheral_Select := 6;
+               Peripheral := 6;
             when 256 =>
-               Peripheral_Select := 7;
+               Peripheral := 7;
             when others =>
-               Peripheral_Select := 7;
+               Peripheral := 7;
          end case;
 
-         Clock_Select := Power_Manager.Clock_Select;
-
-         Clock_Select.PBA_Divide := True;
-         Clock_Select.PBA_Select := Peripheral_Select;
-
-         Clock_Select.PBB_Divide := True;
-         Clock_Select.PBB_Select := Peripheral_Select;
-
-         Power_Manager.Clock_Select := Clock_Select;
+         Power_Manager.Clock_Select :=
+           (PBA_Div    => True,
+            PBA_Select => Peripheral,
+            PBB_Div    => True,
+            PBB_Select => Peripheral,
+            others     => <>);
 
       end if;
 
@@ -259,16 +255,14 @@ package body System.BB.Peripherals is
 
          --  Enable PPL 0
 
-         PPL_Control := Power_Manager.PPL_0_Control;
-
-         PPL_Control.Enable         := True;
-         PPL_Control.Oscillator     := 0;
-         PPL_Control.Options        := 2;
-         PPL_Control.Division       := 0;
-         PPL_Control.Multiplication := SBP.Clock_Multiplication - 1;
-         PPL_Control.Count          := 16;
-
-         Power_Manager.PPL_0_Control := PPL_Control;
+         Power_Manager.PPL_0 :=
+           (Enable  => True,
+            Osc     => 0,
+            Options => 2,
+            Div     => 0,
+            Mult    => SBP.Clock_Multiplication - 1,
+            Count   => 16,
+            others  => <>);
 
          while not Power_Manager.Status.Lock_PPL_0 loop
             null;
@@ -277,20 +271,12 @@ package body System.BB.Peripherals is
          --  Enable Flash wait state
 
          if SBP.Flash_Wait_State > 0 then
-
-            Flash_Control := Flash.Control;
-
-            Flash_Control.Wait_State := True;
-
-            Flash.Control := Flash_Control;
-
+            Flash.Control := (Wait_State => True, others => <>);
          end if;
 
          --  Switch to PPL 0
-
-         Main_Clock_Control.Main_Clock_Select := Select_PPL_0;
-
-         Power_Manager.Main_Clock_Control := Main_Clock_Control;
+         Main.Clock_Select  := Select_PPL_0;
+         Power_Manager.Main := Main;
 
       end if;
 
@@ -333,7 +319,7 @@ package body System.BB.Peripherals is
       Aux       : Scaler_32;
    begin
       --  Assert that it is a external interrupt level.
-      pragma Assert (Level /= 0);
+      pragma Assert (Level > 0);
 
       --  Get Group from Interrupt Cause Register.
       Group := Interrupt_Group (Causes (4 - Level).Cause);
@@ -410,61 +396,48 @@ package body System.BB.Peripherals is
    -----------------------
 
    procedure Initialize_Timers is
-
-      Mode      : TC_Channel_Mode_Register;
-      Interrupt : TC_Interrupt_Control_Register;
-      Control   : TC_Channel_Control_Register;
-
+      C : Scaler_3;
    begin
-      --------------------------
-      -- Common mode settings --
-      --------------------------
-
-      Mode := To_Channel_Mode_Register (0);
 
       case Parameters.Timer_Division is
          when 4 =>
-            Mode.Clock_Select := Timer_Clock_2;
+            C := Timer_Clock_2;
          when 8 =>
-            Mode.Clock_Select := Timer_Clock_3;
+            C := Timer_Clock_3;
          when 16 =>
-            Mode.Clock_Select := Timer_Clock_4;
+            C := Timer_Clock_4;
          when 32 =>
-            Mode.Clock_Select := Timer_Clock_5;
+            C := Timer_Clock_5;
          when others =>
-            Mode.Clock_Select := Timer_Clock_2;
+            C := Timer_Clock_2;
       end case;
 
-      Mode.Wave_Mode := True;
+      --  Initialize clock
 
-      ----------------------
-      -- Initialize Clock --
-      ----------------------
+      Clock.Mode :=
+        (Clock_Select    => C,
+         Wave_Mode       => True,
+         Waveform_Select => Up_No_Trigger,
+         others          => <>);
 
-      Mode.Waveform_Select       := Up_No_Trigger;
-      Clock.Mode                 := Mode;
+      Clock.Interrupt_Enable := (Counter_Overflow => True, others => <>);
 
-      Interrupt                  := To_Interrupt_Control_Register (0);
-      Interrupt.Counter_Overflow := True;
-      Clock.Interrupt_Enable     := Interrupt;
+      Clock.Control :=
+        (Clock_Enable       => True,
+         Software_Trigger   => True,
+         others             => <>);
 
-      Control                    := To_Channel_Control_Register (0);
-      Control.Clock_Enable       := True;
-      Control.Software_Trigger   := True;
-      Clock.Control              := Control;
+      --  Initialize alarm
 
-      ----------------------
-      -- Initialize Alarm --
-      ----------------------
+      Alarm.Mode :=
+        (Clock_Select       => C,
+         Wave_Mode          => True,
+         Waveform_Select    => Up_RC_Trigger,
+         Stop_RC_Compare    => True,
+         Disable_RC_Compare => True,
+         others             => <>);
 
-      Mode.Waveform_Select    := Up_RC_Trigger;
-      Mode.Stop_RC_Compare    := True;
-      Mode.Disable_RC_Compare := True;
-      Alarm.Mode              := Mode;
-
-      Interrupt               := To_Interrupt_Control_Register (0);
-      Interrupt.RC_Compare    := True;
-      Alarm.Interrupt_Enable  := Interrupt;
+      Alarm.Interrupt_Enable := (RC_Compare => True, others => <>);
 
    end Initialize_Timers;
 
@@ -473,14 +446,14 @@ package body System.BB.Peripherals is
    ---------------
 
    procedure Set_Alarm (Ticks : Timer_Interval) is
-      Control : TC_Channel_Control_Register;
    begin
-      Alarm.RC.Value           := Ticks;
 
-      Control                  := To_Channel_Control_Register (0);
-      Control.Clock_Enable     := True;
-      Control.Software_Trigger := True;
-      Alarm.Control            := Control;
+      Alarm.RC.Value := Ticks;
+
+      Alarm.Control :=
+        (Clock_Enable     => True,
+         Software_Trigger => True,
+         others           => <>);
 
    end Set_Alarm;
 
@@ -489,12 +462,8 @@ package body System.BB.Peripherals is
    ------------------
 
    procedure Cancel_Alarm is
-      Control : TC_Channel_Control_Register;
    begin
-      Control               := To_Channel_Control_Register (0);
-      Control.Clock_Disable := True;
-      Alarm.Control         := Control;
-
+      Alarm.Control := (Clock_Disable => True, others => <>);
       Clear_Alarm_Interrupt;
    end Cancel_Alarm;
 
@@ -553,16 +522,14 @@ package body System.BB.Peripherals is
       pragma Warnings (Off, Freq);
       pragma Warnings (Off, USART_Channel_0_Address);
 
-      Mode         : USART_Mode_Register;
-      Control      : USART_Control_Register;
-      Baudrate     : USART_Baudrate_Register;
-      Divider      : Positive;
-      Oversampling : Boolean;
-      Synchronous  : Boolean;
+      Div  : Positive;
+      Over : Boolean;
+      Sync : Boolean;
 
    begin
 
       --  Initialize GPIO pins for USART channel.
+
       if USART'Address = USART_Channel_0_Address then
          GPIO_Configure_Peripheral (GPIO_Port_A'Access, 0, 4, Peripheral_A);
       else
@@ -570,40 +537,37 @@ package body System.BB.Peripherals is
       end if;
 
       --  Calculate and set baudrate.
+
       if Baud < (Freq / 16) then
-         Oversampling := False;
-         Synchronous  := False;
-         Divider      := (Freq + 8 * Baud) / (16 * Baud);
+         Over := False;
+         Sync := False;
+         Div  := (Freq + 8 * Baud) / (16 * Baud);
       elsif Baud < (Freq / 8) then
-         Oversampling := True;
-         Synchronous  := False;
-         Divider      := (Freq + 4 * Baud) / (8 * Baud);
+         Over := True;
+         Sync := False;
+         Div  := (Freq + 4 * Baud) / (8 * Baud);
       else
-         Oversampling := False;
-         Synchronous  := True;
-         Divider      := Freq / Baud;
+         Over := False;
+         Sync := True;
+         Div  := Freq / Baud;
       end if;
 
-      Baudrate               := To_Baudrate_Register (0);
-      Baudrate.Clock_Divider := Scaler_16 (Divider);
-
-      USART.Baudrate := Baudrate;
+      USART.Baudrate := (Clock_Divider => Scaler_16 (Div), others => <>);
 
       --  Set USART transmission mode to normal and 8N1
-      Mode              := To_Mode_Register (0);
-      Mode.Charlength   := Charlength_8;
-      Mode.Parity       := Parity_None;
-      Mode.Stopbits     := Stopbits_1;
-      Mode.Oversampling := Oversampling;
-      Mode.Synchronous  := Synchronous;
 
-      USART.Mode := Mode;
+      USART.Mode :=
+        (Charlength   => Charlength_8,
+         Parity       => Parity_None,
+         Stopbits     => Stopbits_1,
+         Oversampling => Over,
+         Synchronous  => Sync,
+         others       => <>);
 
       --  Enable TX
-      Control           := To_Control_Register (0);
-      Control.Enable_TX := True;
 
-      USART.Control := Control;
+      USART.Control := (Enable_TX => True, others => <>);
+
    end Initialize_Console;
 
    ------------------
