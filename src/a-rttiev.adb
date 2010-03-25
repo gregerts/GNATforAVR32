@@ -38,13 +38,16 @@ with System.BB.Protection;
 package body Ada.Real_Time.Timing_Events is
 
    package Protection renames System.BB.Protection;
-   package SBT renames System.BB.Time;
+
+   use type SBT.Alarm_Id;
 
    type Timing_Event_Access is access all Timing_Event;
 
    --------------------
    -- Local routines --
    --------------------
+
+   procedure Initialize (Event : in out Timing_Event'Class);
 
    procedure Execute_Handler (Event_Address : System.Address);
 
@@ -69,6 +72,25 @@ package body Ada.Real_Time.Timing_Events is
 
    end Execute_Handler;
 
+   ----------------
+   -- Initialize --
+   ----------------
+
+   procedure Initialize (Event : in out Timing_Event'Class) is
+   begin
+      pragma Assert (Event.Id = null);
+
+      Protection.Enter_Kernel;
+
+      SBT.Initialize_Alarm (Event.Alarm,
+                            Execute_Handler'Access,
+                            Event'Address,
+                            Event.Id);
+
+      Protection.Leave_Kernel_No_Change;
+
+   end Initialize;
+
    -----------------
    -- Set_Handler --
    -----------------
@@ -80,17 +102,18 @@ package body Ada.Real_Time.Timing_Events is
    is
    begin
 
+      if Event.Id = null then
+         Initialize (Event);
+      end if;
+
       Protection.Enter_Kernel;
 
       Event.Handler := Handler;
 
-      SBT.Cancel_Handler (Event.Alarm'Unrestricted_Access);
+      SBT.Cancel_Handler (Event.Id);
 
       if Handler /= null then
-         SBT.Set_Handler (Event.Alarm'Unrestricted_Access,
-                          SBT.Time (At_Time),
-                          Execute_Handler'Access,
-                          Event'Address);
+         SBT.Set_Handler (Event.Id, SBT.Time (At_Time));
       end if;
 
       Protection.Leave_Kernel_No_Change;
@@ -131,9 +154,13 @@ package body Ada.Real_Time.Timing_Events is
    is
    begin
 
+      if Event.Id = null then
+         Initialize (Event);
+      end if;
+
       Protection.Enter_Kernel;
 
-      SBT.Cancel_Handler (Event.Alarm'Unrestricted_Access);
+      SBT.Cancel_Handler (Event.Id);
 
       Cancelled     := Event.Handler /= null;
       Event.Handler := null;
@@ -148,7 +175,13 @@ package body Ada.Real_Time.Timing_Events is
 
    function Time_Of_Event (Event : Timing_Event) return Time is
    begin
-      return Time (SBT.Time_Of_Alarm (Event.Alarm'Unrestricted_Access));
+
+      if Event.Id = null then
+         return Time_First;
+      end if;
+
+      return Time (SBT.Time_Of_Alarm (Event.Id));
+
    end Time_Of_Event;
 
 end Ada.Real_Time.Timing_Events;

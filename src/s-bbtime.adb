@@ -117,7 +117,7 @@ package body System.BB.Time is
       --  Make sure we are handling the right interrupt and there is
       --  an event pending.
 
-      pragma Assert (Interrupt = Clock_Interrupt);
+      pragma Assert (Interrupt = Alarm_Interrupt);
       pragma Assert (Pending_Alarm);
       pragma Assert (Alarm /= null);
       pragma Assert (Alarm.Timeout <= Clock);
@@ -139,15 +139,9 @@ package body System.BB.Time is
 
          --  Clear event and call handler
 
-         declare
-            Handler : constant Alarm_Handler  := Alarm.Handler;
-            Data    : constant System.Address := Alarm.Data;
-         begin
-            pragma Assert (Handler /= null);
+         Clear (Alarm);
 
-            Clear   (Alarm);
-            Handler (Data);
-         end;
+         Alarm.Handler (Alarm.Data);
 
          --  Read clock and get first event from queue
 
@@ -184,7 +178,7 @@ package body System.BB.Time is
 
       pragma Assert (Alarm /= null);
 
-      if Alarm.Handler /= null then
+      if Alarm.Next /= null then
 
          --  Check if Alarm is first in queue
 
@@ -217,8 +211,6 @@ package body System.BB.Time is
    procedure Clear (Alarm : Alarm_Id) is
    begin
       Alarm.Timeout := Time'First;
-      Alarm.Handler := null;
-      Alarm.Data    := Null_Address;
       Alarm.Next    := null;
       Alarm.Prev    := null;
    end Clear;
@@ -297,6 +289,27 @@ package body System.BB.Time is
 
    end Clock_Handler;
 
+   ----------------------
+   -- Initialize_Alarm --
+   ----------------------
+
+   procedure Initialize_Alarm
+     (Alarm   : in out Alarm_Descriptor;
+      Handler : Alarm_Handler;
+      Data    : System.Address;
+      Id      : out Alarm_Id)
+   is
+   begin
+
+      pragma Assert (Alarm.Handler = null);
+
+      Alarm.Handler := Handler;
+      Alarm.Data := Data;
+
+      Id := Alarm'Unrestricted_Access;
+
+   end Initialize_Alarm;
+
    -----------------------
    -- Initialize_Timers --
    -----------------------
@@ -342,26 +355,21 @@ package body System.BB.Time is
 
    procedure Set_Handler
      (Alarm   : Alarm_Id;
-      Timeout : Time;
-      Handler : Alarm_Handler;
-      Data    : System.Address)
+      Timeout : Time)
    is
       Aux : Alarm_Id := First_Alarm;
    begin
 
-      pragma Assert (Alarm.Handler = null);
-      pragma Assert (Handler /= null);
+      pragma Assert (Alarm /= null);
 
-      --  Set alarm timeout, handler and data
+      --  Set alarm timeout
 
       Alarm.Timeout := Timeout;
-      Alarm.Handler := Handler;
-      Alarm.Data    := Data;
 
       --  Search for element Aux where Aux.Timeout > Timeout
 
       while Aux.Timeout <= Timeout loop
-            Aux := Aux.Next;
+         Aux := Aux.Next;
       end loop;
 
       --  Insert before Aux (always before Last_Alarm)
@@ -370,12 +378,16 @@ package body System.BB.Time is
       Alarm.Prev := Aux.Prev;
       Aux.Prev := Alarm;
 
+      pragma Assert (Alarm.Next /= null);
+      pragma Assert (Alarm.Timeout < Alarm.Next.Timeout);
+
       --  Check if this alarm is to be first in queue
 
       if Alarm.Prev = null then
          First_Alarm := Alarm;
          Update_Alarm_Timer;
       else
+         pragma Assert (Alarm.Prev.Timeout <= Alarm.Timeout);
          Alarm.Prev.Next := Alarm;
       end if;
 
@@ -387,6 +399,7 @@ package body System.BB.Time is
 
    function Time_Of_Alarm (Alarm : Alarm_Id) return Time is
    begin
+      pragma Assert (Alarm /= null);
       return Alarm.Timeout;
    end Time_Of_Alarm;
 

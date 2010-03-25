@@ -100,11 +100,17 @@ package System.BB.Time is
    procedure Cancel_Handler (Alarm : Alarm_Id);
    --  Cancel alarm timer handler
 
+   procedure Initialize_Alarm
+     (Alarm   : in out Alarm_Descriptor;
+      Handler : Alarm_Handler;
+      Data    : System.Address;
+      Id      : out Alarm_Id);
+   pragma Inline (Initialize_Alarm);
+   --  Initialize and alarm, binding it to the given handler and data
+
    procedure Set_Handler
      (Alarm   : Alarm_Id;
-      Timeout : Time;
-      Handler : Alarm_Handler;
-      Data    : System.Address);
+      Timeout : Time);
    --  Set alarm timer handler
 
    function Time_Of_Alarm (Alarm : Alarm_Id) return Time;

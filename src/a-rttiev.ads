@@ -68,9 +68,12 @@ package Ada.Real_Time.Timing_Events is
 
 private
 
+   package SBT renames System.BB.Time;
+
    type Timing_Event is tagged limited
       record
-         Alarm   : aliased System.BB.Time.Alarm_Descriptor;
+         Id      : SBT.Alarm_Id;
+         Alarm   : System.BB.Time.Alarm_Descriptor;
          Handler : Timing_Event_Handler;
          pragma Volatile (Handler);
       end record;
