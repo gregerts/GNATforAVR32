@@ -58,6 +58,10 @@ with System.BB.Threads.Queues;
 with System.BB.Peripherals;
 --  Used for To_Level
 
+with System.BB.TMU;
+--  Used for Enter_Interrupt
+--           Leave_Interrupt
+
 package body System.BB.Interrupts is
 
    package SSE renames System.Storage_Elements;
@@ -113,10 +117,6 @@ package body System.BB.Interrupts is
    pragma Export (Asm, Interrupt_Wrapper, "interrupt_wrapper");
    --  This wrapper procedure is in charge of setting the appropriate
    --  software priorities before calling the user-defined handler.
-
-   procedure Unhandled (Interrupt : Interrupt_ID);
-   --  This procedure is called when an interrupt without a
-   --  user-defined handler is encountered.
 
    --------------------
    -- Attach_Handler --
@@ -193,8 +193,16 @@ package body System.BB.Interrupts is
       --  This must be an external interrupt
       pragma Assert (Interrupt /= No_Interrupt and Level > 0);
 
+      --  Return if no handler is registered for this interrupt
+      if Interrupt_Handlers_Table (Interrupt) = null then
+         return;
+      end if;
+
       --  Store the interrupt being handled.
       Interrupt_Being_Handled := Interrupt;
+
+      --  Change to TMU interrupt level
+      TMU.Enter_Interrupt (Level);
 
       --  Then, we must set the appropriate software priority
       --  corresponding to the interrupt being handled. It comprises
@@ -213,20 +221,13 @@ package body System.BB.Interrupts is
       CPU_Primitives.Disable_Interrupts;
       Threads.Queues.Change_Priority (Self_Id, Caller_Priority);
 
+      --  Leave TMU interrupt level
+      TMU.Leave_Interrupt;
+
       --  Restore the interrupt that was previously handled.
       Interrupt_Being_Handled := Previous_Interrupt;
 
    end Interrupt_Wrapper;
-
-   ---------------
-   -- Unhandled --
-   ---------------
-
-   procedure Unhandled (Interrupt : Interrupt_ID) is
-      pragma Unreferenced (Interrupt);
-   begin
-      null;
-   end Unhandled;
 
    ----------------------------
    -- Within_Interrupt_Stack --
@@ -254,7 +255,7 @@ package body System.BB.Interrupts is
            Interrupt_Stacks (Interrupt_Handled)(Stack_Space'Last)'Address;
 
          --  Compare the Address passed as argument against the
-         --  previosly calculated stack boundaries.
+         --  previously calculated stack boundaries.
 
          return Stack_Address >= Stack_Start
            and then Stack_Address <= Stack_End;
@@ -276,11 +277,6 @@ package body System.BB.Interrupts is
       for Index in Real_Interrupt_Level loop
          Interrupt_Stack_Table (Index) :=
            Interrupt_Stacks (Index)(Stack_Space'Last - 7)'Address;
-      end loop;
-
-      --  All interrupts initially have no handler
-      for Interrupt in Interrupt_ID loop
-         Interrupt_Handlers_Table (Interrupt) := Unhandled'Access;
       end loop;
 
    end Initialize_Interrupts;

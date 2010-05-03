@@ -48,10 +48,6 @@
 	nop
 	nop
 
-	/* Enable interrupt timer */	
-	mov	r12, \level
-	call	tmu_enter_interrupt	
-
 	/* Call get interrupt ID for level */	
 	mov	r12, \level	
 	call	get_interrupt_id
@@ -84,13 +80,7 @@
 	breq	0f
 	call	context_switch
 
-	/* Return from interrupt, restoring R8 .. R12 LR PC SR */
-	rete
-
 0:
-	/* Restore task timer */	
-	call	tmu_leave_interrupt	
-
 	/* Return from interrupt, restoring R8 .. R12 LR PC SR */
 	rete
 .endm

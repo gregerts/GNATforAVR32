@@ -139,7 +139,7 @@ package System.BB.TMU is
    --  Enter idle mode
 
    procedure Enter_Interrupt (Level : Interrupts.Interrupt_Level);
-   pragma Export (Asm, Enter_Interrupt, "tmu_enter_interrupt");
+   pragma Inline (Enter_Interrupt);
    --  Enter interrupt mode
 
    procedure Enter_Proxy (Id : Thread_Id);
@@ -151,7 +151,7 @@ package System.BB.TMU is
    --  Leave idle mode
 
    procedure Leave_Interrupt;
-   pragma Export (Asm, Leave_Interrupt, "tmu_leave_interrupt");
+   pragma Inline (Leave_Interrupt);
    --  Leave interrupt mode
 
    procedure Leave_Proxy;
