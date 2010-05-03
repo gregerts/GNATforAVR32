@@ -48,7 +48,7 @@
 	/* Get highest interrupt line, abort handler if none */
 	ld.w	r9, r9[r8 << 2]
 	cp.w	r9, 0
-	br.eq	0f
+	breq	0f
 	clz	r9, r9
 	rsub	r9, r9, 31
 
