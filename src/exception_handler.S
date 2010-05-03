@@ -41,33 +41,35 @@
 
 .macro INTERRUPT_HANDLER level
 
-	/* R8 R9 .. R12 LR PC SR are automatically saved on task stack */
+	/* Get group causing interrupt */	
+	lda.w	r9, interrupt_requests
+	ld.w	r8, r9[256 + 4 * (4 - \level)]
+
+	/* Get highest interrupt line, abort handler if none */
+	ld.w	r9, r9[r8 << 2]
+	cp.w	r9, 0
+	br.eq	0f
+	clz	r9, r9
+	rsub	r9, r9, 31
+
+	/* Get interrupt ID from 8-bit array (16 * group + line) */
+	add	r9, r9, r8 << 4
+	lda.w	r8, to_interrupt_id
+	ld.ub	r12, r8[r9]
 
 	/* Set global interrupt mask */
 	ssrf	SR_GM
-	nop
-	nop
-
-	/* Call get interrupt ID for level */	
-	mov	r12, \level	
-	call	get_interrupt_id
-
-	/* If interrupt ID is 0, return from handler */
-	cp.w	r12, 0
-	breq	0f
 
 	/* Load stack pointer for interrupt level from stack table */
 	lda.w	r8, interrupt_stack_table
 	mov 	r9, sp
-	ld.w	sp, r8[4 * \level]
+	ld.w	sp, r8[\level << 2]
 
 	/* Push task stack pointer on interrupt stack */
 	st.w	--sp, r9
 
-	/* Set R11 to level */
-	mov	r11, \level
-
 	/* Call interrupt_wrapper (interrupt, level) */
+	mov	r11, \level
 	call	interrupt_wrapper
 
 	/* Pop task stack pointer from interrupt stack */

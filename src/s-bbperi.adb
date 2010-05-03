@@ -118,14 +118,8 @@ package body System.BB.Peripherals is
    Flash : Flash_Interface;
    for Flash'Address use Flash_Address;
 
-   Requests : aliased Interrupt_Request_Array;
-   for Requests'Address use Interrupt_Request_Address;
-
    Priorities : aliased Interrupt_Priority_Array;
    for Priorities'Address use Interrupt_Priority_Address;
-
-   Causes : aliased Interrupt_Cause_Array;
-   for Causes'Address use Interrupt_Cause_Address;
 
    USART : aliased USART_Channel_Interface;
    for USART'Address use USART_Channel_1_Address;
@@ -167,12 +161,6 @@ package body System.BB.Peripherals is
 
    procedure Initialize_Timers;
    --  Procedure initializing the Timer / Counter.
-
-   function Get_Interrupt_ID
-     (Level : SBI.Interrupt_Level) return SBI.Interrupt_ID;
-   pragma Export (Asm, Get_Interrupt_ID, "get_interrupt_id");
-   --  Function returning the ID of the pending interrupt with the
-   --  highest priority.
 
    procedure GPIO_Configure_Peripheral
      (Port        : access GPIO_Port_Interface;
@@ -276,38 +264,16 @@ package body System.BB.Peripherals is
       Autovectors : Autovector_Array;
       pragma Import (Asm, Autovectors, "autovectors");
    begin
+
       --  Initialize all groups to their predefined level.
+
       for I in Interrupt_Group loop
          Priorities (I) := (Level => To_Level (I),
                             Autovector => Scaler_14 (Autovectors (To_Level (I))),
                             others => <>);
       end loop;
+
    end Initialize_Interrupts;
-
-   ----------------------
-   -- Get_Interrupt_ID --
-   ----------------------
-
-   function Get_Interrupt_ID
-     (Level : SBI.Interrupt_Level)
-      return SBI.Interrupt_ID
-   is
-      Group : constant IC_Group := IC_Group (Causes (4 - Level).Cause);
-      Aux : Scaler_32 := Requests (Group);
-   begin
-
-      if Aux = 0 then
-         return SBI.No_Interrupt;
-      end if;
-
-      --  In case of several interrupt the highest numbered gets priority
-      SMC.Asm ("clz %0, %1",
-               Inputs => Scaler_32'Asm_Input ("r", Aux),
-               Outputs => Scaler_32'Asm_Output ("=r", Aux));
-
-      return SBI.Interrupt_ID (To_Interrupt (Group, IC_Line (31 - Aux)));
-
-   end Get_Interrupt_ID;
 
    --------------
    -- To_Level --
