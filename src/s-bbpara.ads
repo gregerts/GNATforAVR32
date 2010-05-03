@@ -72,10 +72,6 @@ package System.BB.Parameters is
    Clock_Multiplication : constant := 5;
    --  Multiplication of main clock to external clock.
 
-   Peripheral_Division : constant := 1;
-   --  Scaling of peripheral clocks relative to main clock.
-   --  Possible divisions are 1, 2, 4, 8, 16, 32, 64, 128 and 256.
-
    Timer_Division : constant := 32;
    --  Scaling of timer clock relative to peripheral clock A.
    --  Possible divisions are 1, 4, 8, 16 and 32.

@@ -119,12 +119,8 @@ package System.BB.Peripherals is
    -- Interrupts --
    ----------------
 
-   subtype Interrupt_Group is Natural range 0 .. (SBP.Interrupt_Groups - 1);
-   --  Type that defines the range of possible interrupt groups.
-
    function To_Level
      (Interrupt : SBI.Interrupt_ID) return SBI.Interrupt_Level;
-   pragma Inline (To_Level);
    --  Function returning the level of an interrupt ID.
 
    --  Constants defining the external interrupts
@@ -187,27 +183,6 @@ package System.BB.Peripherals is
    EIM_1   : constant := 3;
    EIM_0   : constant := 2;
    COMPARE : constant := 1;  --  Group 0
-
-   --  Constants defining levels of the external interrupt groups
-   Group_0_Level  : constant := 4;
-   Group_1_Level  : constant := 1;
-   Group_2_Level  : constant := 1;
-   Group_3_Level  : constant := 1;
-   Group_4_Level  : constant := 1;
-   Group_5_Level  : constant := 1;
-   Group_6_Level  : constant := 1;
-   Group_7_Level  : constant := 1;
-   Group_8_Level  : constant := 1;
-   Group_9_Level  : constant := 1;
-   Group_10_Level : constant := 1;
-   Group_11_Level : constant := 1;
-   Group_12_Level : constant := 1;
-   Group_13_Level : constant := 1;
-   Group_14_Level : constant := 4;
-   Group_15_Level : constant := 1;
-   Group_16_Level : constant := 1;
-   Group_17_Level : constant := 1;
-   Group_18_Level : constant := 1;
 
    --------------------
    -- Output Console --
