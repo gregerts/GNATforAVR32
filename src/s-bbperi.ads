@@ -77,12 +77,8 @@ package System.BB.Peripherals is
      (SBP.Clock_Frequency * SBP.Clock_Multiplication * 10 ** 6);
    --  Frequency of main clock in Hz
 
-   Peripheral_Frequency : constant :=
-     Main_Clock_Frequency / SBP.Peripheral_Division;
-   --  Frequency of peripheral clock in Hz
-
    Timer_Frequency : constant :=
-     Peripheral_Frequency / SBP.Timer_Division;
+     Main_Clock_Frequency / SBP.Timer_Division;
    --  Frequency of timer clock in Hz
 
    type Timer_Interval is mod 2 ** 16;

@@ -100,197 +100,139 @@ package System.OS_Interface is
 
    --  Group 18
    SDRAMC           : constant := SBP.SDRAMC;
-   SDRAMC_Priority  : constant
-     := Interrupt_Priority'First + SBP.Group_18_Level - 1;
+   SDRAMC_Priority  : constant := Interrupt_Priority'First;
    --  Group 17
    USB              : constant := SBP.USB;
-   USB_Priority     : constant
-     := Interrupt_Priority'First + SBP.Group_17_Level - 1;
+   USB_Priority     : constant := Interrupt_Priority'First;
    --  Group 16
    MACB             : constant := SBP.MACB;
-   MACB_Priority    : constant
-     := Interrupt_Priority'First + SBP.Group_16_Level - 1;
+   MACB_Priority    : constant := Interrupt_Priority'First;
    --  Group 15
    ADC              : constant := SBP.ADC;
-   ADC_Priority     : constant
-     := Interrupt_Priority'First + SBP.Group_15_Level - 1;
+   ADC_Priority     : constant := Interrupt_Priority'First;
    --  Group 14
    TC_2             : constant := SBP.TC_2;
-   TC_2_Priority    : constant
-     := Interrupt_Priority'First + SBP.Group_14_Level - 1;
+   TC_2_Priority    : constant := Interrupt_Priority'First + 3;
    TC_1             : constant := SBP.TC_1;
-   TC_1_Priority    : constant
-     := Interrupt_Priority'First + SBP.Group_14_Level - 1;
+   TC_1_Priority    : constant := Interrupt_Priority'First + 3;
    TC_0             : constant := SBP.TC_0;
-   TC_0_Priority    : constant
-     := Interrupt_Priority'First + SBP.Group_14_Level - 1;
+   TC_0_Priority    : constant := Interrupt_Priority'First + 3;
    --  Group 13
    SSC              : constant := SBP.SSC;
-   SSC_Priority     : constant
-     := Interrupt_Priority'First + SBP.Group_13_Level - 1;
+   SSC_Priority     : constant := Interrupt_Priority'First;
    --  Group 12
    PWM              : constant := SBP.PWM;
-   PWM_Priority     : constant
-     := Interrupt_Priority'First + SBP.Group_12_Level - 1;
+   PWM_Priority     : constant := Interrupt_Priority'First;
    --  Group 11
    TWI              : constant := SBP.TWI;
-   TWI_Priority     : constant
-     := Interrupt_Priority'First + SBP.Group_11_Level - 1;
+   TWI_Priority     : constant := Interrupt_Priority'First;
    --  Group 10
    SPI_1            : constant := SBP.SPI_1;
-   SPI_1_Priority   : constant
-     := Interrupt_Priority'First + SBP.Group_10_Level - 1;
+   SPI_1_Priority   : constant := Interrupt_Priority'First;
    --  Group 9
    SPI_0            : constant := SBP.SPI_0;
-   SPI_0_Priority   : constant
-     := Interrupt_Priority'First + SBP.Group_9_Level - 1;
+   SPI_0_Priority   : constant := Interrupt_Priority'First;
    --  Group 8
    USART_3          : constant := SBP.USART_3;
-   USART_3_Priority : constant
-     := Interrupt_Priority'First + SBP.Group_8_Level - 1;
+   USART_3_Priority : constant := Interrupt_Priority'First;
    --  Group 7
    USART_2          : constant := SBP.USART_2;
-   USART_2_Priority : constant
-     := Interrupt_Priority'First + SBP.Group_7_Level - 1;
+   USART_2_Priority : constant := Interrupt_Priority'First;
    --  Group 6
    USART_1          : constant := SBP.USART_1;
-   USART_1_Priority : constant
-     := Interrupt_Priority'First + SBP.Group_6_Level - 1;
+   USART_1_Priority : constant := Interrupt_Priority'First;
    --  Group 5
    USART_0          : constant := SBP.USART_0;
-   USART_0_Priority : constant
-     := Interrupt_Priority'First + SBP.Group_5_Level - 1;
+   USART_0_Priority : constant := Interrupt_Priority'First;
    --  Group 4
    FLASHC           : constant := SBP.FLASHC;
-   FLASHC_Priority  : constant
-     := Interrupt_Priority'First + SBP.Group_4_Level - 1;
+   FLASHC_Priority  : constant := Interrupt_Priority'First;
    --  Group 3
    PDCA_14          : constant := SBP.PDCA_14;
-   PDCA_14_Priority : constant
-     := Interrupt_Priority'First + SBP.Group_3_Level - 1;
+   PDCA_14_Priority : constant := Interrupt_Priority'First;
    PDCA_13          : constant := SBP.PDCA_13;
-   PDCA_13_Priority : constant
-     := Interrupt_Priority'First + SBP.Group_3_Level - 1;
+   PDCA_13_Priority : constant := Interrupt_Priority'First;
    PDCA_12          : constant := SBP.PDCA_12;
-   PDCA_12_Priority : constant
-     := Interrupt_Priority'First + SBP.Group_3_Level - 1;
+   PDCA_12_Priority : constant := Interrupt_Priority'First;
    PDCA_11          : constant := SBP.PDCA_11;
-   PDCA_11_Priority : constant
-     := Interrupt_Priority'First + SBP.Group_3_Level - 1;
+   PDCA_11_Priority : constant := Interrupt_Priority'First;
    PDCA_10          : constant := SBP.PDCA_10;
-   PDCA_10_Priority : constant
-     := Interrupt_Priority'First + SBP.Group_3_Level - 1;
+   PDCA_10_Priority : constant := Interrupt_Priority'First;
    PDCA_9           : constant := SBP.PDCA_9;
-   PDCA_9_Priority  : constant
-     := Interrupt_Priority'First + SBP.Group_3_Level - 1;
+   PDCA_9_Priority  : constant := Interrupt_Priority'First;
    PDCA_8           : constant := SBP.PDCA_8;
-   PDCA_8_Priority  : constant
-     := Interrupt_Priority'First + SBP.Group_3_Level - 1;
+   PDCA_8_Priority  : constant := Interrupt_Priority'First;
    PDCA_7           : constant := SBP.PDCA_7;
-   PDCA_7_Priority  : constant
-     := Interrupt_Priority'First + SBP.Group_3_Level - 1;
+   PDCA_7_Priority  : constant := Interrupt_Priority'First;
    PDCA_6           : constant := SBP.PDCA_6;
-   PDCA_6_Priority  : constant
-     := Interrupt_Priority'First + SBP.Group_3_Level - 1;
+   PDCA_6_Priority  : constant := Interrupt_Priority'First;
    PDCA_5           : constant := SBP.PDCA_5;
-   PDCA_5_Priority  : constant
-     := Interrupt_Priority'First + SBP.Group_3_Level - 1;
+   PDCA_5_Priority  : constant := Interrupt_Priority'First;
    PDCA_4           : constant := SBP.PDCA_4;
-   PDCA_4_Priority  : constant
-     := Interrupt_Priority'First + SBP.Group_3_Level - 1;
+   PDCA_4_Priority  : constant := Interrupt_Priority'First;
    PDCA_3           : constant := SBP.PDCA_3;
-   PDCA_3_Priority  : constant
-     := Interrupt_Priority'First + SBP.Group_3_Level - 1;
+   PDCA_3_Priority  : constant := Interrupt_Priority'First;
    PDCA_2           : constant := SBP.PDCA_2;
-   PDCA_2_Priority  : constant
-     := Interrupt_Priority'First + SBP.Group_3_Level - 1;
+   PDCA_2_Priority  : constant := Interrupt_Priority'First;
    PDCA_1           : constant := SBP.PDCA_1;
-   PDCA_1_Priority  : constant
-     := Interrupt_Priority'First + SBP.Group_3_Level - 1;
+   PDCA_1_Priority  : constant := Interrupt_Priority'First;
    PDCA_0           : constant := SBP.PDCA_0;
-   PDCA_0_Priority  : constant
-     := Interrupt_Priority'First + SBP.Group_3_Level - 1;
+   PDCA_0_Priority  : constant := Interrupt_Priority'First;
    --  Group 2
    GPIO_13          : constant := SBP.GPIO_13;
-   GPIO_13_Priority : constant
-     := Interrupt_Priority'First + SBP.Group_2_Level - 1;
+   GPIO_13_Priority : constant := Interrupt_Priority'First;
    GPIO_12          : constant := SBP.GPIO_12;
-   GPIO_12_Priority : constant
-     := Interrupt_Priority'First + SBP.Group_2_Level - 1;
+   GPIO_12_Priority : constant := Interrupt_Priority'First;
    GPIO_11          : constant := SBP.GPIO_11;
-   GPIO_11_Priority : constant
-     := Interrupt_Priority'First + SBP.Group_2_Level - 1;
+   GPIO_11_Priority : constant := Interrupt_Priority'First;
    GPIO_10          : constant := SBP.GPIO_10;
-   GPIO_10_Priority : constant
-     := Interrupt_Priority'First + SBP.Group_2_Level - 1;
+   GPIO_10_Priority : constant := Interrupt_Priority'First;
    GPIO_9           : constant := SBP.GPIO_9;
-   GPIO_9_Priority  : constant
-     := Interrupt_Priority'First + SBP.Group_2_Level - 1;
+   GPIO_9_Priority  : constant := Interrupt_Priority'First;
    GPIO_8           : constant := SBP.GPIO_8;
-   GPIO_8_Priority  : constant
-     := Interrupt_Priority'First + SBP.Group_2_Level - 1;
+   GPIO_8_Priority  : constant := Interrupt_Priority'First;
    GPIO_7           : constant := SBP.GPIO_7;
-   GPIO_7_Priority  : constant
-     := Interrupt_Priority'First + SBP.Group_2_Level - 1;
+   GPIO_7_Priority  : constant := Interrupt_Priority'First;
    GPIO_6           : constant := SBP.GPIO_6;
-   GPIO_6_Priority  : constant
-     := Interrupt_Priority'First + SBP.Group_2_Level - 1;
+   GPIO_6_Priority  : constant := Interrupt_Priority'First;
    GPIO_5           : constant := SBP.GPIO_5;
-   GPIO_5_Priority  : constant
-     := Interrupt_Priority'First + SBP.Group_2_Level - 1;
+   GPIO_5_Priority  : constant := Interrupt_Priority'First;
    GPIO_4           : constant := SBP.GPIO_4;
-   GPIO_4_Priority  : constant
-     := Interrupt_Priority'First + SBP.Group_2_Level - 1;
+   GPIO_4_Priority  : constant := Interrupt_Priority'First;
    GPIO_3           : constant := SBP.GPIO_3;
-   GPIO_3_Priority  : constant
-     := Interrupt_Priority'First + SBP.Group_2_Level - 1;
+   GPIO_3_Priority  : constant := Interrupt_Priority'First;
    GPIO_2           : constant := SBP.GPIO_2;
-   GPIO_2_Priority  : constant
-     := Interrupt_Priority'First + SBP.Group_2_Level - 1;
+   GPIO_2_Priority  : constant := Interrupt_Priority'First;
    GPIO_1           : constant := SBP.GPIO_1;
-   GPIO_1_Priority  : constant
-     := Interrupt_Priority'First + SBP.Group_2_Level - 1;
+   GPIO_1_Priority  : constant := Interrupt_Priority'First;
    GPIO_0           : constant := SBP.GPIO_0;
-   GPIO_0_Priority  : constant
-     := Interrupt_Priority'First + SBP.Group_2_Level - 1;
+   GPIO_0_Priority  : constant := Interrupt_Priority'First;
    --  Group 1
    FREQM            : constant := SBP.FREQM;
-   FREQM_Priority   : constant
-     := Interrupt_Priority'First + SBP.Group_1_Level - 1;
+   FREQM_Priority   : constant := Interrupt_Priority'First;
    PM               : constant := SBP.PM;
-   PM_Priority      : constant
-     := Interrupt_Priority'First + SBP.Group_1_Level - 1;
+   PM_Priority      : constant := Interrupt_Priority'First;
    RTC              : constant := SBP.RTC;
-   RTC_Priority     : constant
-     := Interrupt_Priority'First + SBP.Group_1_Level - 1;
+   RTC_Priority     : constant := Interrupt_Priority'First;
    EIM_7            : constant := SBP.EIM_7;
-   EIM_7_Priority   : constant
-     := Interrupt_Priority'First + SBP.Group_1_Level - 1;
+   EIM_7_Priority   : constant := Interrupt_Priority'First;
    EIM_6            : constant := SBP.EIM_6;
-   EIM_6_Priority   : constant
-     := Interrupt_Priority'First + SBP.Group_1_Level - 1;
+   EIM_6_Priority   : constant := Interrupt_Priority'First;
    EIM_5            : constant := SBP.EIM_5;
-   EIM_5_Priority   : constant
-     := Interrupt_Priority'First + SBP.Group_1_Level - 1;
+   EIM_5_Priority   : constant := Interrupt_Priority'First;
    EIM_4            : constant := SBP.EIM_4;
-   EIM_4_Priority   : constant
-     := Interrupt_Priority'First + SBP.Group_1_Level - 1;
+   EIM_4_Priority   : constant := Interrupt_Priority'First;
    EIM_3            : constant := SBP.EIM_3;
-   EIM_3_Priority   : constant
-     := Interrupt_Priority'First + SBP.Group_1_Level - 1;
+   EIM_3_Priority   : constant := Interrupt_Priority'First;
    EIM_2            : constant := SBP.EIM_2;
-   EIM_2_Priority   : constant
-     := Interrupt_Priority'First + SBP.Group_1_Level - 1;
+   EIM_2_Priority   : constant := Interrupt_Priority'First;
    EIM_1            : constant := SBP.EIM_1;
-   EIM_1_Priority   : constant
-     := Interrupt_Priority'First + SBP.Group_1_Level - 1;
+   EIM_1_Priority   : constant := Interrupt_Priority'First;
    EIM_0            : constant := SBP.EIM_0;
-   EIM_0_Priority   : constant
-     := Interrupt_Priority'First + SBP.Group_1_Level - 1;
+   EIM_0_Priority   : constant := Interrupt_Priority'First;
    --  Group 0
    COMPARE          : constant := SBP.COMPARE;
-   COMPARE_Priority : constant
-     := Interrupt_Priority'First + SBP.Group_0_Level - 1;
+   COMPARE_Priority : constant := Interrupt_Priority'First + 3;
 
    --------------------------
    -- Interrupt processing --

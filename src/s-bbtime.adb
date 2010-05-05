@@ -45,6 +45,7 @@ with System.BB.Interrupts;
 package body System.BB.Time is
 
    use type Peripherals.Timer_Interval;
+   use type Interrupts.Interrupt_ID;
 
    subtype Timer_Interval is Peripherals.Timer_Interval;
 

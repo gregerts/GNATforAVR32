@@ -40,8 +40,11 @@ with System.BB.Threads;
 package body System.BB.TMU is
 
    package CPU renames System.BB.CPU_Primitives;
+   package SBI renames System.BB.Interrupts;
 
    use type CPU.Word;
+   use type SBI.Interrupt_Level;
+   use type SBI.Interrupt_ID;
 
    subtype Word is CPU.Word;
 
@@ -50,8 +53,7 @@ package body System.BB.TMU is
 
    pragma Suppress_Initialization (Interrupt_Timer_Array);
 
-   subtype Timer_Index is Interrupts.Interrupt_Level;
-
+   type Timer_Index is range 0 .. Integer (SBI.Interrupt_Level'Last);
    type Timer_Array is array (Timer_Index) of Timer_Id;
    pragma Suppress_Initialization (Timer_Array);
 
@@ -74,7 +76,7 @@ package body System.BB.TMU is
    Top : Timer_Index;
    --  Index of stack top
 
-   To_Timer : Timer_Array;
+   To_Timer : array (SBI.Interrupt_Level) of Timer_Id;
    --  Access to interrupt level timers indexed by level
 
    -----------------------
@@ -361,7 +363,7 @@ package body System.BB.TMU is
             TM : constant Timer_Id := Interrupt_TM (I)'Access;
          begin
             Initialize_Timer (TM);
-            To_Timer (I - Interrupt_TM'First + 1) := TM;
+            To_Timer (SBI.Interrupt_Level (I - Interrupt_TM'First)) := TM;
          end;
       end loop;
 

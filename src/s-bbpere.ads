@@ -108,9 +108,6 @@ package System.BB.Peripherals.Registers is
    Interrupt_Request_Address :
      constant System.Address := System'To_Address (16#FFFF0800# + 256);
 
-   Interrupt_Cause_Address :
-     constant System.Address := System'To_Address (16#FFFF0800# + 512);
-
    Power_Manager_Address :
      constant System.Address := System'To_Address (16#FFFF0C00#);
 
@@ -388,6 +385,22 @@ package System.BB.Peripherals.Registers is
       end record;
 
    pragma Suppress_Initialization (Flash_Interface);
+
+   --------------------------------
+   -- Interrupt Request Register --
+   --------------------------------
+
+   subtype Interrupt_Request_Register is Scaler_32;
+
+   -----------------------------
+   -- Interrupt Request Array --
+   -----------------------------
+
+   type Interrupt_Request_Array is
+     array (0 .. 63) of Interrupt_Request_Register;
+
+   pragma Atomic_Components (Interrupt_Request_Array);
+   pragma Suppress_Initialization (Interrupt_Request_Array);
 
    ---------------------------------
    -- Interrupt Priority Register --

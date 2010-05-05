@@ -68,11 +68,6 @@ package body System.BB.Interrupts is
 
    use type System.Storage_Elements.Storage_Offset;
 
-   subtype Real_Interrupt_Level is Interrupt_Level
-     range 1 .. Interrupt_Level'Last;
-   --  This subtype is the same as Interrupt_Level but excluding Level
-   --  0, which is not a real interrupt level.
-
    ----------------
    -- Local data --
    ----------------
@@ -84,7 +79,7 @@ package body System.BB.Interrupts is
    --  stack must be aligned to 8 bytes to allow double word data
    --  movements.
 
-   Interrupt_Stacks : array (Real_Interrupt_Level) of Stack_Space;
+   Interrupt_Stacks : array (Interrupt_Level) of Stack_Space;
    --  Array that contains the stack used for each interrupt level.
 
    Interrupt_Stack_Table : array (Interrupt_Level) of System.Address;
@@ -159,10 +154,7 @@ package body System.BB.Interrupts is
      (Level : Interrupt_Level) return System.Any_Priority
    is
    begin
-      --  Assert that it is a real interrupt level.
-      pragma Assert (Level /= No_Level);
-
-      return (Any_Priority (Level) + Interrupt_Priority'First - 1);
+      return Interrupt_Priority'First + Any_Priority (Level);
    end To_Priority;
 
    -----------------------
@@ -236,12 +228,13 @@ package body System.BB.Interrupts is
    function Within_Interrupt_Stack
      (Stack_Address : System.Address) return Boolean
    is
-      Interrupt_Handled : constant Interrupt_ID := Current_Interrupt;
-      Stack_Start       : System.Address;
-      Stack_End         : System.Address;
+      Level : constant Interrupt_Level
+        := Peripherals.To_Level (Current_Interrupt);
+      Stack_Start : System.Address;
+      Stack_End   : System.Address;
 
    begin
-      if Interrupt_Handled = No_Interrupt then
+      if Current_Interrupt = No_Interrupt then
 
          --  Return False if no interrupt is being handled
 
@@ -250,9 +243,9 @@ package body System.BB.Interrupts is
          --  Calculate stack boundaries for the interrupt being handled
 
          Stack_Start :=
-           Interrupt_Stacks (Interrupt_Handled)(Stack_Space'First)'Address;
+           Interrupt_Stacks (Level)(Stack_Space'First)'Address;
          Stack_End   :=
-           Interrupt_Stacks (Interrupt_Handled)(Stack_Space'Last)'Address;
+           Interrupt_Stacks (Level)(Stack_Space'Last)'Address;
 
          --  Compare the Address passed as argument against the
          --  previously calculated stack boundaries.
@@ -274,7 +267,7 @@ package body System.BB.Interrupts is
       Interrupt_Stack_Table (0) := SSE.To_Address (0);
 
       --  Set SP of interrupt level to the last double word
-      for Index in Real_Interrupt_Level loop
+      for Index in Interrupt_Level loop
          Interrupt_Stack_Table (Index) :=
            Interrupt_Stacks (Index)(Stack_Space'Last - 7)'Address;
       end loop;
