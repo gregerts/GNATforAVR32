@@ -97,11 +97,12 @@ package body Ada.Execution_Time is
    ---------------------
 
    function Interrupt_Clock
-     (Priority : System.Interrupt_Priority)
+     (I : Ada.Interrupts.Interrupt_ID)
       return CPU_Time
    is
+      C : constant TMU.Clock_Id := TMU.Interrupt_Clock (TMU.Interrupt_ID (I));
    begin
-      return CPU_Time (TMU.Time_Of (TMU.Interrupt_Clock (Priority)));
+      return CPU_Time (TMU.Time_Of (C));
    end Interrupt_Clock;
 
    ---------

@@ -74,7 +74,7 @@ package Ada.Execution_Time.Timers is
      := Ada.Task_Identification.Null_Task_Id;
    --  Non-standard definition
 
-   type Interrupt_Timer (I : System.Interrupt_Priority)
+   type Interrupt_Timer (I : Ada.Interrupts.Interrupt_ID)
       is new Timer (Pseudo_Task_Id'Access) with private;
    --  Non-standard definition
 
@@ -90,7 +90,7 @@ private
         pragma Volatile (Handler);
       end record;
 
-   type Interrupt_Timer (I : System.Interrupt_Priority)
+   type Interrupt_Timer (I : Ada.Interrupts.Interrupt_ID)
       is new Timer (Pseudo_Task_Id'Access) with null record;
 
 end Ada.Execution_Time.Timers;

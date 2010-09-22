@@ -45,14 +45,13 @@ package body System.BB.TMU is
 
    subtype Word is CPU.Word;
 
-   type Interrupt_Clock_Array is
-     array (Interrupt_Priority) of aliased Clock_Descriptor;
+   type Interrupt_Clock_Array is array (Interrupt_ID) of Clock_Id;
    pragma Suppress_Initialization (Interrupt_Clock_Array);
 
-   subtype Clock_Index is Interrupts.Interrupt_Level;
+   type Clock_Index is new Interrupts.Interrupt_Level;
 
-   type Clock_Array is array (Clock_Index) of Clock_Id;
-   pragma Suppress_Initialization (Clock_Array);
+   type Clock_Stack is array (Clock_Index) of Clock_Id;
+   pragma Suppress_Initialization (Clock_Stack);
 
    -----------------------
    -- Local definitions --
@@ -64,20 +63,17 @@ package body System.BB.TMU is
    Max_Timers : constant := 1;
    --  Maxmal number of timers allowed for a clock
 
-   Idle_Clock_Desc : aliased Clock_Descriptor;
+   Idle_Clock : aliased Clock_Descriptor;
    --  Clock of the pseudo idle thread
 
-   Interrupt_Clock_Desc : Interrupt_Clock_Array;
+   Interrupt_Clocks : Interrupt_Clock_Array;
    --  Clocks of the pseudo server threads for each interrupt priority
 
-   Stack : Clock_Array;
+   Stack : Clock_Stack;
    --  Stack of timers
 
    Top : Clock_Index;
    --  Index of stack top
-
-   To_Clock : Clock_Array;
-   --  Access to interrupt level clock indexed by level
 
    -----------------------
    -- Local subprograms --
@@ -216,7 +212,7 @@ package body System.BB.TMU is
       pragma Assert (Top = 0);
       pragma Assert (Clock.Active = Clock);
 
-      Clock.Active := Idle_Clock_Desc'Access;
+      Clock.Active := Idle_Clock'Access;
 
       Swap_Clock (Clock, Clock.Active);
 
@@ -226,23 +222,22 @@ package body System.BB.TMU is
    -- Enter_Interrupt --
    ---------------------
 
-   procedure Enter_Interrupt (Level : Interrupts.Interrupt_Level) is
-      Clock_A : constant Clock_Id := Stack (Top).Active;
-      Clock_B : constant Clock_Id := To_Clock (Level);
+   procedure Enter_Interrupt (Id : Interrupt_ID) is
+      A : constant Clock_Id := Stack (Top).Active;
+      B : constant Clock_Id := Interrupt_Clocks (Id);
 
    begin
-
-      pragma Assert (Level > 0);
       pragma Assert (Top < Stack'Last);
+      pragma Assert (B /= null);
 
       --  Set new top of stack
 
       Top         := Top + 1;
-      Stack (Top) := Clock_B;
+      Stack (Top) := B;
 
       --  Swap timer to new top of stack
 
-      Swap_Clock (Clock_A, Clock_B);
+      Swap_Clock (A, B);
 
    end Enter_Interrupt;
 
@@ -294,9 +289,21 @@ package body System.BB.TMU is
 
    procedure Initialize_Clock (Clock : Clock_Id) is
    begin
-      Clock.Active := Clock;
-      Clock.Free   := Max_Timers;
+      Clock.Base_Time := 0;
+      Clock.Active    := Clock;
+      Clock.Free      := Max_Timers;
    end Initialize_Clock;
+
+   --------------------------
+   -- Initialize_Interrupt --
+   --------------------------
+
+   procedure Initialize_Interrupt (Id : Interrupt_ID) is
+   begin
+      pragma Assert (Interrupt_Clocks (Id) = null);
+      Interrupt_Clocks (Id) := new Clock_Descriptor;
+      Initialize_Clock (Interrupt_Clocks (Id));
+   end Initialize_Interrupt;
 
    --------------------
    -- Initialize_TMU --
@@ -308,23 +315,10 @@ package body System.BB.TMU is
 
       Initialize_Clock (Environment_Clock);
 
-      --  Initialize pseudo task clocks
+      --  Initialize idle task clock, no timers allowed
 
-      Initialize_Clock (Idle_Clock_Desc'Access);
-
-      for I in Interrupt_Clock_Desc'Range loop
-         declare
-            Clock : constant Clock_Id := Interrupt_Clock_Desc (I)'Access;
-         begin
-            Initialize_Clock (Clock);
-            To_Clock (I - Interrupt_Clock_Desc'First + 1) := Clock;
-         end;
-      end loop;
-
-      --  No timers allowed for idle timer and highest interrupt level
-
-      Idle_Clock_Desc.Free := 0;
-      Interrupt_Clock_Desc (Interrupt_Clock_Desc'Last).Free := 0;
+      Initialize_Clock (Idle_Clock'Access);
+      Idle_Clock.Free := 0;
 
       --  Install compare handler
 
@@ -342,11 +336,9 @@ package body System.BB.TMU is
    -- Interrupt_Clock --
    ---------------------
 
-   function Interrupt_Clock
-     (Priority : Interrupt_Priority) return Clock_Id
-   is
+   function Interrupt_Clock (Id : Interrupt_ID) return Clock_Id is
    begin
-      return Interrupt_Clock_Desc (Priority)'Access;
+      return Interrupt_Clocks (Id);
    end Interrupt_Clock;
 
    ---------------
@@ -375,7 +367,7 @@ package body System.BB.TMU is
       Clock : constant Clock_Id := Stack (0);
    begin
       pragma Assert (Top = 0);
-      pragma Assert (Clock.Active = Idle_Clock_Desc'Access);
+      pragma Assert (Clock.Active = Idle_Clock'Access);
 
       Swap_Clock (Clock.Active, Clock);
 

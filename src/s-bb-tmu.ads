@@ -59,11 +59,13 @@ package System.BB.TMU is
    CPU_Ticks_Per_Second : constant := Peripherals.Main_Clock_Frequency;
    --  Number of CPU ticks per second
 
-   ---------------
-   -- Thread_Id --
-   ---------------
+   ----------------
+   -- Identities --
+   ----------------
 
    type Thread_Id is not null access all System.BB.Threads.Thread_Descriptor;
+
+   subtype Interrupt_ID is System.BB.Interrupts.Interrupt_ID;
 
    ----------------------
    -- Clock_Descriptor --
@@ -87,8 +89,11 @@ package System.BB.TMU is
    -- Initialization --
    --------------------
 
+   procedure Initialize_Interrupt (Id : Interrupt_ID);
+   --  Initializes the clock for the given interrupt ID
+
    procedure Initialize_Clock (Clock : Clock_Id);
-   --  Initializes the given Clock.
+   --  Initializes the given Clock
 
    procedure Initialize_TMU (Environment_Clock : Clock_Id);
    --  Initialize this package. Must be called before any other
@@ -98,14 +103,13 @@ package System.BB.TMU is
    -- Clock operations --
    ----------------------
 
-   function Interrupt_Clock
-     (Priority : Interrupt_Priority) return Clock_Id;
-   pragma Inline_Always (Interrupt_Clock);
-   --  Returns the execution time clock for the given interrupt level
-
    function Thread_Clock (Id : Thread_Id) return Clock_Id;
    pragma Inline_Always (Thread_Clock);
    --  Returns execution time clock for the given thread
+
+   function Interrupt_Clock (Id : Interrupt_ID) return Clock_Id;
+   pragma Inline_Always (Interrupt_Clock);
+   --  Returns the execution time clock for the given interrupt ID
 
    function Time_Of (Clock : Clock_Id) return CPU_Time;
    --  Get execution time of the given clock
@@ -140,7 +144,7 @@ package System.BB.TMU is
    pragma Inline (Enter_Idle);
    --  Enter idle mode
 
-   procedure Enter_Interrupt (Level : Interrupts.Interrupt_Level);
+   procedure Enter_Interrupt (Id : Interrupt_ID);
    pragma Inline (Enter_Interrupt);
    --  Enter interrupt mode
 
@@ -173,7 +177,7 @@ private
          --  the idle loop, otherwise to this clock.
 
          First_TM : Timer_Id;
-         --  First timer of this clock, or null if no active timer
+         --  First timer of this clock, or null if no set timer
 
          Free : Natural;
          --  Remaining number of timers allowed for this clock

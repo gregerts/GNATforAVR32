@@ -129,7 +129,8 @@ package body Ada.Execution_Time.Timers is
       pragma Assert (TM.Id = null);
 
       if TM in Interrupt_Timer'Class then
-         Clock := TMU.Interrupt_Clock (Interrupt_Timer (TM).I);
+         Clock := TMU.Interrupt_Clock
+           (TMU.Interrupt_ID (Interrupt_Timer (TM).I));
       else
          Clock := STPO.Task_Clock (To_Task_Id (TM.T.all));
       end if;

@@ -135,6 +135,8 @@ package body System.BB.Interrupts is
 
       Interrupt_Handlers_Table (Id) := Handler;
 
+      TMU.Initialize_Interrupt (Id);
+
    end Attach_Handler;
 
    ---------------------------
@@ -201,11 +203,11 @@ package body System.BB.Interrupts is
          return;
       end if;
 
+      --  Activate clock for current interrupt
+      TMU.Enter_Interrupt (Interrupt);
+
       --  Store the interrupt being handled
       Interrupt_Being_Handled := Interrupt;
-
-      --  Enter this interrupt level
-      TMU.Enter_Interrupt (Level);
 
       --  Then, we must set the appropriate software priority
       --  corresponding to the interrupt being handled. It comprises
@@ -226,11 +228,11 @@ package body System.BB.Interrupts is
       --  returning to normal execution.
       Threads.Queues.Change_Priority (Self_Id, Caller_Priority);
 
-      --  Leave interrupt level
-      TMU.Leave_Interrupt;
-
       --  Restore the interrupt that was previously handled.
       Interrupt_Being_Handled := Previous_Interrupt;
+
+      --  Restore previous clock
+      TMU.Leave_Interrupt;
 
    end Interrupt_Wrapper;
 

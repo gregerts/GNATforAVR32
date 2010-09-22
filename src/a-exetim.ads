@@ -39,6 +39,7 @@
 
 with Ada.Task_Identification;
 with Ada.Real_Time;
+with Ada.Interrupts;
 with System.BB.TMU;
 
 package Ada.Execution_Time is
@@ -56,7 +57,7 @@ package Ada.Execution_Time is
       return CPU_Time;
 
    function Interrupt_Clock
-     (Priority : System.Interrupt_Priority)
+     (I : Ada.Interrupts.Interrupt_ID)
      return CPU_Time;
    --  Non-standard function!
 
