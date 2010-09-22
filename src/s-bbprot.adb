@@ -173,7 +173,7 @@ package body System.BB.Protection is
 
          --  Leave TMU idle mode
 
-         TMU.Leave_Idle;
+         TMU.Leave_Idle (TMU.Thread_Id (Self_Id));
 
       end if;
 

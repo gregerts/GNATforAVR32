@@ -98,8 +98,8 @@ package body System.BB.TMU is
    pragma Inline_Always (Is_Set);
    --  Returns true when the given timer is set
 
-   procedure Swap_Clock (Clock_A, Clock_B : Clock_Id);
-   --  Swap clock from Clk_A to Clk_B
+   procedure Swap_Clock (A, B : Clock_Id);
+   --  Swap clock from A to B
 
    ------------
    -- Cancel --
@@ -131,11 +131,10 @@ package body System.BB.TMU is
 
    procedure Compare_Handler (Id : Interrupts.Interrupt_ID) is
 
-      --  Only the active clock second from the top of the stack can
-      --  have an expired timer since timeouts are not allowed for
-      --  highest priority.
+      --  Only the clock second from the top of the stack can have
+      --  expired as timeouts are not allowed for highest priority.
 
-      Clock : constant Clock_Id := Stack (Top - 1).Active;
+      Clock : constant Clock_Id := Stack (Top - 1);
       TM    : constant Timer_Id := Clock.First_TM;
 
    begin
@@ -166,11 +165,11 @@ package body System.BB.TMU is
    begin
 
       --  Set bottom of stack to timer of first thread and swap to the
-      --  active timer of this thread.
+      --  timer of this thread.
 
       Stack (0) := First.Clock'Access;
 
-      Swap_Clock (Running.Clock.Active, First.Clock.Active);
+      Swap_Clock (Running.Clock'Access, First.Clock'Access);
 
    end Context_Switch;
 
@@ -207,14 +206,14 @@ package body System.BB.TMU is
    ----------------
 
    procedure Enter_Idle is
-      Clock : constant Clock_Id := Stack (0);
+      A : constant Clock_Id := Stack (0);
+      B : constant Clock_Id := Idle_Clock'Access;
+
    begin
       pragma Assert (Top = 0);
-      pragma Assert (Clock.Active = Clock);
 
-      Clock.Active := Idle_Clock'Access;
-
-      Swap_Clock (Clock, Clock.Active);
+      Stack (0) := B;
+      Swap_Clock (A, B);
 
    end Enter_Idle;
 
@@ -223,7 +222,7 @@ package body System.BB.TMU is
    ---------------------
 
    procedure Enter_Interrupt (Id : Interrupt_ID) is
-      A : constant Clock_Id := Stack (Top).Active;
+      A : constant Clock_Id := Stack (Top);
       B : constant Clock_Id := Interrupt_Clocks (Id);
 
    begin
@@ -246,14 +245,14 @@ package body System.BB.TMU is
    -----------------
 
    function Get_Compare (Clock : Clock_Id) return Word is
-      B  : constant CPU_Time := Clock.Base_Time;
+      T  : constant CPU_Time := Clock.Base_Time;
       TM : constant Timer_Id := Clock.First_TM;
    begin
 
       if TM = null then
          return Max_Compare;
-      elsif TM.Timeout > B then
-         return Word (CPU_Time'Min (TM.Timeout - B, Max_Compare));
+      elsif TM.Timeout > T then
+         return Word (CPU_Time'Min (TM.Timeout - T, Max_Compare));
       else
          return 1;
       end if;
@@ -267,8 +266,7 @@ package body System.BB.TMU is
    procedure Initialize_Clock (Clock : Clock_Id) is
    begin
       Clock.Base_Time := 0;
-      Clock.Active    := Clock;
-      Clock.Free      := Max_Timers;
+      Clock.Free := Max_Timers;
    end Initialize_Clock;
 
    --------------------------
@@ -324,7 +322,7 @@ package body System.BB.TMU is
 
    function Is_Active (Clock : Clock_Id) return Boolean is
    begin
-      return Clock = Stack (Top).Active;
+      return Clock = Stack (Top);
    end Is_Active;
 
    ------------
@@ -340,15 +338,23 @@ package body System.BB.TMU is
    -- Leave_Idle --
    ----------------
 
-   procedure Leave_Idle is
-      Clock : constant Clock_Id := Stack (0);
+   procedure Leave_Idle (Id : Thread_Id) is
+      A : constant Clock_Id := Stack (0);
+      B : constant Clock_Id := Id.Clock'Access;
+
    begin
       pragma Assert (Top = 0);
-      pragma Assert (Clock.Active = Idle_Clock'Access);
 
-      Swap_Clock (Clock.Active, Clock);
+      --  Swap to clock B if not already active
 
-      Clock.Active := Clock;
+      if A /= B then
+
+         pragma Assert (A = Idle_Clock'Access);
+
+         Stack (0) := B;
+         Swap_Clock (A, B);
+
+      end if;
 
    end Leave_Idle;
 
@@ -360,14 +366,13 @@ package body System.BB.TMU is
       Clock : constant Clock_Id := Stack (Top);
    begin
       pragma Assert (Top > 0);
-      pragma Assert (Clock.Active = Clock);
 
       --  Set new top of stack
 
       Stack (Top) := null;
       Top         := Top - 1;
 
-      Swap_Clock (Clock, Stack (Top).Active);
+      Swap_Clock (Clock, Stack (Top));
 
    end Leave_Interrupt;
 
@@ -398,18 +403,18 @@ package body System.BB.TMU is
    -- Swap_Clock --
    ----------------
 
-   procedure Swap_Clock (Clock_A, Clock_B : Clock_Id) is
+   procedure Swap_Clock (A, B : Clock_Id) is
       Count : Word;
    begin
-      pragma Assert (Clock_A /= Clock_B);
+      pragma Assert (A /= B);
 
-      --  Swap in counter for TM_B
+      --  Swap in counter for B
 
-      CPU.Swap_Count (Get_Compare (Clock_B), Count);
+      CPU.Swap_Count (Get_Compare (B), Count);
 
-      --  Update base time for TM_A
+      --  Update base time for A
 
-      Clock_A.Base_Time := Clock_A.Base_Time + CPU_Time (Count);
+      A.Base_Time := A.Base_Time + CPU_Time (Count);
 
    end Swap_Clock;
 

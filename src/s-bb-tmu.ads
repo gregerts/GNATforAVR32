@@ -148,7 +148,7 @@ package System.BB.TMU is
    pragma Inline (Enter_Interrupt);
    --  Enter interrupt mode
 
-   procedure Leave_Idle;
+   procedure Leave_Idle (Id : Thread_Id);
    pragma Inline (Leave_Idle);
    --  Leave idle mode
 
@@ -163,10 +163,6 @@ private
          Base_Time : CPU_Time;
          pragma Volatile (Base_Time);
          --  Base time, updated when the clock is deactivated
-
-         Active : Clock_Id;
-         --  Will point to another clock if executing code by proxy or
-         --  the idle loop, otherwise to this clock.
 
          First_TM : Timer_Id;
          --  First timer of this clock, or null if no set timer
