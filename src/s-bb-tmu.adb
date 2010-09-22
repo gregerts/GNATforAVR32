@@ -242,29 +242,6 @@ package body System.BB.TMU is
    end Enter_Interrupt;
 
    -----------------
-   -- Enter_Proxy --
-   -----------------
-
-   procedure Enter_Proxy (Id : Thread_Id) is
-   begin
-
-      CPU.Disable_Interrupts;
-
-      declare
-         Clock : constant Clock_Id := Stack (Top);
-      begin
-         pragma Assert (Clock.Active = Clock);
-
-         Clock.Active := Id.Clock'Access;
-
-         Swap_Clock (Clock, Clock.Active);
-      end;
-
-      CPU.Restore_Interrupts;
-
-   end Enter_Proxy;
-
-   -----------------
    -- Get_Compare --
    -----------------
 
@@ -393,29 +370,6 @@ package body System.BB.TMU is
       Swap_Clock (Clock, Stack (Top).Active);
 
    end Leave_Interrupt;
-
-   -----------------
-   -- Leave_Proxy --
-   -----------------
-
-   procedure Leave_Proxy is
-   begin
-
-      CPU.Disable_Interrupts;
-
-      declare
-         Clock : constant Clock_Id := Stack (Top);
-      begin
-         pragma Assert (Clock.Active /= Clock);
-
-         Swap_Clock (Clock.Active, Clock);
-
-         Clock.Active := Clock;
-      end;
-
-      CPU.Restore_Interrupts;
-
-   end Leave_Proxy;
 
    ---------
    -- Set --

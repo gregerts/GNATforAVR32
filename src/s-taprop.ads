@@ -126,11 +126,4 @@ package System.Task_Primitives.Operations is
    pragma Inline (Task_Clock);
    --  This function returns the exeuction time of the given task
 
-   procedure Enter_Proxy (T : ST.Task_Id);
-   pragma Inline (Enter_Proxy);
-   --  Enter proxy timing mode for the given task
-
-   procedure Leave_Proxy renames System.BB.TMU.Leave_Proxy;
-   --  Leave proxy timing mode
-
 end System.Task_Primitives.Operations;

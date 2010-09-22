@@ -148,10 +148,6 @@ package System.BB.TMU is
    pragma Inline (Enter_Interrupt);
    --  Enter interrupt mode
 
-   procedure Enter_Proxy (Id : Thread_Id);
-   pragma Inline (Enter_Proxy);
-   --  Enter proxy mode for the given thread
-
    procedure Leave_Idle;
    pragma Inline (Leave_Idle);
    --  Leave idle mode
@@ -159,10 +155,6 @@ package System.BB.TMU is
    procedure Leave_Interrupt;
    pragma Inline (Leave_Interrupt);
    --  Leave interrupt mode
-
-   procedure Leave_Proxy;
-   pragma Inline (Leave_Proxy);
-   --  Leave proxy mode
 
 private
 

@@ -249,13 +249,4 @@ package body System.Task_Primitives.Operations is
       return TMU.Thread_Clock (TMU.Thread_Id (T.Common.LL.Thread));
    end Task_Clock;
 
-   -----------------
-   -- Enter_Proxy --
-   -----------------
-
-   procedure Enter_Proxy (T : ST.Task_Id) is
-   begin
-      TMU.Enter_Proxy (TMU.Thread_Id (T.Common.LL.Thread));
-   end Enter_Proxy;
-
 end System.Task_Primitives.Operations;
