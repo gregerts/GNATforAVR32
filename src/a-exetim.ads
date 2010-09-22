@@ -39,7 +39,6 @@
 
 with Ada.Task_Identification;
 with Ada.Real_Time;
-with Ada.Interrupts;
 with System.BB.TMU;
 
 package Ada.Execution_Time is
@@ -55,11 +54,6 @@ package Ada.Execution_Time is
      (T : Ada.Task_Identification.Task_Id
           := Ada.Task_Identification.Current_Task)
       return CPU_Time;
-
-   function Interrupt_Clock
-     (I : Ada.Interrupts.Interrupt_ID)
-     return CPU_Time;
-   --  Non-standard function!
 
    function "+"
      (Left  : CPU_Time;
@@ -106,7 +100,6 @@ private
    pragma Import (Intrinsic, ">=");
 
    pragma Inline (Clock);
-   pragma Inline (Interrupt_Clock);
    pragma Inline ("+");
    pragma Inline ("-");
 

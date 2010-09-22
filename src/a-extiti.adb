@@ -35,6 +35,7 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
+with Ada.Execution_Time.Interrupts.Timers;
 with Ada.Unchecked_Conversion;
 with System.Tasking;
 with System.Task_Primitives.Operations;
@@ -45,6 +46,7 @@ package body Ada.Execution_Time.Timers is
    package Protection renames System.BB.Protection;
    package STPO renames System.Task_Primitives.Operations;
    package TMU renames System.BB.TMU;
+   package EIT renames Ada.Execution_Time.Interrupts.Timers;
 
    use type TMU.Timer_Id;
    use type Ada.Task_Identification.Task_Id;
@@ -128,9 +130,8 @@ package body Ada.Execution_Time.Timers is
 
       pragma Assert (TM.Id = null);
 
-      if TM in Interrupt_Timer'Class then
-         Clock := TMU.Interrupt_Clock
-           (TMU.Interrupt_ID (Interrupt_Timer (TM).I));
+      if TM in EIT.Timer'Class then
+         Clock := TMU.Interrupt_Clock (TMU.Interrupt_ID (EIT.Timer (TM).I));
       else
          Clock := STPO.Task_Clock (To_Task_Id (TM.T.all));
       end if;

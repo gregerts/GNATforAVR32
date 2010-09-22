@@ -92,19 +92,6 @@ package body Ada.Execution_Time is
       return CPU_Time (TMU.Time_Of (STPO.Task_Clock (To_Task_Id (T))));
    end Clock;
 
-   ---------------------
-   -- Interrupt_Clock --
-   ---------------------
-
-   function Interrupt_Clock
-     (I : Ada.Interrupts.Interrupt_ID)
-      return CPU_Time
-   is
-      C : constant TMU.Clock_Id := TMU.Interrupt_Clock (TMU.Interrupt_ID (I));
-   begin
-      return CPU_Time (TMU.Time_Of (C));
-   end Interrupt_Clock;
-
    ---------
    -- "+" --
    ---------

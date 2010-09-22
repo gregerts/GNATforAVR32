@@ -69,7 +69,9 @@ a-sytaco.ads \
 a-taside.ads \
 a-taster.ads \
 a-exetim.ads \
-a-extiti.ads
+a-extiin.ads \
+a-extiti.ads \
+a-etinti.ads
 
 LIBGNARL_OBJS = $(LIBGNARL_SRC:.ads=.o)
 LIBGNARL_ALIS = $(LIBGNARL_SRC:.ads=.ali)
