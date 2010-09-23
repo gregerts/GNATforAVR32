@@ -60,9 +60,6 @@ package body System.BB.TMU is
    Max_Compare : constant := Word'Last / 2;
    --  Maximal value set to COMPARE register
 
-   Max_Timers : constant := 1;
-   --  Maxmal number of timers allowed for a clock
-
    Idle_Clock : aliased Clock_Descriptor;
    --  Clock of the pseudo idle thread
 
@@ -94,10 +91,6 @@ package body System.BB.TMU is
    pragma Inline_Always (Is_Active);
    --  Returns true when the given clock is active (running)
 
-   function Is_Set (TM : Timer_Id) return Boolean;
-   pragma Inline_Always (Is_Set);
-   --  Returns true when the given timer is set
-
    procedure Swap_Clock (A, B : Clock_Id);
    --  Swap clock from A to B
 
@@ -110,12 +103,12 @@ package body System.BB.TMU is
 
       pragma Assert (TM /= null);
 
-      if Is_Set (TM) then
+      if TM.Set then
 
          --  Clear timer and adjust COMPARE if its clock is active
 
          TM.Timeout := CPU_Time'First;
-         TM.Clock.First_TM := null;
+         TM.Set := False;
 
          if Is_Active (TM.Clock) then
             CPU.Adjust_Compare (Max_Compare);
@@ -135,21 +128,20 @@ package body System.BB.TMU is
       --  expired as timeouts are not allowed for highest priority.
 
       Clock : constant Clock_Id := Stack (Top - 1);
-      TM    : constant Timer_Id := Clock.First_TM;
+      TM    : constant Timer_Id := Clock.TM'Access;
 
    begin
 
       pragma Assert (Id = Peripherals.COMPARE);
 
-      --  Clear TM and call handler if it is non-null and has expired
+      --  Clear TM and call handler if it has expired
 
-      if TM /= null and then TM.Timeout <= Clock.Base_Time then
+      if TM.Set and then TM.Timeout <= Clock.Base_Time then
 
-         pragma Assert (TM.Clock = Clock);
          pragma Assert (TM.Handler /= null);
 
          TM.Timeout := CPU_Time'First;
-         TM.Clock.First_TM := null;
+         TM.Set := False;
 
          TM.Handler (TM.Data);
 
@@ -178,22 +170,19 @@ package body System.BB.TMU is
    ------------
 
    function Create
-     (Clock   : not null Clock_Id;
+     (Clock   : Clock_Id;
       Handler : not null Timer_Handler;
       Data    : System.Address) return Timer_Id
    is
       TM : Timer_Id := null;
    begin
 
-      if Clock.Free > 0 then
+      if Clock.TM.Handler = null then
 
-         Clock.Free := Clock.Free - 1;
-
-         TM := new Timer_Descriptor (Clock);
+         TM := Clock.TM'Access;
 
          TM.Handler := Handler;
          TM.Data    := Data;
-         TM.Timeout := CPU_Time'First;
 
       end if;
 
@@ -246,10 +235,10 @@ package body System.BB.TMU is
 
    function Get_Compare (Clock : Clock_Id) return Word is
       T  : constant CPU_Time := Clock.Base_Time;
-      TM : constant Timer_Id := Clock.First_TM;
+      TM : constant Timer_Id := Clock.TM'Access;
    begin
 
-      if TM = null then
+      if not TM.Set then
          return Max_Compare;
       elsif TM.Timeout > T then
          return Word (CPU_Time'Min (TM.Timeout - T, Max_Compare));
@@ -265,8 +254,11 @@ package body System.BB.TMU is
 
    procedure Initialize_Clock (Clock : Clock_Id) is
    begin
-      Clock.Base_Time := 0;
-      Clock.Free := Max_Timers;
+      Clock.Base_Time  := 0;
+      Clock.TM.Clock   := Clock;
+      Clock.TM.Handler := null;
+      Clock.TM.Timeout := 0;
+      Clock.TM.Set     := False;
    end Initialize_Clock;
 
    --------------------------
@@ -293,7 +285,6 @@ package body System.BB.TMU is
       --  Initialize idle task clock, no timers allowed
 
       Initialize_Clock (Idle_Clock'Access);
-      Idle_Clock.Free := 0;
 
       --  Install compare handler
 
@@ -324,15 +315,6 @@ package body System.BB.TMU is
    begin
       return Clock = Stack (Top);
    end Is_Active;
-
-   ------------
-   -- Is_Set --
-   ------------
-
-   function Is_Set (TM : Timer_Id) return Boolean is
-   begin
-      return TM = TM.Clock.First_TM;
-   end Is_Set;
 
    ----------------
    -- Leave_Idle --
@@ -391,7 +373,6 @@ package body System.BB.TMU is
       --  Set timer and adjust COMPARE if its clock is active
 
       TM.Timeout := Timeout;
-      TM.Clock.First_TM := TM;
 
       if Is_Active (TM.Clock) then
          CPU.Adjust_Compare (Get_Compare (TM.Clock));

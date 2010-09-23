@@ -67,23 +67,23 @@ package System.BB.TMU is
 
    subtype Interrupt_ID is System.BB.Interrupts.Interrupt_ID;
 
-   ----------------------
-   -- Clock_Descriptor --
-   ----------------------
+   -----------
+   -- Clock --
+   -----------
 
    type Clock_Descriptor is limited private;
 
-   type Clock_Id is access all Clock_Descriptor;
+   type Clock_Id is private;
 
-   ----------------------
-   -- Timer_Descriptor --
-   ----------------------
+   -----------
+   -- Timer --
+   -----------
 
-   type Timer_Descriptor (Clock : not null Clock_Id) is private;
-
-   type Timer_Id is access all Timer_Descriptor;
+   type Timer_Id is private;
 
    type Timer_Handler is access procedure (Data : System.Address);
+
+   Null_Timer_Id : constant Timer_Id;
 
    --------------------
    -- Initialization --
@@ -119,11 +119,12 @@ package System.BB.TMU is
    ----------------------
 
    function Create
-     (Clock   : not null Clock_Id;
+     (Clock   : Clock_Id;
       Handler : not null Timer_Handler;
       Data    : System.Address) return Timer_Id;
-   --  Creates a timer for the given clock with the given handler and
-   --  data. Return null if the clock already has a timer.
+   --  Creates a timer associated with the given clock with the given
+   --  handler and data. Returns Null_Timer_Id if the clock cannot
+   --  have more timers.
 
    procedure Cancel (TM : Timer_Id);
    --  Cancels the timer
@@ -158,24 +159,17 @@ package System.BB.TMU is
 
 private
 
-   type Clock_Descriptor is
+   type Clock_Id is access all Clock_Descriptor;
+
+   ----------------------
+   -- Timer_Descriptor --
+   ----------------------
+
+   type Timer_Descriptor is
       record
-         Base_Time : CPU_Time;
-         pragma Volatile (Base_Time);
-         --  Base time, updated when the clock is deactivated
+         Clock : Clock_Id;
+         --  Clock of this timer
 
-         First_TM : Timer_Id;
-         --  First timer of this clock, or null if no set timer
-
-         Free : Natural;
-         --  Remaining number of timers allowed for this clock
-
-      end record;
-
-   pragma Suppress_Initialization (Clock_Descriptor);
-
-   type Timer_Descriptor (Clock : not null Clock_Id) is
-      record
          Handler : Timer_Handler;
          --  Handler to be called when the timer expires
 
@@ -185,6 +179,32 @@ private
          Timeout : CPU_Time;
          --  Timeout of timer or CPU_Time'First if timer is not set
 
+         Set : Boolean;
+         --  True if the timer is set
+
       end record;
+
+   pragma Suppress_Initialization (Timer_Descriptor);
+
+   type Timer_Id is access all Timer_Descriptor;
+
+   Null_Timer_Id : constant Timer_Id := null;
+
+   ----------------------
+   -- Clock_Descriptor --
+   ----------------------
+
+   type Clock_Descriptor is
+      record
+         Base_Time : CPU_Time;
+         pragma Volatile (Base_Time);
+         --  Base time, updated when the clock is deactivated
+
+         TM : aliased Timer_Descriptor;
+         --  The one and only timer for this clock
+
+      end record;
+
+   pragma Suppress_Initialization (Clock_Descriptor);
 
 end System.BB.TMU;
