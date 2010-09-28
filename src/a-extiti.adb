@@ -77,7 +77,7 @@ package body Ada.Execution_Time.Timers is
    is
    begin
 
-      if TM.Id = null then
+      if TM.Id = TMU.Null_Timer_Id then
          Initialize (TM);
       end if;
 
@@ -128,7 +128,7 @@ package body Ada.Execution_Time.Timers is
       Clock : TMU.Clock_Id;
    begin
 
-      pragma Assert (TM.Id = null);
+      pragma Assert (TM.Id = TMU.Null_Timer_Id);
 
       if TM in EIT.Timer'Class then
          Clock := TMU.Interrupt_Clock (TMU.Interrupt_ID (EIT.Timer (TM).I));
@@ -142,7 +142,7 @@ package body Ada.Execution_Time.Timers is
 
       Protection.Leave_Kernel_No_Change;
 
-      if TM.Id = null then
+      if TM.Id = TMU.Null_Timer_Id then
          raise Timer_Resource_Error;
       end if;
 
@@ -160,11 +160,11 @@ package body Ada.Execution_Time.Timers is
       At_Time : CPU_Time;
    begin
 
-      if TM.Id = null then
+      if TM.Id = TMU.Null_Timer_Id then
          Initialize (TM);
       end if;
 
-      At_Time := CPU_Time (TMU.Time_Of (TM.Id.Clock)) + In_Time;
+      At_Time := CPU_Time (TMU.Time_Of (TMU.Clock_Of (TM.Id))) + In_Time;
 
       Set_Handler (TM, At_Time, Handler);
 
@@ -181,7 +181,7 @@ package body Ada.Execution_Time.Timers is
    is
    begin
 
-      if TM.Id = null then
+      if TM.Id = TMU.Null_Timer_Id then
          Initialize (TM);
       end if;
 
@@ -206,7 +206,7 @@ package body Ada.Execution_Time.Timers is
    function Time_Remaining (TM : Timer) return Ada.Real_Time.Time_Span is
    begin
 
-      if TM.Id = null then
+      if TM.Id = TMU.Null_Timer_Id then
          return Ada.Real_Time.Time_Span_Zero;
       end if;
 

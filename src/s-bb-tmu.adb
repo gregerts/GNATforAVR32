@@ -35,22 +35,30 @@
 ------------------------------------------------------------------------------
 
 with System.BB.CPU_Primitives;
+with System.BB.Parameters;
 with System.BB.Threads;
 
 package body System.BB.TMU is
 
    package CPU renames System.BB.CPU_Primitives;
+   package SBP renames System.BB.Parameters;
 
    use type CPU.Word;
 
    subtype Word is CPU.Word;
 
-   type Interrupt_Clock_Array is array (Interrupt_ID) of Clock_Id;
+   type Interrupt_Clock_Index is range 0 .. SBP.Interrupt_Clocks;
+   for Interrupt_Clock_Index'Size use 8;
+
+   type Interrupt_Clock_Array is array (Interrupt_Clock_Index)
+     of aliased Clock_Descriptor;
+
    pragma Suppress_Initialization (Interrupt_Clock_Array);
 
    type Clock_Index is new Interrupts.Interrupt_Level;
 
    type Clock_Stack is array (Clock_Index) of Clock_Id;
+
    pragma Suppress_Initialization (Clock_Stack);
 
    -----------------------
@@ -64,7 +72,13 @@ package body System.BB.TMU is
    --  Clock of the pseudo idle thread
 
    Interrupt_Clocks : Interrupt_Clock_Array;
-   --  Clocks of the pseudo server threads for each interrupt priority
+   --  Clocks used for interrupt handling
+
+   Last_Interrupt_Clock : Interrupt_Clock_Index := 0;
+   --  Pointing to last allocated interrupt clock
+
+   To_Clock_Index : array (Interrupt_ID) of Interrupt_Clock_Index;
+   --  Array for translating interrupt IDs to interrupt clock index
 
    Stack : Clock_Stack;
    --  Stack of timers
@@ -86,6 +100,9 @@ package body System.BB.TMU is
    function Get_Compare (Clock : Clock_Id) return Word;
    pragma Inline (Get_Compare);
    --  Computes the COMPARE value for a clock
+
+   procedure Initialize_Clock (Clock : Clock_Id);
+   --  Initializes the given clock
 
    function Is_Active (Clock : Clock_Id) return Boolean;
    pragma Inline_Always (Is_Active);
@@ -117,6 +134,15 @@ package body System.BB.TMU is
       end if;
 
    end Cancel;
+
+   --------------
+   -- Clock_Of --
+   --------------
+
+   function Clock_Of (TM : Timer_Id) return Clock_Id is
+   begin
+      return TM.Clock;
+   end Clock_Of;
 
    ---------------------
    -- Compare_Handler --
@@ -177,7 +203,7 @@ package body System.BB.TMU is
       TM : Timer_Id := null;
    begin
 
-      if Clock.TM.Handler = null then
+      if Clock.TM.Free then
 
          TM := Clock.TM'Access;
 
@@ -212,7 +238,7 @@ package body System.BB.TMU is
 
    procedure Enter_Interrupt (Id : Interrupt_ID) is
       A : constant Clock_Id := Stack (Top);
-      B : constant Clock_Id := Interrupt_Clocks (Id);
+      B : constant Clock_Id := Interrupt_Clock (Id);
 
    begin
       pragma Assert (Top < Stack'Last);
@@ -254,37 +280,57 @@ package body System.BB.TMU is
 
    procedure Initialize_Clock (Clock : Clock_Id) is
    begin
-      Clock.Base_Time  := 0;
-      Clock.TM.Clock   := Clock;
-      Clock.TM.Handler := null;
-      Clock.TM.Timeout := 0;
-      Clock.TM.Set     := False;
+      Clock.TM.Clock := Clock;
+      Clock.TM.Free  := True;
    end Initialize_Clock;
 
-   --------------------------
-   -- Initialize_Interrupt --
-   --------------------------
+   --------------------------------
+   -- Initialize_Interrupt_Clock --
+   --------------------------------
 
-   procedure Initialize_Interrupt (Id : Interrupt_ID) is
+   procedure Initialize_Interrupt_Clock (Id : Interrupt_ID) is
    begin
-      pragma Assert (Interrupt_Clocks (Id) = null);
-      Interrupt_Clocks (Id) := new Clock_Descriptor;
-      Initialize_Clock (Interrupt_Clocks (Id));
-   end Initialize_Interrupt;
+      pragma Assert (To_Clock_Index (Id) = 0);
+      pragma Assert (Last_Interrupt_Clock < Interrupt_Clock_Index'Last);
+
+      Last_Interrupt_Clock := Last_Interrupt_Clock + 1;
+
+      To_Clock_Index (Id) := Last_Interrupt_Clock;
+
+      if Interrupts.To_Priority (Id) = Interrupt_Priority'Last then
+         Interrupt_Clocks (Last_Interrupt_Clock).TM.Free := False;
+      end if;
+
+   end Initialize_Interrupt_Clock;
+
+   -----------------------------
+   -- Initialize_Thread_Clock --
+   -----------------------------
+
+   procedure Initialize_Thread_Clock (Id : Thread_Id) is
+   begin
+      Initialize_Clock (Id.Clock'Access);
+   end Initialize_Thread_Clock;
 
    --------------------
    -- Initialize_TMU --
    --------------------
 
-   procedure Initialize_TMU (Environment_Clock : Clock_Id) is
+   procedure Initialize_TMU (Environment_Thread : Thread_Id) is
    begin
       --  Initialize the clock of the environment thread
 
-      Initialize_Clock (Environment_Clock);
+      Initialize_Clock (Environment_Thread.Clock'Access);
 
       --  Initialize idle task clock, no timers allowed
 
       Initialize_Clock (Idle_Clock'Access);
+
+      --  Initialize interrupt clocks
+
+      for I in Interrupt_Clocks'Range loop
+         Initialize_Clock (Interrupt_Clocks (I)'Access);
+      end loop;
 
       --  Install compare handler
 
@@ -292,7 +338,7 @@ package body System.BB.TMU is
 
       --  Activate clock of environment thread
 
-      Stack (0) := Environment_Clock;
+      Stack (0) := Environment_Thread.Clock'Access;
 
       CPU.Reset_Count (Max_Compare);
 
@@ -304,7 +350,7 @@ package body System.BB.TMU is
 
    function Interrupt_Clock (Id : Interrupt_ID) return Clock_Id is
    begin
-      return Interrupt_Clocks (Id);
+      return Interrupt_Clocks (To_Clock_Index (Id))'Access;
    end Interrupt_Clock;
 
    ---------------

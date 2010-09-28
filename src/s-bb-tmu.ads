@@ -89,13 +89,13 @@ package System.BB.TMU is
    -- Initialization --
    --------------------
 
-   procedure Initialize_Interrupt (Id : Interrupt_ID);
+   procedure Initialize_Interrupt_Clock (Id : Interrupt_ID);
    --  Initializes the clock for the given interrupt ID
 
-   procedure Initialize_Clock (Clock : Clock_Id);
-   --  Initializes the given Clock
+   procedure Initialize_Thread_Clock (Id : Thread_Id);
+   --  Initializes the clock for the given thread
 
-   procedure Initialize_TMU (Environment_Clock : Clock_Id);
+   procedure Initialize_TMU (Environment_Thread : Thread_Id);
    --  Initialize this package. Must be called before any other
    --  procedures and functions in this package.
 
@@ -117,6 +117,9 @@ package System.BB.TMU is
    ----------------------
    -- Timer operations --
    ----------------------
+
+   function Clock_Of (TM : Timer_Id) return Clock_Id;
+   pragma Inline_Always (Clock_Of);
 
    function Create
      (Clock   : Clock_Id;
@@ -181,6 +184,9 @@ private
 
          Set : Boolean;
          --  True if the timer is set
+
+         Free : Boolean;
+         --  True if the timer is free
 
       end record;
 

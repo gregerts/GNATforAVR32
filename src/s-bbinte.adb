@@ -135,7 +135,7 @@ package body System.BB.Interrupts is
 
       Interrupt_Handlers_Table (Id) := Handler;
 
-      TMU.Initialize_Interrupt (Id);
+      TMU.Initialize_Interrupt_Clock (Id);
 
    end Attach_Handler;
 

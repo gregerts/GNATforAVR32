@@ -195,7 +195,7 @@ package body System.BB.Threads is
 
       --  Initialize the Time Management Unit
 
-      TMU.Initialize_TMU (Environment_Thread.Clock'Access);
+      TMU.Initialize_TMU (TMU.Thread_Id (Environment_Thread));
 
       --  Create alarm timer
 
@@ -330,7 +330,7 @@ package body System.BB.Threads is
 
       --  Initialize execution time clock
 
-      TMU.Initialize_Clock (Id.Clock'Access);
+      TMU.Initialize_Thread_Clock (TMU.Thread_Id (Id));
 
       --  Create alarm timer
 
