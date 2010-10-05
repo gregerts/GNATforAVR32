@@ -135,15 +135,6 @@ package body System.BB.TMU is
 
    end Cancel;
 
-   --------------
-   -- Clock_Of --
-   --------------
-
-   function Clock_Of (TM : Timer_Id) return Clock_Id is
-   begin
-      return TM.Clock;
-   end Clock_Of;
-
    ---------------------
    -- Compare_Handler --
    ---------------------
@@ -154,7 +145,7 @@ package body System.BB.TMU is
       --  expired as timeouts are not allowed for highest priority.
 
       Clock : constant Clock_Id := Stack (Top - 1);
-      TM    : constant Timer_Id := Clock.TM'Access;
+      TM    : constant Timer_Id := Clock.TM;
 
    begin
 
@@ -190,31 +181,6 @@ package body System.BB.TMU is
       Swap_Clock (Running.Active_Clock, First.Active_Clock);
 
    end Context_Switch;
-
-   ------------
-   -- Create --
-   ------------
-
-   function Create
-     (Clock   : Clock_Id;
-      Handler : not null Timer_Handler;
-      Data    : System.Address) return Timer_Id
-   is
-      TM : Timer_Id := null;
-   begin
-
-      if Clock.TM.Free then
-
-         TM := Clock.TM'Access;
-
-         TM.Handler := Handler;
-         TM.Data    := Data;
-
-      end if;
-
-      return TM;
-
-   end Create;
 
    ----------------
    -- Enter_Idle --
@@ -264,7 +230,7 @@ package body System.BB.TMU is
 
    function Get_Compare (Clock : Clock_Id) return Word is
       T  : constant CPU_Time := Clock.Base_Time;
-      TM : constant Timer_Id := Clock.TM'Access;
+      TM : constant Timer_Id := Clock.TM;
    begin
 
       if not TM.Set then
@@ -283,8 +249,7 @@ package body System.BB.TMU is
 
    procedure Initialize_Clock (Clock : Clock_Id) is
    begin
-      Clock.TM.Clock := Clock;
-      Clock.TM.Free  := True;
+      null;
    end Initialize_Clock;
 
    --------------------------------
@@ -293,16 +258,14 @@ package body System.BB.TMU is
 
    procedure Initialize_Interrupt_Clock (Id : Interrupt_ID) is
    begin
+      pragma Assert (Id /= Interrupts.No_Interrupt);
       pragma Assert (To_Clock_Index (Id) = 0);
       pragma Assert (Last_Interrupt_Clock < Interrupt_Clock_Index'Last);
 
       Last_Interrupt_Clock := Last_Interrupt_Clock + 1;
-
       To_Clock_Index (Id) := Last_Interrupt_Clock;
 
-      if Interrupts.To_Priority (Id) = Interrupt_Priority'Last then
-         Interrupt_Clocks (Last_Interrupt_Clock).TM.Free := False;
-      end if;
+      Initialize_Clock (Interrupt_Clocks (Last_Interrupt_Clock)'Access);
 
    end Initialize_Interrupt_Clock;
 
@@ -312,9 +275,42 @@ package body System.BB.TMU is
 
    procedure Initialize_Thread_Clock (Id : Thread_Id) is
    begin
+      pragma Assert (Id /= null and then Id.Active_Clock = null);
+
       Id.Active_Clock := Id.Clock'Access;
       Initialize_Clock (Id.Active_Clock);
+
    end Initialize_Thread_Clock;
+
+   ----------------------
+   -- Initialize_Timer --
+   ----------------------
+
+   procedure Initialize_Timer
+     (TM      : Timer_Id;
+      Clock   : Clock_Id;
+      Handler : not null Timer_Handler;
+      Data    : System.Address;
+      Success : out Boolean)
+   is
+   begin
+      pragma Assert (TM /= null and then TM.Clock = null);
+
+      if Clock /= null and then Clock.TM = null then
+
+         Clock.TM := TM;
+
+         TM.Clock   := Clock;
+         TM.Handler := Handler;
+         TM.Data    := Data;
+
+         Success := True;
+
+      else
+         Success := False;
+      end if;
+
+   end Initialize_Timer;
 
    --------------------
    -- Initialize_TMU --
@@ -322,19 +318,10 @@ package body System.BB.TMU is
 
    procedure Initialize_TMU (Environment_Thread : Thread_Id) is
    begin
-      --  Initialize the clock of the environment thread
+      --  Initialize clock of environment and idle threads
 
       Initialize_Clock (Environment_Thread.Clock'Access);
-
-      --  Initialize idle task clock, no timers allowed
-
       Initialize_Clock (Idle_Clock'Access);
-
-      --  Initialize interrupt clocks
-
-      for I in Interrupt_Clocks'Range loop
-         Initialize_Clock (Interrupt_Clocks (I)'Access);
-      end loop;
 
       --  Install compare handler
 
@@ -498,6 +485,15 @@ package body System.BB.TMU is
       end if;
 
    end Time_Remaining;
+
+   -----------------
+   -- Timer_Clock --
+   -----------------
+
+   function Timer_Clock (TM : Timer_Id) return Clock_Id is
+   begin
+      return TM.Clock;
+   end Timer_Clock;
 
    ------------------
    -- Thread_Clock --

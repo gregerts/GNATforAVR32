@@ -77,7 +77,7 @@ package body Ada.Execution_Time.Timers is
    is
    begin
 
-      if TM.Id = TMU.Null_Timer_Id then
+      if TM.Id = null then
          Initialize (TM);
       end if;
 
@@ -126,9 +126,10 @@ package body Ada.Execution_Time.Timers is
 
    procedure Initialize (TM : in out Timer'Class) is
       Clock : TMU.Clock_Id;
+      Success : Boolean;
    begin
 
-      pragma Assert (TM.Id = TMU.Null_Timer_Id);
+      pragma Assert (TM.Id = null);
 
       if TM in EIT.Timer'Class then
          Clock := TMU.Interrupt_Clock (TMU.Interrupt_ID (EIT.Timer (TM).I));
@@ -138,11 +139,17 @@ package body Ada.Execution_Time.Timers is
 
       Protection.Enter_Kernel;
 
-      TM.Id := TMU.Create (Clock, Execute_Handler'Access, TM'Address);
+      TM.Id := TM.Timer'Unchecked_Access;
+
+      TMU.Initialize_Timer (TM.Id,
+                            Clock,
+                            Execute_Handler'Access,
+                            TM'Address,
+                            Success);
 
       Protection.Leave_Kernel_No_Change;
 
-      if TM.Id = TMU.Null_Timer_Id then
+      if not Success then
          raise Timer_Resource_Error;
       end if;
 
@@ -160,11 +167,11 @@ package body Ada.Execution_Time.Timers is
       At_Time : CPU_Time;
    begin
 
-      if TM.Id = TMU.Null_Timer_Id then
+      if TM.Id = null then
          Initialize (TM);
       end if;
 
-      At_Time := CPU_Time (TMU.Time_Of (TMU.Clock_Of (TM.Id))) + In_Time;
+      At_Time := CPU_Time (TMU.Time_Of (TMU.Timer_Clock (TM.Id))) + In_Time;
 
       Set_Handler (TM, At_Time, Handler);
 
@@ -181,7 +188,7 @@ package body Ada.Execution_Time.Timers is
    is
    begin
 
-      if TM.Id = TMU.Null_Timer_Id then
+      if TM.Id = null then
          Initialize (TM);
       end if;
 
@@ -206,7 +213,7 @@ package body Ada.Execution_Time.Timers is
    function Time_Remaining (TM : Timer) return Ada.Real_Time.Time_Span is
    begin
 
-      if TM.Id = TMU.Null_Timer_Id then
+      if TM.Id = null then
          return Ada.Real_Time.Time_Span_Zero;
       end if;
 

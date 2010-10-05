@@ -73,17 +73,17 @@ package System.BB.TMU is
 
    type Clock_Descriptor is limited private;
 
-   type Clock_Id is private;
+   type Clock_Id is access all Clock_Descriptor;
 
    -----------
    -- Timer --
    -----------
 
-   type Timer_Id is private;
+   type Timer_Descriptor is limited private;
+
+   type Timer_Id is access all Timer_Descriptor;
 
    type Timer_Handler is access procedure (Data : System.Address);
-
-   Null_Timer_Id : constant Timer_Id;
 
    --------------------
    -- Initialization --
@@ -94,6 +94,14 @@ package System.BB.TMU is
 
    procedure Initialize_Thread_Clock (Id : Thread_Id);
    --  Initializes the clock for the given thread
+
+   procedure Initialize_Timer
+     (TM      : Timer_Id;
+      Clock   : Clock_Id;
+      Handler : not null Timer_Handler;
+      Data    : System.Address;
+      Success : out Boolean);
+   --  Binds TM with the given clock, handler and data
 
    procedure Initialize_TMU (Environment_Thread : Thread_Id);
    --  Initialize this package. Must be called before any other
@@ -118,17 +126,6 @@ package System.BB.TMU is
    -- Timer operations --
    ----------------------
 
-   function Clock_Of (TM : Timer_Id) return Clock_Id;
-   pragma Inline_Always (Clock_Of);
-
-   function Create
-     (Clock   : Clock_Id;
-      Handler : not null Timer_Handler;
-      Data    : System.Address) return Timer_Id;
-   --  Creates a timer associated with the given clock with the given
-   --  handler and data. Returns Null_Timer_Id if the clock cannot
-   --  have more timers.
-
    procedure Cancel (TM : Timer_Id);
    --  Cancels the timer
 
@@ -139,6 +136,10 @@ package System.BB.TMU is
 
    function Time_Remaining (TM : Timer_Id) return CPU_Time;
    --  Returns time remaining before timeout or 0 if no timeout
+
+   function Timer_Clock (TM : Timer_Id) return Clock_Id;
+   pragma Inline_Always (Timer_Clock);
+   --  Returns the clock of the given timer
 
    -------------------------
    -- Internal operations --
@@ -162,8 +163,6 @@ package System.BB.TMU is
 
 private
 
-   type Clock_Id is access all Clock_Descriptor;
-
    ----------------------
    -- Timer_Descriptor --
    ----------------------
@@ -185,16 +184,9 @@ private
          Set : Boolean;
          --  True if the timer is set
 
-         Free : Boolean;
-         --  True if the timer is free
-
       end record;
 
    pragma Suppress_Initialization (Timer_Descriptor);
-
-   type Timer_Id is access all Timer_Descriptor;
-
-   Null_Timer_Id : constant Timer_Id := null;
 
    ----------------------
    -- Clock_Descriptor --
@@ -206,8 +198,8 @@ private
          pragma Volatile (Base_Time);
          --  Base time, updated when the clock is deactivated
 
-         TM : aliased Timer_Descriptor;
-         --  The one and only timer for this clock
+         TM : Timer_Id;
+         --  Points to the timer of this clock, if any
 
       end record;
 

@@ -77,6 +77,7 @@ private
    type Timer (T : not null access constant
                Ada.Task_Identification.Task_Id) is tagged limited
       record
+         Timer   : aliased System.BB.TMU.Timer_Descriptor;
          Id      : System.BB.TMU.Timer_Id;
          Handler : Timer_Handler;
         pragma Volatile (Handler);
