@@ -120,7 +120,7 @@ package System.BB.Threads is
       --  Points to the ready thread that is in the next position for
       --  execution.
 
-      Alarm : System.BB.Time.Alarm_Id;
+      Alarm : aliased System.BB.Time.Alarm_Descriptor;
       --  Alarm used to wakeup the thread
 
       State : Thread_States;

@@ -74,9 +74,25 @@ package System.BB.Time is
    Ticks_Per_Second : constant := Peripherals.Timer_Frequency;
    --  Number of ticks (or clock interrupts) per second
 
+   ----------------------
+   -- Alarm_Descriptor --
+   ----------------------
+
+   type Alarm_Descriptor is limited private;
+
+   type Alarm_Id is access all Alarm_Descriptor;
+
+   type Alarm_Handler is access procedure (Data : System.Address);
+
    --------------------
    -- Initialization --
    --------------------
+
+   procedure Initialize_Alarm
+     (Alarm   : not null Alarm_Id;
+      Handler : not null Alarm_Handler;
+      Data    : System.Address);
+   --  Creates an alarm timer with the given handler and data
 
    procedure Initialize_Timers;
    --  Initialize this package (clock and alarm handlers). Must be called
@@ -88,21 +104,6 @@ package System.BB.Time is
 
    function Clock return Time;
    --  Get the number of ticks elapsed since startup
-
-   ----------------------
-   -- Alarm_Descriptor --
-   ----------------------
-
-   type Alarm_Descriptor is limited private;
-
-   type Alarm_Id is access all Alarm_Descriptor;
-
-   type Alarm_Handler is access procedure (Data : System.Address);
-
-   function Create
-     (Handler : not null Alarm_Handler;
-      Data    : System.Address) return Alarm_Id;
-   --  Creates an alarm timer with the given handler and data
 
    procedure Cancel (Alarm : Alarm_Id);
    --  Cancel alarm timer

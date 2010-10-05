@@ -243,25 +243,25 @@ package body System.BB.Time is
 
    end Clock_Handler;
 
-   ------------
-   -- Create --
-   ------------
+   ----------------------
+   -- Initialize_Alarm --
+   ----------------------
 
-   function Create
-     (Handler : not null Alarm_Handler;
-      Data    : System.Address) return Alarm_Id
+   procedure Initialize_Alarm
+     (Alarm   : not null Alarm_Id;
+      Handler : not null Alarm_Handler;
+      Data    : System.Address)
    is
-      Alarm : constant Alarm_Id := new Alarm_Descriptor;
    begin
+
+      pragma Assert (Alarm.Handler = null);
 
       Alarm.Handler := Handler;
       Alarm.Data    := Data;
 
       Clear (Alarm);
 
-      return Alarm;
-
-   end Create;
+   end Initialize_Alarm;
 
    -----------------------
    -- Initialize_Timers --
