@@ -185,9 +185,9 @@ package body System.BB.TMU is
       --  Set bottom of stack to timer of first thread and swap to the
       --  timer of this thread.
 
-      Stack (0) := First.Clock'Access;
+      Stack (0) := First.Active_Clock;
 
-      Swap_Clock (Running.Clock'Access, First.Clock'Access);
+      Swap_Clock (Running.Active_Clock, First.Active_Clock);
 
    end Context_Switch;
 
@@ -220,14 +220,17 @@ package body System.BB.TMU is
    -- Enter_Idle --
    ----------------
 
-   procedure Enter_Idle is
-      A : constant Clock_Id := Stack (0);
+   procedure Enter_Idle (Id : Thread_Id) is
+      A : constant Clock_Id := Id.Active_Clock;
       B : constant Clock_Id := Idle_Clock'Access;
 
    begin
-      pragma Assert (Top = 0);
+      pragma Assert (Top = 0 and then A = Stack (0));
+      pragma Assert (A = Id.Clock'Access);
 
+      Id.Active_Clock := B;
       Stack (0) := B;
+
       Swap_Clock (A, B);
 
    end Enter_Idle;
@@ -309,7 +312,8 @@ package body System.BB.TMU is
 
    procedure Initialize_Thread_Clock (Id : Thread_Id) is
    begin
-      Initialize_Clock (Id.Clock'Access);
+      Id.Active_Clock := Id.Clock'Access;
+      Initialize_Clock (Id.Active_Clock);
    end Initialize_Thread_Clock;
 
    --------------------
@@ -367,22 +371,17 @@ package body System.BB.TMU is
    ----------------
 
    procedure Leave_Idle (Id : Thread_Id) is
-      A : constant Clock_Id := Stack (0);
+      A : constant Clock_Id := Id.Active_Clock;
       B : constant Clock_Id := Id.Clock'Access;
 
    begin
-      pragma Assert (Top = 0);
+      pragma Assert (Top = 0 and then A = Stack (0));
+      pragma Assert (A = Idle_Clock'Access);
 
-      --  Swap to clock B if not already active
+      Id.Active_Clock := B;
+      Stack (0) := B;
 
-      if A /= B then
-
-         pragma Assert (A = Idle_Clock'Access);
-
-         Stack (0) := B;
-         Swap_Clock (A, B);
-
-      end if;
+      Swap_Clock (A, B);
 
    end Leave_Idle;
 

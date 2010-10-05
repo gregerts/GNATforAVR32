@@ -141,7 +141,7 @@ package body System.BB.Protection is
 
          --  Enter TMU idle mode
 
-         TMU.Enter_Idle;
+         TMU.Enter_Idle (TMU.Thread_Id (Self_Id));
 
          --  In the meantime, we put the task temporarily in the ready queue
          --  so interrupt handling is performed normally. Note that the task

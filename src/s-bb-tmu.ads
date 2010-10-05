@@ -144,7 +144,7 @@ package System.BB.TMU is
    -- Internal operations --
    -------------------------
 
-   procedure Enter_Idle;
+   procedure Enter_Idle (Id : Thread_Id);
    pragma Inline (Enter_Idle);
    --  Enter idle mode
 

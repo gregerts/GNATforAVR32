@@ -93,6 +93,9 @@ package System.BB.Threads is
       Clock : aliased System.BB.TMU.Clock_Descriptor;
       --  Execution-time clock for this thread
 
+      Active_Clock : System.BB.TMU.Clock_Id;
+      --  Active execution time clock for this thread
+
       ATCB : System.Address;
       --  Address of the Ada Task Control Block corresponding to the Ada task
       --  that executes on this thread.
