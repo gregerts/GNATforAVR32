@@ -49,7 +49,7 @@ package body Test is
    H_I : Interrupt_Handler (EIM_5, EIM_5_Priority, S_I'Access);
 
    P_I : aliased Interrupt_Server_Parameters :=
-     (Pri    => EIM_5_Priority,
+     (State  => S_I'Access,
       Period => Milliseconds (25),
       Budget => Milliseconds (2));
 
@@ -61,7 +61,7 @@ package body Test is
 
    procedure Run is
    begin
-      ETP.Run;
+      ETP.Run (Milliseconds (200));
    end Run;
 
 begin
@@ -70,14 +70,12 @@ begin
 
    Configure_Peripheral (Port_A, 4, Peripheral_B);
 
-   -- Setup and register external interrupt
+   -- Initialize external interrupt and server
 
    S_I.Initialize (External_Interrupts.Falling);
-   E_I.Register (S_I'Access);
+   E_I.Initialize;
 
    -- Initialize poller and register tasks
-
-   ETP.Initialize (6, S_D.Period);
 
    ETP.Register (T_S'Identity);
    ETP.Register (T_A'Identity);
@@ -85,5 +83,9 @@ begin
    ETP.Register (T_C'Identity);
    ETP.Register (T_D'Identity);
    ETP.Register (Current_Task);
+   ETP.Register (COMPARE);
+   ETP.Register (TC_1);
+   ETP.Register (TC_2);
+   ETP.Register (S_I.Identity);
 
 end Test;

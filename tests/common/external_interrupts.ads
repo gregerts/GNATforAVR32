@@ -21,13 +21,10 @@ package External_Interrupts is
                          Filter : Boolean := True);
 
    procedure Enable (S : in out External_Interrupt);
-   pragma Inline (Enable);
-
    procedure Disable (S : in out External_Interrupt);
-   pragma Inline (Disable);
-
    procedure Clear (S : in out External_Interrupt);
-   pragma Inline (Clear);
+
+   function Identity (S : External_Interrupt) return Interrupt_ID;
 
 private
 
