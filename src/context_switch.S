@@ -60,9 +60,9 @@ context_switch:
 	ld.w	r9, r8[0]
 
 	/* Add size of context */
-	sub	r9, -44
+	sub	r9, -(CONTEXT_SIZE + 4)
 	
-	/* Save context of running thread */
+	/* Save CPU context of running thread */
 	stm	--r9, r0,r1,r2,r3,r4,r5,r6,r7,sp,lr
 	mfsr	r0, SYSREG_SR
 	st.w	--r9, r0
@@ -75,11 +75,17 @@ context_switch:
 	st.w	r8[0], r2
 	
 	/* Do TMU context switch */
-	mov	r12, r9
-	mov	r11, r2
-	call	tmu_context_switch
+	mov	r8, TMU_SWAP_COUNT_HI
+	ld.d	r4, r2++
+	ld.d	r6, r2++
+	st.d 	r8++, r4
+	st.d 	r8++, r6
+	ld.d 	r6, --r8
+	ld.d 	r4, --r8
+	st.d 	--r9, r6
+	st.d 	--r9, r4
 
-	/* Load context of first thread */
+	/* Load CPU context of first thread */
 	mov	r9, r2
 	ld.w	r0, r9++
 	mtsr	SYSREG_SR, r0
