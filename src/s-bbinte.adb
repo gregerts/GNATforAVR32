@@ -58,6 +58,8 @@ with System.BB.Threads.Queues;
 with System.BB.Peripherals;
 --  Used for To_Level
 
+with System.BB.TMU;
+
 package body System.BB.Interrupts is
 
    package SSE renames System.Storage_Elements;
@@ -107,9 +109,7 @@ package body System.BB.Interrupts is
    -- Local subprograms --
    -----------------------
 
-   procedure Interrupt_Wrapper
-     (Interrupt : Interrupt_ID;
-      Level     : Interrupt_Level);
+   procedure Interrupt_Wrapper (Level : Interrupt_Level);
    pragma Export (Asm, Interrupt_Wrapper, "interrupt_wrapper");
    --  This wrapper procedure is in charge of setting the appropriate
    --  software priorities before calling the user-defined handler.
@@ -134,6 +134,8 @@ package body System.BB.Interrupts is
       --  Copy the user's handler to the appropriate place within the table
 
       Interrupt_Handlers_Table (Id) := Handler;
+
+      TMU.Initialize_Interrupt_Clock (Id);
 
    end Attach_Handler;
 
@@ -178,22 +180,33 @@ package body System.BB.Interrupts is
    -- Interrupt_Wrapper --
    -----------------------
 
-   procedure Interrupt_Wrapper
-     (Interrupt : Interrupt_ID;
-      Level     : Interrupt_Level)
-   is
+   procedure Interrupt_Wrapper (Level : Interrupt_Level) is
+
       Self_Id : constant Threads.Thread_Id :=
         Threads.Thread_Self;
+
       Caller_Priority : constant Any_Priority :=
         Threads.Get_Priority (Self_Id);
+
       Previous_Interrupt : constant Interrupt_ID :=
         Interrupt_Being_Handled;
 
+      Interrupt : constant Interrupt_ID :=
+        Peripherals.Get_Interrupt_ID (Level);
+
    begin
       --  This must be an external interrupt
-      pragma Assert (Interrupt /= No_Interrupt and Level > 0);
+      pragma Assert (Level > 0);
 
-      --  Store the interrupt being handled.
+      --  Return immediatly in case of false interrupt
+      if Interrupt = No_Interrupt then
+         return;
+      end if;
+
+      --  Activate clock for current interrupt
+      TMU.Enter_Interrupt (Interrupt);
+
+      --  Store the interrupt being handled
       Interrupt_Being_Handled := Interrupt;
 
       --  Then, we must set the appropriate software priority
@@ -201,20 +214,25 @@ package body System.BB.Interrupts is
       --  also the appropriate interrupt masking.
       Threads.Queues.Change_Priority (Self_Id, To_Priority (Level));
 
-      --  Restore interrupt mask.
+      --  Restore interrupts priort to calling handler
       CPU_Primitives.Restore_Interrupts;
 
-      --  Call the user handler.
+      --  Call the user handler
       Interrupt_Handlers_Table (Interrupt).all (Interrupt);
+
+      --  Restore interrupts
+      CPU_Primitives.Disable_Interrupts;
 
       --  Restore the software priority to the state before the
       --  interrupt. Interrupts are enabled by context switch or by
       --  returning to normal execution.
-      CPU_Primitives.Disable_Interrupts;
       Threads.Queues.Change_Priority (Self_Id, Caller_Priority);
 
       --  Restore the interrupt that was previously handled.
       Interrupt_Being_Handled := Previous_Interrupt;
+
+      --  Restore previous clock
+      TMU.Leave_Interrupt;
 
    end Interrupt_Wrapper;
 

@@ -70,27 +70,16 @@ package Ada.Execution_Time.Timers is
 
    function Time_Remaining (TM : Timer) return Ada.Real_Time.Time_Span;
 
-   Pseudo_Task_Id : aliased constant Ada.Task_Identification.Task_Id
-     := Ada.Task_Identification.Null_Task_Id;
-   --  Non-standard definition
-
-   type Interrupt_Timer (I : System.Interrupt_Priority)
-      is new Timer (Pseudo_Task_Id'Access) with private;
-   --  Non-standard definition
-
    Timer_Resource_Error : exception;
 
 private
 
    type Timer (T : not null access constant
                Ada.Task_Identification.Task_Id) is tagged limited
-     record
-        Id      : System.BB.TMU.Timer_Id;
-        Handler : Timer_Handler;
+      record
+         Id      : System.BB.TMU.Timer_Id;
+         Handler : Timer_Handler;
         pragma Volatile (Handler);
-     end record;
-
-   type Interrupt_Timer (I : System.Interrupt_Priority)
-      is new Timer (Pseudo_Task_Id'Access) with null record;
+      end record;
 
 end Ada.Execution_Time.Timers;

@@ -122,22 +122,8 @@ package System.Task_Primitives.Operations is
    -- TMU --
    ---------
 
-   procedure Acquire_Task_Timer
-     (T       : ST.Task_Id;
-      Handler : System.BB.TMU.Timer_Handler;
-      Data    : System.Address;
-      TM      : out System.BB.TMU.Timer_Id);
-   --  This procedure acquires the timer of a task if free
-
-   function Task_Clock (T : ST.Task_Id) return System.BB.TMU.CPU_Time;
+   function Task_Clock (T : ST.Task_Id) return System.BB.TMU.Clock_Id;
    pragma Inline (Task_Clock);
    --  This function returns the exeuction time of the given task
-
-   procedure Enter_Proxy (T : ST.Task_Id);
-   pragma Inline (Enter_Proxy);
-   --  Enter proxy timing mode for the given task
-
-   procedure Leave_Proxy renames System.BB.TMU.Leave_Proxy;
-   --  Leave proxy timing mode
 
 end System.Task_Primitives.Operations;

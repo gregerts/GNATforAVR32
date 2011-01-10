@@ -155,12 +155,6 @@ package body System.BB.Peripherals is
    procedure Initialize_Timers;
    --  Procedure initializing the Timer / Counter.
 
-   function Get_Interrupt_ID
-     (Level : SBI.Interrupt_Level) return SBI.Interrupt_ID;
-   pragma Export (Asm, Get_Interrupt_ID, "get_interrupt_id");
-   --  Function returning the ID of the pending interrupt with the
-   --  highest priority.
-
    procedure GPIO_Configure_Peripheral
      (Port        : access GPIO_Port_Interface;
       From        : GPIO_Pin;
@@ -359,11 +353,7 @@ package body System.BB.Peripherals is
                Interrupt := ADC + SBI.Interrupt_ID (Group - 15);
          end case;
       else
-         if Level = 4 then
-            Interrupt := COMPARE;
-         else
-            Interrupt := SBI.No_Interrupt;
-         end if;
+         Interrupt := SBI.No_Interrupt;
       end if;
 
       return Interrupt;

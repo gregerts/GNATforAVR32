@@ -69,7 +69,9 @@ a-sytaco.ads \
 a-taside.ads \
 a-taster.ads \
 a-exetim.ads \
-a-extiti.ads
+a-extiin.ads \
+a-extiti.ads \
+a-etinti.ads
 
 LIBGNARL_OBJS = $(LIBGNARL_SRC:.ads=.o)
 LIBGNARL_ALIS = $(LIBGNARL_SRC:.ads=.ali)
@@ -77,7 +79,7 @@ LIBGNARL_ALIS = $(LIBGNARL_SRC:.ads=.ali)
 ADA_SRC = $(LIBGNAT_ADA_SRC) $(LIBGNARL_SRC)
 
 # Compiler flags
-ADA_FLAGS = -O2 -gnatnpg -g
+ADA_FLAGS = -O2 -gnatanpg -g
 ASM_FLAGS =
 
 # Utils

@@ -240,37 +240,13 @@ package body System.Task_Primitives.Operations is
       return System.OS_Interface.Current_Interrupt = No_Interrupt;
    end Is_Task_Context;
 
-   ------------------------
-   -- Acquire_Task_Timer --
-   ------------------------
-
-   procedure Acquire_Task_Timer
-     (T       : ST.Task_Id;
-      Handler : System.BB.TMU.Timer_Handler;
-      Data    : System.Address;
-      TM      : out System.BB.TMU.Timer_Id)
-   is
-   begin
-      TMU.Acquire_Thread_Timer
-        (TMU.Thread_Id (T.Common.LL.Thread), Handler, Data, TM);
-   end Acquire_Task_Timer;
-
    ----------------
    -- Task_Clock --
    ----------------
 
-   function Task_Clock (T : ST.Task_Id) return TMU.CPU_Time is
+   function Task_Clock (T : ST.Task_Id) return TMU.Clock_Id is
    begin
       return TMU.Thread_Clock (TMU.Thread_Id (T.Common.LL.Thread));
    end Task_Clock;
-
-   -----------------
-   -- Enter_Proxy --
-   -----------------
-
-   procedure Enter_Proxy (T : ST.Task_Id) is
-   begin
-      TMU.Enter_Proxy (TMU.Thread_Id (T.Common.LL.Thread));
-   end Enter_Proxy;
 
 end System.Task_Primitives.Operations;

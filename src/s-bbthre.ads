@@ -90,8 +90,11 @@ package System.BB.Threads is
       --  counter, ...) are stored. This field supports context switches among
       --  threads.
 
-      TM : aliased System.BB.TMU.Timer_Descriptor;
-      --  The one and only execution timer for the thread.
+      Clock : aliased System.BB.TMU.Clock_Descriptor;
+      --  Execution-time clock for this thread
+
+      Active_Clock : System.BB.TMU.Clock_Id;
+      --  Active execution time clock for this thread
 
       ATCB : System.Address;
       --  Address of the Ada Task Control Block corresponding to the Ada task
@@ -117,11 +120,8 @@ package System.BB.Threads is
       --  Points to the ready thread that is in the next position for
       --  execution.
 
-      Alarm : System.BB.Time.Alarm_Descriptor;
-      --  Alarm timer use to wakeup the thread
-
-      Alarm_Id : System.BB.Time.Alarm_Id;
-      --  Id of alarm timer use to wakeup the thread
+      Alarm : System.BB.Time.Alarm_Id;
+      --  Alarm used to wakeup the thread
 
       State : Thread_States;
       --  Encodes some basic information about the state of a thread

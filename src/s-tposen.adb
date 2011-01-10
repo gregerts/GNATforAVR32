@@ -64,8 +64,6 @@ with System.Task_Primitives.Operations;
 --  used for Self
 --           Get_Priority
 --           Set_Priority
---           Enter_Proxy
---           Leave_Proxy
 
 package body System.Tasking.Protected_Objects.Single_Entry is
 
@@ -271,18 +269,10 @@ package body System.Tasking.Protected_Objects.Single_Entry is
 
          Caller := Entry_Call.Self;
 
-         --  Enter proxy timing mode for Caller
-
-         STPO.Enter_Proxy (Caller);
-
          --  Execute entry call
 
          Object.Entry_Body.Action
            (Object.Compiler_Info, Entry_Call.Uninterpreted_Data, 1);
-
-         --  Leave proxy timing mode
-
-         STPO.Leave_Proxy;
 
          Object.Call_In_Progress := null;
          Unlock_Entry (Object);

@@ -97,6 +97,9 @@ package System.BB.Parameters is
    Interrupts : constant := 58;
    --  The number of interrupts on the UC3A.
 
+   Interrupt_Clocks : constant := 10;
+   --  Maximal number of interrupt clocks and thereby also interrupts
+
    -------------------------
    -- USART I / 0 channel --
    -------------------------

@@ -72,6 +72,12 @@ package body System.BB.Protection is
    --  executing is no longer the highest priority one. This function can
    --  also be called by the interrupt handlers' epilogue.
 
+   ----------------
+   -- Local data --
+   ----------------
+
+   Nesting : Integer := 0;
+
    ------------------
    -- Enter_Kernel --
    ------------------
@@ -82,6 +88,7 @@ package body System.BB.Protection is
       --  kernel data. This way, external interrupts cannot be raised.
 
       CPU_Primitives.Disable_Interrupts;
+      Nesting := Nesting + 1;
    end Enter_Kernel;
 
    ---------------------------
@@ -115,6 +122,14 @@ package body System.BB.Protection is
 
    begin
 
+      --  Only leave kernel if nesting is 0
+
+      Nesting := Nesting - 1;
+
+      if Nesting > 0 then
+         return;
+      end if;
+
       --  If there is nothing to execute (no tasks or interrupt handlers)
       --  then we just wait until there is something to do. It means that we
       --  need to wait until there is any thread ready to execute. Interrupts
@@ -126,7 +141,7 @@ package body System.BB.Protection is
 
          --  Enter TMU idle mode
 
-         TMU.Enter_Idle;
+         TMU.Enter_Idle (TMU.Thread_Id (Self_Id));
 
          --  In the meantime, we put the task temporarily in the ready queue
          --  so interrupt handling is performed normally. Note that the task
@@ -142,7 +157,7 @@ package body System.BB.Protection is
 
             CPU_Primitives.Wait_For_Interrupts;
 
-            --  Exit when this thread is runnable or another is ready
+            --  Exit when this thread is runnable or another thread is ready
 
             exit when Self_Id.State = Threads.Runnable;
             exit when Self_Id.Next /= Threads.Null_Thread_Id;
@@ -158,7 +173,7 @@ package body System.BB.Protection is
 
          --  Leave TMU idle mode
 
-         TMU.Leave_Idle;
+         TMU.Leave_Idle (TMU.Thread_Id (Self_Id));
 
       end if;
 
@@ -172,8 +187,7 @@ package body System.BB.Protection is
       --  to the software priority of the task that is executing.
 
       CPU_Primitives.Enable_Interrupts
-        (Any_Priority'Max (Self_Id.Active_Priority, Priority'Last)
-         - Priority'Last);
+        (Integer'Max (Integer (Self_Id.Active_Priority) - Priority'Last, 0));
 
    end Leave_Kernel;
 
@@ -184,7 +198,12 @@ package body System.BB.Protection is
    procedure Leave_Kernel_No_Change is
    begin
       pragma Assert (not Context_Switch_Needed);
-      CPU_Primitives.Restore_Interrupts;
+
+      Nesting := Nesting - 1;
+
+      if Nesting = 0 then
+         CPU_Primitives.Restore_Interrupts;
+      end if;
    end Leave_Kernel_No_Change;
 
 end System.BB.Protection;

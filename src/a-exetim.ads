@@ -55,11 +55,6 @@ package Ada.Execution_Time is
           := Ada.Task_Identification.Current_Task)
       return CPU_Time;
 
-   function Interrupt_Clock
-     (Priority : System.Interrupt_Priority)
-     return CPU_Time;
-   --  Non-standard function!
-
    function "+"
      (Left  : CPU_Time;
       Right : Ada.Real_Time.Time_Span) return CPU_Time;
@@ -105,7 +100,6 @@ private
    pragma Import (Intrinsic, ">=");
 
    pragma Inline (Clock);
-   pragma Inline (Interrupt_Clock);
    pragma Inline ("+");
    pragma Inline ("-");
 

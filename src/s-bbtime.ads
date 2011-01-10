@@ -44,6 +44,9 @@ pragma Restrictions (No_Elaboration_Code);
 with System.BB.Peripherals;
 --  Used for Main_Clock_Frequency
 
+with System.Storage_Elements;
+--  Used for Integer_Address
+
 package System.BB.Time is
 
    pragma Preelaborate;
@@ -91,31 +94,27 @@ package System.BB.Time is
    ----------------------
 
    type Alarm_Descriptor is limited private;
-   pragma Preelaborable_Initialization (Alarm_Descriptor);
 
    type Alarm_Id is access all Alarm_Descriptor;
 
    type Alarm_Handler is access procedure (Data : System.Address);
 
-   procedure Cancel_Handler (Alarm : Alarm_Id);
-   --  Cancel alarm timer handler
+   function Create
+     (Handler : not null Alarm_Handler;
+      Data    : System.Address) return Alarm_Id;
+   --  Creates an alarm timer with the given handler and data
 
-   procedure Initialize_Alarm
-     (Alarm   : in out Alarm_Descriptor;
-      Handler : Alarm_Handler;
-      Data    : System.Address;
-      Id      : out Alarm_Id);
-   pragma Inline (Initialize_Alarm);
-   --  Initialize and alarm, binding it to the given handler and data
+   procedure Cancel (Alarm : Alarm_Id);
+   --  Cancel alarm timer
 
-   procedure Set_Handler
+   procedure Set
      (Alarm   : Alarm_Id;
       Timeout : Time);
-   --  Set alarm timer handler
+   --  Set alarm timer
 
    function Time_Of_Alarm (Alarm : Alarm_Id) return Time;
    pragma Inline (Time_Of_Alarm);
-   --  Get time of timing event
+   --  Get expiration time of alarm
 
 private
 
@@ -125,11 +124,10 @@ private
          --  Timeout of alarm or Time'First if alarm is not set
 
          Handler : Alarm_Handler;
-         --  Handler to be called when the alarm expires or null if
-         --  alarm is not set.
+         --  Handler of alarm, always non-null after initialization
 
          Data : System.Address;
-         --  Argument to be given when calling the handler
+         --  Data to be passed when calling handler
 
          Next, Prev : Alarm_Id;
          --  Next and previous elements when in alarm queue
