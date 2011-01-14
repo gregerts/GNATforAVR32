@@ -90,11 +90,11 @@ package System.BB.Threads is
       --  counter, ...) are stored. This field supports context switches among
       --  threads.
 
-      Clock : aliased System.BB.TMU.Clock_Descriptor;
-      --  Execution-time clock for this thread
+      TM : aliased System.BB.TMU.Timer_Descriptor;
+      --  Execution-time timer for this thread
 
-      Active_Clock : System.BB.TMU.Clock_Id;
-      --  Active execution time clock for this thread
+      Active_TM : System.BB.TMU.Timer_Id;
+      --  Active execution time timer for this thread
 
       ATCB : System.Address;
       --  Address of the Ada Task Control Block corresponding to the Ada task

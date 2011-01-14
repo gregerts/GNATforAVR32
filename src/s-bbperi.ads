@@ -115,6 +115,29 @@ package System.BB.Peripherals is
    pragma Inline (Clear_Alarm_Interrupt);
    --  Acknowledge the event interrupt
 
+   ------------------------------------
+   -- TMU definitions and primitives --
+   ------------------------------------
+
+   TMU_Frequency : constant := Peripheral_Frequency;
+
+   type TMU_Interval is mod 2 ** 64;
+   for TMU_Interval'Size use 64;
+
+   procedure Set_Compare (Compare : TMU_Interval);
+   pragma Inline (Set_Compare);
+
+   procedure Set_Count (Count : TMU_Interval);
+   pragma Inline (Set_Count);
+
+   procedure Swap_Context (Compare_A : TMU_Interval;
+                           Count_A   : TMU_Interval;
+                           Count_B   : out TMU_Interval);
+   pragma Inline (Swap_Context);
+
+   function Get_Count return TMU_Interval;
+   pragma Inline (Get_Count);
+
    ----------------
    -- Interrupts --
    ----------------
@@ -134,6 +157,7 @@ package System.BB.Peripherals is
 
    --  Constants defining the external interrupts
 
+   TMUC    : constant := 59; --  Group 19
    SDRAMC  : constant := 58; --  Group 18
    USB     : constant := 57; --  Group 17
    MACB    : constant := 56; --  Group 16
@@ -194,7 +218,7 @@ package System.BB.Peripherals is
    COMPARE : constant := 1;  --  Group 0
 
    --  Constants defining levels of the external interrupt groups
-   Group_0_Level  : constant := 4;
+   Group_0_Level  : constant := 1;
    Group_1_Level  : constant := 1;
    Group_2_Level  : constant := 1;
    Group_3_Level  : constant := 1;
@@ -213,6 +237,7 @@ package System.BB.Peripherals is
    Group_16_Level : constant := 1;
    Group_17_Level : constant := 1;
    Group_18_Level : constant := 1;
+   Group_19_Level : constant := 4;
 
    --------------------
    -- Output Console --

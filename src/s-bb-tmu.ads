@@ -49,14 +49,13 @@ package System.BB.TMU is
    -- CPU_Time --
    --------------
 
-   type CPU_Time is mod 2 ** 64;
-   for CPU_Time'Size use 64;
+   subtype CPU_Time is Peripherals.TMU_Interval;
    --  Type representing of CPU time
 
    CPU_Tick : constant := 1;
    --  Smallest amount of execution time representable by the CPU_Time
 
-   CPU_Ticks_Per_Second : constant := Peripherals.Main_Clock_Frequency;
+   CPU_Ticks_Per_Second : constant := Peripherals.TMU_Frequency;
    --  Number of CPU ticks per second
 
    ----------------
@@ -68,74 +67,60 @@ package System.BB.TMU is
    subtype Interrupt_ID is System.BB.Interrupts.Interrupt_ID;
 
    -----------
-   -- Clock --
-   -----------
-
-   type Clock_Descriptor is limited private;
-
-   type Clock_Id is private;
-
-   -----------
    -- Timer --
    -----------
 
-   type Timer_Id is private;
+   type Timer_Descriptor is limited private;
+
+   type Timer_Id is access all Timer_Descriptor;
 
    type Timer_Handler is access procedure (Data : System.Address);
-
-   Null_Timer_Id : constant Timer_Id;
 
    --------------------
    -- Initialization --
    --------------------
 
-   procedure Initialize_Interrupt_Clock (Id : Interrupt_ID);
-   --  Initializes the clock for the given interrupt ID
+   procedure Initialize_Interrupt_Timer (Id : Interrupt_ID);
+   --  Initializes the timer for the given interrupt ID
 
-   procedure Initialize_Thread_Clock (Id : Thread_Id);
-   --  Initializes the clock for the given thread
+   procedure Initialize_Thread_Timer (Id : Thread_Id);
+   --  Initializes the timer for the given thread
 
    procedure Initialize_TMU (Environment_Thread : Thread_Id);
    --  Initialize this package. Must be called before any other
    --  procedures and functions in this package.
 
    ----------------------
-   -- Clock operations --
-   ----------------------
-
-   function Thread_Clock (Id : Thread_Id) return Clock_Id;
-   pragma Inline_Always (Thread_Clock);
-   --  Returns execution time clock for the given thread
-
-   function Interrupt_Clock (Id : Interrupt_ID) return Clock_Id;
-   pragma Inline_Always (Interrupt_Clock);
-   --  Returns the execution time clock for the given interrupt ID
-
-   function Time_Of (Clock : Clock_Id) return CPU_Time;
-   --  Get execution time of the given clock
-
-   ----------------------
    -- Timer operations --
    ----------------------
 
-   function Clock_Of (TM : Timer_Id) return Clock_Id;
-   pragma Inline_Always (Clock_Of);
-
-   function Create
-     (Clock   : Clock_Id;
-      Handler : not null Timer_Handler;
-      Data    : System.Address) return Timer_Id;
-   --  Creates a timer associated with the given clock with the given
-   --  handler and data. Returns Null_Timer_Id if the clock cannot
-   --  have more timers.
+   procedure Bind
+     (TM      : Timer_Id;
+      Handler : Timer_Handler;
+      Data    : System.Address;
+      Success : out Boolean);
+   --  Binds the timer to the given handler and data. Success set to
+   --  false if the timer is already bound.
 
    procedure Cancel (TM : Timer_Id);
    --  Cancels the timer
+
+   function Clock (TM : Timer_Id) return CPU_Time;
+   pragma Inline_Always (Clock);
+   --  Returns the execution time clock for the given timer
+
+   function Interrupt_Timer (Id : Interrupt_ID) return Timer_Id;
+   pragma Inline_Always (Interrupt_Timer);
+   --  Get the timer associated with the given interrupt
 
    procedure Set
      (TM      : Timer_Id;
       Timeout : CPU_Time);
    --  Sets the timer, may overwrite an already pending timeout
+
+   function Thread_Timer (Id : Thread_Id) return Timer_Id;
+   pragma Inline_Always (Thread_Timer);
+   --  Get the timer associated with the given thread
 
    function Time_Remaining (TM : Timer_Id) return CPU_Time;
    --  Returns time remaining before timeout or 0 if no timeout
@@ -162,7 +147,7 @@ package System.BB.TMU is
 
 private
 
-   type Clock_Id is access all Clock_Descriptor;
+   type Timer_State is (Uninitialized, Free, Cleared, Set);
 
    ----------------------
    -- Timer_Descriptor --
@@ -170,8 +155,11 @@ private
 
    type Timer_Descriptor is
       record
-         Clock : Clock_Id;
-         --  Clock of this timer
+         Compare : CPU_Time;
+         --  Timeout if timer is set, else CPU_Time'Last
+
+         Count : CPU_Time;
+         --  Current time of clock if not active
 
          Handler : Timer_Handler;
          --  Handler to be called when the timer expires
@@ -179,38 +167,11 @@ private
          Data : System.Address;
          --  Argument to be given when calling handler
 
-         Timeout : CPU_Time;
-         --  Timeout of timer or CPU_Time'First if timer is not set
-
-         Set : Boolean;
-         --  True if the timer is set
-
-         Free : Boolean;
-         --  True if the timer is free
+         State : Timer_State;
+         --  State of the timer, initially uninitialized
 
       end record;
 
    pragma Suppress_Initialization (Timer_Descriptor);
-
-   type Timer_Id is access all Timer_Descriptor;
-
-   Null_Timer_Id : constant Timer_Id := null;
-
-   ----------------------
-   -- Clock_Descriptor --
-   ----------------------
-
-   type Clock_Descriptor is
-      record
-         Base_Time : CPU_Time;
-         pragma Volatile (Base_Time);
-         --  Base time, updated when the clock is deactivated
-
-         TM : aliased Timer_Descriptor;
-         --  The one and only timer for this clock
-
-      end record;
-
-   pragma Suppress_Initialization (Clock_Descriptor);
 
 end System.BB.TMU;

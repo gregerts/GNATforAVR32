@@ -76,7 +76,8 @@ package body System.BB.Peripherals is
          Group_15_Level,
          Group_16_Level,
          Group_17_Level,
-         Group_18_Level);
+         Group_18_Level,
+         Group_19_Level);
 
    ------------------------------------------------
    -- Constants used for configurating registers --
@@ -128,6 +129,9 @@ package body System.BB.Peripherals is
 
    GPIO_Port_B : aliased GPIO_Port_Interface;
    for GPIO_Port_B'Address use GPIO_Port_B_Address;
+
+   TMU : aliased TMU_Interface;
+   for TMU'Address use TMU_Address;
 
    -----------------------
    -- Local definitions --
@@ -351,6 +355,8 @@ package body System.BB.Peripherals is
                Interrupt := TC_0 + SBI.Interrupt_ID (Line) - 1;
             when 15 .. 18 =>
                Interrupt := ADC + SBI.Interrupt_ID (Group - 15);
+            when 19 =>
+               Interrupt := TMUC;
          end case;
       else
          Interrupt := SBI.No_Interrupt;
@@ -508,6 +514,48 @@ package body System.BB.Peripherals is
       --  Interrupt cleared by reading status register.
       null;
    end Clear_Alarm_Interrupt;
+
+   -----------------
+   -- Set_Compare --
+   -----------------
+
+   procedure Set_Compare (Compare : TMU_Interval) is
+   begin
+      TMU.Compare := Compare;
+   end Set_Compare;
+
+   ---------------
+   -- Set_Count --
+   ---------------
+
+   procedure Set_Count (Count : TMU_Interval) is
+   begin
+      TMU.Count := Count;
+   end Set_Count;
+
+   ------------------
+   -- Swap_Context --
+   ------------------
+
+   procedure Swap_Context
+     (Compare_A : TMU_Interval;
+      Count_A   : TMU_Interval;
+      Count_B   : out TMU_Interval)
+   is
+   begin
+      TMU.Swap_Compare := Compare_A;
+      TMU.Swap_Count   := Count_A;
+      Count_B          := TMU.Swap_Count;
+   end Swap_Context;
+
+   ---------------
+   -- Get_Count --
+   ---------------
+
+   function Get_Count return TMU_Interval is
+   begin
+      return TMU.Count;
+   end Get_Count;
 
    ------------------------
    -- Initialize_Console --

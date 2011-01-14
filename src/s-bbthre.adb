@@ -328,9 +328,9 @@ package body System.BB.Threads is
 
       Initialize_Context (Id.Context'Access, Code, Arg, Id.Top_Of_Stack);
 
-      --  Initialize execution time clock
+      --  Initialize execution time timer
 
-      TMU.Initialize_Thread_Clock (TMU.Thread_Id (Id));
+      TMU.Initialize_Thread_Timer (TMU.Thread_Id (Id));
 
       --  Create alarm timer
 

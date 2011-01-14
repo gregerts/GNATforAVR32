@@ -122,8 +122,8 @@ package System.Task_Primitives.Operations is
    -- TMU --
    ---------
 
-   function Task_Clock (T : ST.Task_Id) return System.BB.TMU.Clock_Id;
-   pragma Inline (Task_Clock);
+   function Task_Timer (T : ST.Task_Id) return System.BB.TMU.Timer_Id;
+   pragma Inline (Task_Timer);
    --  This function returns the exeuction time of the given task
 
 end System.Task_Primitives.Operations;

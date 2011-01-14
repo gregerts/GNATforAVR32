@@ -135,6 +135,9 @@ package System.BB.Peripherals.Registers is
    Timer_Counter_2_Address :
      constant System.Address := System'To_Address (16#FFFF3880#);
 
+   TMU_Address :
+     constant System.Address := System'To_Address (16#FFFF3A00#);
+
    ---------------------------------
    -- Main Clock Control Register --
    ---------------------------------
@@ -857,5 +860,127 @@ package System.BB.Peripherals.Registers is
       end record;
 
    pragma Suppress_Initialization (GPIO_Port_Interface);
+
+   --------------------------
+   -- TMU Control Register --
+   --------------------------
+
+   type TMU_Control_Register is
+      record
+         Enable   : Boolean   := False;
+         Disable  : Boolean   := False;
+         Unused_A : Scaler_6  := 0;
+         Unused_B : Scaler_24 := 0;
+      end record;
+
+   for TMU_Control_Register use
+      record
+         Enable   at 0 range 31 .. 31;
+         Disable  at 0 range 30 .. 30;
+         Unused_A at 0 range 24 .. 29;
+         Unused_B at 0 range 0 .. 23;
+      end record;
+
+   for TMU_Control_Register'Size use 32;
+
+   pragma Suppress_Initialization (TMU_Control_Register);
+
+   -----------------------
+   -- TMU Mode Register --
+   -----------------------
+
+   type TMU_Mode_Register is
+      record
+         Unused : Scaler_32 := 0;
+      end record;
+
+   for TMU_Mode_Register'Size use 32;
+
+   pragma Suppress_Initialization (TMU_Mode_Register);
+
+   -------------------------
+   -- TMU Status Register --
+   -------------------------
+
+   type TMU_Status_Register is
+      record
+         Compare_Match          : Boolean   := False;
+         Overflow               : Boolean   := False;
+         Unused_A               : Scaler_6  := 0;
+         Previous_Compare_Match : Boolean   := False;
+         Previous_Overflow      : Boolean   := False;
+         Unused_B               : Scaler_6  := 0;
+         Enable                 : Boolean   := False;
+         Unused_C               : Scaler_7  := 0;
+         Unused_D               : Scaler_8  := 0;
+      end record;
+
+   for TMU_Status_Register use
+      record
+         Compare_Match          at 0 range 31 .. 31;
+         Overflow               at 0 range 30 .. 30;
+         Unused_A               at 0 range 24 .. 29;
+         Previous_Compare_Match at 0 range 23 .. 23;
+         Previous_Overflow      at 0 range 22 .. 22;
+         Unused_B               at 0 range 16 .. 21;
+         Enable                 at 0 range 15 .. 15;
+         Unused_C               at 0 range 8 .. 14;
+         Unused_D               at 0 range 0 .. 7;
+      end record;
+
+   for TMU_Status_Register'Size use 32;
+
+   pragma Suppress_Initialization (TMU_Status_Register);
+
+   -------------------------------
+   -- TMU Interrupt Register --
+   -------------------------------
+
+   type TMU_Interrupt_Register is
+      record
+         Compare_Match : Boolean   := False;
+         Overflow      : Boolean   := False;
+         Unused_A      : Scaler_6  := 0;
+         Unused_B      : Scaler_24 := 0;
+      end record;
+
+   for TMU_Interrupt_Register use
+      record
+         Compare_Match          at 0 range 31 .. 31;
+         Overflow               at 0 range 30 .. 30;
+         Unused_A               at 0 range 24 .. 29;
+         Unused_B               at 0 range 0 .. 23;
+      end record;
+
+   for TMU_Interrupt_Register'Size use 32;
+
+   pragma Suppress_Initialization (TMU_Interrupt_Register);
+
+   -------------------
+   -- TMU Interface --
+   -------------------
+
+   type TMU_Interface is
+      record
+         Control      : TMU_Control_Register;
+         Mode         : TMU_Mode_Register;
+         Status       : TMU_Status_Register;
+         Clear        : TMU_Interrupt_Register;
+         Enable       : TMU_Interrupt_Register;
+         Disable      : TMU_Interrupt_Register;
+         Compare      : TMU_Interval;
+         Count        : TMU_Interval;
+         Swap_Compare : TMU_Interval;
+         Swap_Count   : TMU_Interval;
+         pragma Atomic (Control);
+         pragma Atomic (Mode);
+         pragma Atomic (Status);
+         pragma Atomic (Clear);
+         pragma Atomic (Enable);
+         pragma Atomic (Disable);
+         pragma Volatile (Count);
+      end record;
+
+   pragma Suppress_Initialization (TMU_Interface);
 
 end System.BB.Peripherals.Registers;

@@ -91,14 +91,14 @@ package System.BB.Parameters is
    Interrupt_Levels : constant := 4;
    --  Number of interrupt levels in the AVR32 architecture.
 
-   Interrupt_Groups : constant := 19;
+   Interrupt_Groups : constant := 20;
    --  Number of interrupt groups on the UC3A.
 
-   Interrupts : constant := 58;
+   Interrupts : constant := 59;
    --  The number of interrupts on the UC3A.
 
-   Interrupt_Clocks : constant := 10;
-   --  Maximal number of interrupt clocks and thereby also interrupts
+   Interrupt_Timers : constant := 10;
+   --  Maximal number of interrupt timers and thereby also interrupts
 
    -------------------------
    -- USART I / 0 channel --

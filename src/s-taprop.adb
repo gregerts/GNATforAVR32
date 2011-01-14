@@ -241,12 +241,12 @@ package body System.Task_Primitives.Operations is
    end Is_Task_Context;
 
    ----------------
-   -- Task_Clock --
+   -- Task_Timer --
    ----------------
 
-   function Task_Clock (T : ST.Task_Id) return TMU.Clock_Id is
+   function Task_Timer (T : ST.Task_Id) return TMU.Timer_Id is
    begin
-      return TMU.Thread_Clock (TMU.Thread_Id (T.Common.LL.Thread));
-   end Task_Clock;
+      return TMU.Thread_Timer (TMU.Thread_Id (T.Common.LL.Thread));
+   end Task_Timer;
 
 end System.Task_Primitives.Operations;
