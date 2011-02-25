@@ -172,7 +172,7 @@ package body Ada.Execution_Time.Timers is
          Initialize (TM);
       end if;
 
-      At_Time := CPU_Time (TMU.Time_Of (TMU.Timer_Clock (TM.Id))) + In_Time;
+      At_Time := CPU_Time (TMU.Execution_Time (TMU.Clock (TM.Id))) + In_Time;
 
       Set_Handler (TM, At_Time, Handler);
 

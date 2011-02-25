@@ -56,7 +56,7 @@ package body System.BB.TMU is
    -- Local definitions --
    -----------------------
 
-   Max_Compare : constant := Word'Last / 2;
+   Max_Compare : constant := Word'Last - 2**16;
    --  Maximal value set to COMPARE register
 
    Pool : array (Pool_Index) of aliased Clock_Descriptor;
@@ -81,6 +81,10 @@ package body System.BB.TMU is
    -- Local subprograms --
    -----------------------
 
+   function Active (Clock : Clock_Id) return Boolean;
+   pragma Inline_Always (Active);
+   --  Returns true when the given clock is active (running)
+
    procedure Compare_Handler (Id : Interrupts.Interrupt_ID);
    --  Handler for the COMPARE interrupt
 
@@ -95,12 +99,17 @@ package body System.BB.TMU is
    procedure Initialize_Clock (Clock : Clock_Id);
    --  Initializes the given clock
 
-   function Is_Active (Clock : Clock_Id) return Boolean;
-   pragma Inline_Always (Is_Active);
-   --  Returns true when the given clock is active (running)
-
    procedure Swap_Clock (A, B : Clock_Id);
    --  Swap clock from A to B
+
+   ------------
+   -- Active --
+   ------------
+
+   function Active (Clock : Clock_Id) return Boolean is
+   begin
+      return Clock = Stack (Top);
+   end Active;
 
    ------------
    -- Cancel --
@@ -118,13 +127,22 @@ package body System.BB.TMU is
          TM.Timeout := CPU_Time'First;
          TM.Set := False;
 
-         if Is_Active (TM.Clock) then
+         if Active (TM.Clock) then
             CPU.Adjust_Compare (Max_Compare);
          end if;
 
       end if;
 
    end Cancel;
+
+   -----------
+   -- Clock --
+   -----------
+
+   function Clock (TM : Timer_Id) return Clock_Id is
+   begin
+      return TM.Clock;
+   end Clock;
 
    ---------------------
    -- Compare_Handler --
@@ -215,6 +233,35 @@ package body System.BB.TMU is
 
    end Enter_Interrupt;
 
+   --------------------
+   -- Execution_Time --
+   --------------------
+
+   function Execution_Time (Clock : Clock_Id) return CPU_Time is
+      B : CPU_Time;
+      C : Word;
+
+   begin
+      pragma Assert (Clock /= null);
+
+      --  If clock is not active return base time
+
+      if not Active (Clock) then
+         return Clock.Base_Time;
+      end if;
+
+      --  Else the time of clock is sum of base time and count
+
+      loop
+         B := Clock.Base_Time;
+         C := CPU.Get_Count;
+         exit when B = Clock.Base_Time;
+      end loop;
+
+      return B + CPU_Time (C);
+
+   end Execution_Time;
+
    -----------------
    -- Get_Compare --
    -----------------
@@ -240,7 +287,7 @@ package body System.BB.TMU is
 
    procedure Initialize_Clock (Clock : Clock_Id) is
    begin
-      null;
+      Clock.all := (Base_Time => CPU_Time'First, TM => null);
    end Initialize_Clock;
 
    --------------------------------
@@ -342,15 +389,6 @@ package body System.BB.TMU is
       end if;
    end Interrupt_Clock;
 
-   ---------------
-   -- Is_Active --
-   ---------------
-
-   function Is_Active (Clock : Clock_Id) return Boolean is
-   begin
-      return Clock = Stack (Top);
-   end Is_Active;
-
    ----------------
    -- Leave_Idle --
    ----------------
@@ -404,7 +442,7 @@ package body System.BB.TMU is
 
       TM.Timeout := Timeout;
 
-      if Is_Active (TM.Clock) then
+      if Active (TM.Clock) then
          CPU.Adjust_Compare (Get_Compare (TM.Clock));
       end if;
 
@@ -429,35 +467,6 @@ package body System.BB.TMU is
 
    end Swap_Clock;
 
-   -------------
-   -- Time_Of --
-   -------------
-
-   function Time_Of (Clock : Clock_Id) return CPU_Time is
-      B : CPU_Time;
-      C : Word;
-
-   begin
-      pragma Assert (Clock /= null);
-
-      --  If clock is not active return base time
-
-      if not Is_Active (Clock) then
-         return Clock.Base_Time;
-      end if;
-
-      --  Else the time of clock is sum of base time and count
-
-      loop
-         B := Clock.Base_Time;
-         C := CPU.Get_Count;
-         exit when B = Clock.Base_Time;
-      end loop;
-
-      return B + CPU_Time (C);
-
-   end Time_Of;
-
    --------------------
    -- Time_Remaining --
    --------------------
@@ -470,7 +479,7 @@ package body System.BB.TMU is
 
       loop
          Timeout := TM.Timeout;
-         Now     := Time_Of (TM.Clock);
+         Now     := Execution_Time (TM.Clock);
          exit when Timeout = TM.Timeout;
       end loop;
 
@@ -483,15 +492,6 @@ package body System.BB.TMU is
       end if;
 
    end Time_Remaining;
-
-   -----------------
-   -- Timer_Clock --
-   -----------------
-
-   function Timer_Clock (TM : Timer_Id) return Clock_Id is
-   begin
-      return TM.Clock;
-   end Timer_Clock;
 
    ------------------
    -- Thread_Clock --

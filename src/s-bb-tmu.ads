@@ -111,6 +111,9 @@ package System.BB.TMU is
    -- Clock operations --
    ----------------------
 
+   function Execution_Time (Clock : Clock_Id) return CPU_Time;
+   --  Get execution time of the given clock
+
    function Thread_Clock (Id : Thread_Id) return Clock_Id;
    pragma Inline_Always (Thread_Clock);
    --  Returns execution time clock for the given thread
@@ -118,9 +121,6 @@ package System.BB.TMU is
    function Interrupt_Clock (Id : Interrupt_ID) return Clock_Id;
    pragma Inline_Always (Interrupt_Clock);
    --  Returns the execution time clock for the given interrupt ID
-
-   function Time_Of (Clock : Clock_Id) return CPU_Time;
-   --  Get execution time of the given clock
 
    ----------------------
    -- Timer operations --
@@ -137,8 +137,8 @@ package System.BB.TMU is
    function Time_Remaining (TM : Timer_Id) return CPU_Time;
    --  Returns time remaining before timeout or 0 if no timeout
 
-   function Timer_Clock (TM : Timer_Id) return Clock_Id;
-   pragma Inline_Always (Timer_Clock);
+   function Clock (TM : Timer_Id) return Clock_Id;
+   pragma Inline_Always (Clock);
    --  Returns the clock of the given timer
 
    -------------------------
