@@ -140,7 +140,7 @@ package body Ada.Execution_Time.Timers is
 
       Protection.Enter_Kernel;
 
-      TM.Id := TM.Timer'Unchecked_Access;
+      TM.Id := TM.Desc'Unchecked_Access;
 
       TMU.Initialize_Timer (TM.Id,
                             Clock,

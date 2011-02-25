@@ -80,7 +80,7 @@ package body Ada.Real_Time.Timing_Events is
 
    procedure Initialize (Event : in out Timing_Event) is
    begin
-      Event.Id := Event.Alarm'Unrestricted_Access;
+      Event.Id := Event.Desc'Unchecked_Access;
       SBT.Initialize_Alarm (Event.Id, Execute_Handler'Access, Event'Address);
    end Initialize;
 
