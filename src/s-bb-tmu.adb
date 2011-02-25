@@ -47,19 +47,10 @@ package body System.BB.TMU is
 
    subtype Word is CPU.Word;
 
-   type Interrupt_Clock_Index is range 0 .. SBP.Interrupt_Clocks;
-   for Interrupt_Clock_Index'Size use 8;
+   type Pool_Index is range 0 .. SBP.Interrupt_Clocks;
+   for Pool_Index'Size use 8;
 
-   type Interrupt_Clock_Array is array (Interrupt_Clock_Index)
-     of aliased Clock_Descriptor;
-
-   pragma Suppress_Initialization (Interrupt_Clock_Array);
-
-   type Clock_Index is new Interrupts.Interrupt_Level;
-
-   type Clock_Stack is array (Clock_Index) of Clock_Id;
-
-   pragma Suppress_Initialization (Clock_Stack);
+   type Stack_Index is new Interrupts.Interrupt_Level;
 
    -----------------------
    -- Local definitions --
@@ -68,22 +59,22 @@ package body System.BB.TMU is
    Max_Compare : constant := Word'Last / 2;
    --  Maximal value set to COMPARE register
 
-   Idle_Clock : aliased Clock_Descriptor;
+   Pool : array (Pool_Index) of aliased Clock_Descriptor;
+   --  Pool of clocks
+
+   Last : Pool_Index := 0;
+   --  Pointing to last allocated clock in pool
+
+   Idle : constant Clock_Id := Pool (0)'Access;
    --  Clock of the pseudo idle thread
 
-   Interrupt_Clocks : Interrupt_Clock_Array;
-   --  Clocks used for interrupt handling
-
-   Last_Interrupt_Clock : Interrupt_Clock_Index := 0;
-   --  Pointing to last allocated interrupt clock
-
-   To_Clock_Index : array (Interrupt_ID) of Interrupt_Clock_Index;
+   Lookup : array (Interrupt_ID) of Pool_Index;
    --  Array for translating interrupt IDs to interrupt clock index
 
-   Stack : Clock_Stack;
+   Stack : array (Stack_Index) of Clock_Id;
    --  Stack of timers
 
-   Top : Clock_Index;
+   Top : Stack_Index;
    --  Index of stack top
 
    -----------------------
@@ -188,7 +179,7 @@ package body System.BB.TMU is
 
    procedure Enter_Idle (Id : Thread_Id) is
       A : constant Clock_Id := Id.Active_Clock;
-      B : constant Clock_Id := Idle_Clock'Access;
+      B : constant Clock_Id := Idle;
 
    begin
       pragma Assert (Top = 0 and then A = Stack (0));
@@ -259,13 +250,13 @@ package body System.BB.TMU is
    procedure Initialize_Interrupt_Clock (Id : Interrupt_ID) is
    begin
       pragma Assert (Id /= Interrupts.No_Interrupt);
-      pragma Assert (To_Clock_Index (Id) = 0);
-      pragma Assert (Last_Interrupt_Clock < Interrupt_Clock_Index'Last);
+      pragma Assert (Lookup (Id) = 0);
+      pragma Assert (Last < Pool_Index'Last);
 
-      Last_Interrupt_Clock := Last_Interrupt_Clock + 1;
-      To_Clock_Index (Id) := Last_Interrupt_Clock;
+      Last := Last + 1;
+      Lookup (Id) := Last;
 
-      Initialize_Clock (Interrupt_Clocks (Last_Interrupt_Clock)'Access);
+      Initialize_Clock (Pool (Last)'Access);
 
    end Initialize_Interrupt_Clock;
 
@@ -300,9 +291,11 @@ package body System.BB.TMU is
 
          Clock.TM := TM;
 
-         TM.Clock   := Clock;
-         TM.Handler := Handler;
-         TM.Data    := Data;
+         TM.all := (Clock   => Clock,
+                    Handler => Handler,
+                    Data    => Data,
+                    Timeout => CPU_Time'First,
+                    Set     => False);
 
          Success := True;
 
@@ -321,7 +314,7 @@ package body System.BB.TMU is
       --  Initialize clock of environment and idle threads
 
       Initialize_Clock (Environment_Thread.Clock'Access);
-      Initialize_Clock (Idle_Clock'Access);
+      Initialize_Clock (Idle);
 
       --  Install compare handler
 
@@ -340,8 +333,13 @@ package body System.BB.TMU is
    ---------------------
 
    function Interrupt_Clock (Id : Interrupt_ID) return Clock_Id is
+      I : constant Pool_Index := Lookup (Id);
    begin
-      return Interrupt_Clocks (To_Clock_Index (Id))'Access;
+      if I > 0 then
+         return Pool (I)'Access;
+      else
+         return null;
+      end if;
    end Interrupt_Clock;
 
    ---------------
@@ -363,7 +361,7 @@ package body System.BB.TMU is
 
    begin
       pragma Assert (Top = 0 and then A = Stack (0));
-      pragma Assert (A = Idle_Clock'Access);
+      pragma Assert (A = Idle);
 
       Id.Active_Clock := B;
       Stack (0) := B;
