@@ -4,9 +4,6 @@ OUTPUT_ARCH(avr32:uc)
 ENTRY(_start)
 SEARCH_DIR("/usr/avr32/lib");
 
-/* Input custom initializing scrip for AVR32GNAT RTS */
-INPUT(ada_crt0.o)
-
 MEMORY
 {
     FLASH (rxai!w) : ORIGIN = 0x80000000, LENGTH = 512K
