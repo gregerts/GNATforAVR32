@@ -112,7 +112,7 @@ package System.BB.TMU is
    ----------------------
 
    function Execution_Time (Clock : Clock_Id) return CPU_Time;
-   --  Get execution time of the given clock
+   --  Returns the execution time of the given clock
 
    function Thread_Clock (Id : Thread_Id) return Clock_Id;
    pragma Inline_Always (Thread_Clock);
@@ -135,7 +135,7 @@ package System.BB.TMU is
    --  Sets the timer, may overwrite an already pending timeout
 
    function Time_Remaining (TM : Timer_Id) return CPU_Time;
-   --  Returns time remaining before timeout or 0 if no timeout
+   --  Returns time remaining before timeout or CPU_Time'First if no timeout
 
    function Clock (TM : Timer_Id) return Clock_Id;
    pragma Inline_Always (Clock);

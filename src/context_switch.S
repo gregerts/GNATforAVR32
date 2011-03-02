@@ -75,8 +75,7 @@ context_switch:
 	st.w	r8[0], r2
 	
 	/* Do TMU context switch */
-	mov	r12, r9
-	mov	r11, r2
+	mov	r12, r2
 	call	tmu_context_switch
 
 	/* Load context of first thread */
