@@ -131,14 +131,16 @@ package body System.BB.CPU_Primitives is
    is
       use Interfaces;
       Mask : constant Unsigned_32 := Shift_Left (2, Level) - 2;
+      Aux : Word;
    begin
-      SMC.Asm ("mfsr    r8, 0"         & ASCII.LF & ASCII.HT &
-               "bfins   r8, %0, 16, 5" & ASCII.LF & ASCII.HT &
-               "mtsr    0, r8"         & ASCII.LF & ASCII.HT &
+      SMC.Asm ("mfsr    %0, 0"         & ASCII.LF & ASCII.HT &
+               "bfins   %0, %1, 16, 5" & ASCII.LF & ASCII.HT &
+               "mtsr    0, %0"         & ASCII.LF & ASCII.HT &
                "nop"                   & ASCII.LF & ASCII.HT &
                "nop",
                Inputs => Unsigned_32'Asm_Input ("r", Mask),
-               Clobber => "r8, cc, memory",
+               Outputs => Word'Asm_Output ("+r", Aux),
+               Clobber => "cc, memory",
                Volatile => True);
    end Enable_Interrupts;
 
@@ -149,16 +151,18 @@ package body System.BB.CPU_Primitives is
    procedure Wait_For_Interrupts is
       use Interfaces;
       Mask : constant Unsigned_32 := 0;
+      Aux : Word;
    begin
-      SMC.Asm ("mfsr    r8, 0"         & ASCII.LF & ASCII.HT &
-               "bfins   r8, %0, 16, 5" & ASCII.LF & ASCII.HT &
-               "mtsr    0, r8"         & ASCII.LF & ASCII.HT &
+      SMC.Asm ("mfsr    %0, 0"         & ASCII.LF & ASCII.HT &
+               "bfins   %0, %1, 16, 5" & ASCII.LF & ASCII.HT &
+               "mtsr    0, %0"         & ASCII.LF & ASCII.HT &
                "sleep   0"             & ASCII.LF & ASCII.HT &
                "ssrf    16"            & ASCII.LF & ASCII.HT &
                "nop"                   & ASCII.LF & ASCII.HT &
                "nop",
                Inputs => Unsigned_32'Asm_Input ("r", Mask),
-               Clobber => "r8, cc, memory",
+               Outputs => Word'Asm_Output ("+r", Aux),
+               Clobber => "cc, memory",
                Volatile => True);
    end Wait_For_Interrupts;
 
@@ -181,15 +185,17 @@ package body System.BB.CPU_Primitives is
    --------------------
 
    procedure Adjust_Compare (Compare : Word) is
+      Aux : Word;
    begin
 
-      SMC.Asm ("mfsr    r8, 264" & ASCII.LF & ASCII.HT &
-               "sub     r8, -8"  & ASCII.LF & ASCII.HT &
-               "cp.w    r8, %0"  & ASCII.LF & ASCII.HT &
-               "movlo   r8, %0"  & ASCII.LF & ASCII.HT &
-               "mtsr    268, r8",
+      SMC.Asm ("mfsr    %0, 264" & ASCII.LF & ASCII.HT &
+               "sub     %0, -8"  & ASCII.LF & ASCII.HT &
+               "cp.w    %0, %1"  & ASCII.LF & ASCII.HT &
+               "movlo   %0, %1"  & ASCII.LF & ASCII.HT &
+               "mtsr    268, %0",
                Inputs => Word'Asm_Input ("r", Compare),
-               Clobber => "r8, cc",
+               Outputs => Word'Asm_Output ("+r", Aux),
+               Clobber => "cc",
                Volatile => True);
 
    end Adjust_Compare;
@@ -219,21 +225,19 @@ package body System.BB.CPU_Primitives is
      (Compare : Word;
       Count   : out Word)
    is
-      New_Count : constant Word := 0;
-      Old_Count : Word;
+      Zero : constant Word := 0;
    begin
 
-      SMC.Asm ("mfsr    r8, 264" & ASCII.LF & ASCII.HT &
+      SMC.Asm ("mfsr    %0, 264" & ASCII.LF & ASCII.HT &
                "mtsr    264, %1" & ASCII.LF & ASCII.HT &
                "mtsr    268, %1" & ASCII.LF & ASCII.HT &
-               "mtsr    264, %2" & ASCII.LF & ASCII.HT &
-               "mov     %0, r8",
+               "mtsr    264, %2",
                Inputs => (Word'Asm_Input ("r", Compare),
-                          Word'Asm_Input ("r", New_Count)),
-               Outputs => Word'Asm_Output ("=r", Old_Count),
-               Clobber => "r8");
+                          Word'Asm_Input ("r", Zero)),
+               Outputs => Word'Asm_Output ("+r", Count),
+               Volatile => True);
 
-      Count := Old_Count + 4;
+      Count := Count + 4;
 
    end Swap_Count;
 
