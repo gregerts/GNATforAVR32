@@ -190,7 +190,7 @@ package body System.BB.TMU is
       B : constant Clock_Id := First.Active_Clock;
 
    begin
-      pragma Assert (Top = 0 and A /= B);
+      pragma Assert (Top = 0);
 
       Swap_Clock (A, B);
       Stack (0) := B;
@@ -269,14 +269,14 @@ package body System.BB.TMU is
    -----------------
 
    function Get_Compare (Clock : Clock_Id) return Word is
-      T  : constant CPU_Time := Clock.Base_Time;
+      B  : constant CPU_Time := Clock.Base_Time;
       TM : constant Timer_Id := Clock.TM;
    begin
 
-      if TM = null or else TM.Timeout > (T + Max_Compare) then
+      if TM = null or else TM.Timeout > (B + Max_Compare) then
          return Max_Compare;
-      elsif TM.Timeout > T then
-         return Word (TM.Timeout - T);
+      elsif TM.Timeout > B then
+         return Word (TM.Timeout - B);
       else
          return 1;
       end if;
@@ -334,7 +334,7 @@ package body System.BB.TMU is
       Success : out Boolean)
    is
    begin
-      pragma Assert (TM /= null and then TM.Clock = null);
+      pragma Assert (TM /= null);
 
       if Clock /= null and then Clock.TM = null then
 
@@ -362,7 +362,7 @@ package body System.BB.TMU is
    begin
       --  Initialize clock of environment and idle threads
 
-      Initialize_Clock (Environment_Thread.Clock'Access);
+      Initialize_Thread_Clock (Environment_Thread);
       Initialize_Clock (Idle);
 
       --  Install compare handler
@@ -455,8 +455,13 @@ package body System.BB.TMU is
    procedure Swap_Clock (A, B : Clock_Id) is
       Count : Word;
    begin
+      pragma Assert (A /= null);
+      pragma Assert (B /= null);
+      pragma Assert (A /= B);
+
       CPU.Swap_Count (Get_Compare (B), Count);
       A.Base_Time := A.Base_Time + CPU_Time (Count);
+
    end Swap_Clock;
 
    --------------------
