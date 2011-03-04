@@ -162,11 +162,18 @@ package body System.BB.Time is
       end loop;
 
       --  If a clock interrupt is pending the task has the highest
-      --  priority or is executing within kernel.
+      --  priority or is executing within kernel. It is therefore safe
+      --  to clear interrupt flag and update base time.
 
       if Peripherals.Pending_Clock then
+
+         Peripherals.Clear_Clock_Interrupt;
+
          B := B + Clock_Period;
          C := Peripherals.Read_Clock;
+
+         Base_Time := B;
+
       end if;
 
       return B + Time (C);
@@ -178,7 +185,7 @@ package body System.BB.Time is
    -------------------
 
    procedure Clock_Handler (Interrupt : Interrupts.Interrupt_ID) is
-      Now : Time;
+      Now : constant Time := Clock;
    begin
 
       --  Make sure we are handling the right interrupt
@@ -186,36 +193,11 @@ package body System.BB.Time is
       pragma Assert (Interrupt = Alarm_Interrupt
                        or Interrupt = Clock_Interrupt);
 
-      --  Clear alarm interrupt, possible pending alarm is handled
+      --  Clear alarm interrupt
 
       Peripherals.Clear_Alarm_Interrupt;
 
-      --  Read the time, update base time if and clear clock
-      --  overflow interrupt if necessary.
-
-      declare
-         B : Time           := Base_Time;
-         C : Timer_Interval := Peripherals.Read_Clock;
-      begin
-
-         if Peripherals.Pending_Clock then
-
-            Peripherals.Clear_Clock_Interrupt;
-
-            B := B + Clock_Period;
-            C := Peripherals.Read_Clock;
-
-            Base_Time := B;
-
-         end if;
-
-         Now := B + Time (C);
-
-      end;
-
-      --  Exit loop when first alarm is in the future. Else remove
-      --  first alarm from queue, clear it and call its handler.
-      --  Defer updates to hardware timer to end of handler
+      --  Handle expired alarms, defer updates to alarm timer
 
       Defer_Update := True;
 
@@ -296,7 +278,7 @@ package body System.BB.Time is
       --  Search for element Aux where Aux.Timeout > Timeout
 
       while Aux.Timeout <= Timeout loop
-            Aux := Aux.Next;
+         Aux := Aux.Next;
       end loop;
 
       --  Insert before Aux (always before Last_Alarm)
