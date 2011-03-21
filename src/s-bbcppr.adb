@@ -201,43 +201,22 @@ package body System.BB.CPU_Primitives is
    end Adjust_Compare;
 
    ----------------
-   -- Reset_Count --
-   ----------------
-
-   procedure Reset_Count (Compare : Word) is
-      Count : constant Word := 0;
-   begin
-
-      SMC.Asm ("mtsr    264, %0" & ASCII.LF & ASCII.HT &
-               "mtsr    268, %0" & ASCII.LF & ASCII.HT &
-               "mtsr    264, %1",
-               Inputs => (Word'Asm_Input ("r", Compare),
-                          Word'Asm_Input ("r", Count)),
-               Volatile => True);
-
-   end Reset_Count;
-
-   ----------------
    -- Swap_Count --
    ----------------
 
-   procedure Swap_Count
-     (Compare : Word;
-      Count   : out Word)
-   is
+   function Swap_Count return Word is
+      Count : Word;
       Zero : constant Word := 0;
    begin
 
       SMC.Asm ("mfsr    %0, 264" & ASCII.LF & ASCII.HT &
-               "mtsr    264, %1" & ASCII.LF & ASCII.HT &
                "mtsr    268, %1" & ASCII.LF & ASCII.HT &
-               "mtsr    264, %2",
-               Inputs => (Word'Asm_Input ("r", Compare),
-                          Word'Asm_Input ("r", Zero)),
+               "mtsr    264, %1",
+               Inputs => Word'Asm_Input ("r", Zero),
                Outputs => Word'Asm_Output ("+r", Count),
                Volatile => True);
 
-      Count := Count + 4;
+      return Count + 4;
 
    end Swap_Count;
 

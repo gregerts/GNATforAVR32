@@ -58,7 +58,9 @@ with System.BB.Threads.Queues;
 with System.BB.Peripherals;
 --  Used for To_Level
 
-with System.BB.TMU;
+with System.BB.Time;
+--  Used for Enter_Interrupt
+--           Leave_Interrupt
 
 package body System.BB.Interrupts is
 
@@ -135,7 +137,7 @@ package body System.BB.Interrupts is
 
       Interrupt_Handlers_Table (Id) := Handler;
 
-      TMU.Initialize_Interrupt_Clock (Id);
+      Time.Initialize_Interrupt_Clock (Id);
 
    end Attach_Handler;
 
@@ -204,7 +206,7 @@ package body System.BB.Interrupts is
       end if;
 
       --  Activate clock for current interrupt
-      TMU.Enter_Interrupt (Interrupt);
+      Time.Enter_Interrupt (Interrupt);
 
       --  Store the interrupt being handled
       Interrupt_Being_Handled := Interrupt;
@@ -232,7 +234,7 @@ package body System.BB.Interrupts is
       Interrupt_Being_Handled := Previous_Interrupt;
 
       --  Restore previous clock
-      TMU.Leave_Interrupt;
+      Time.Leave_Interrupt;
 
    end Interrupt_Wrapper;
 

@@ -327,7 +327,7 @@ package System.OS_Interface is
    Ticks_Per_Second : constant := System.BB.Time.Ticks_Per_Second;
    --  Number of ticks (or clock interrupts) per second
 
-   function Clock return Time renames System.BB.Time.Clock;
+   function Clock return Time renames System.BB.Time.Monotonic_Clock;
    --  Get the number of ticks elapsed since startup
 
    -------------

@@ -69,9 +69,9 @@ package System.BB.Peripherals is
    --  Procedure that performs the hardware initialization of the board.
    --  Should be called before any other operations in this package.
 
-   ------------------------------------------------
-   -- Clock and timer definitions and primitives --
-   ------------------------------------------------
+   -----------------------
+   -- Board frequencies --
+   -----------------------
 
    Main_Clock_Frequency : constant :=
      (SBP.Clock_Frequency * SBP.Clock_Multiplication * 10 ** 6);
@@ -80,40 +80,6 @@ package System.BB.Peripherals is
    Peripheral_Frequency : constant :=
      Main_Clock_Frequency / SBP.Peripheral_Division;
    --  Frequency of peripheral clock in Hz
-
-   Timer_Frequency : constant :=
-     Peripheral_Frequency / SBP.Timer_Division;
-   --  Frequency of timer clock in Hz
-
-   type Timer_Interval is mod 2 ** 16;
-   for Timer_Interval'Size use 16;
-   --  This type represents any interval that we can measure within a
-   --  Clock_Interrupt_Period.
-
-   procedure Set_Alarm (Ticks : Timer_Interval);
-   --  Set an alarm that will expire after the specified number of
-   --  clock ticks.
-
-   procedure Cancel_Alarm;
-   --  Cancel any previous set alarm.
-
-   function Pending_Clock return Boolean;
-   pragma Inline (Pending_Clock);
-   --  Returns true if there is a pending clock interrupt
-
-   function Read_Clock return Timer_Interval;
-   pragma Inline (Read_Clock);
-   --  Read the value contained in the clock hardware counter, and
-   --  return the number of ticks elapsed since the last clock
-   --  interrupt, that is, since the clock counter was last reloaded.
-
-   procedure Clear_Clock_Interrupt;
-   pragma Inline (Clear_Clock_Interrupt);
-   --  Acknowledge the clock interrupt
-
-   procedure Clear_Alarm_Interrupt;
-   pragma Inline (Clear_Alarm_Interrupt);
-   --  Acknowledge the event interrupt
 
    ----------------
    -- Interrupts --

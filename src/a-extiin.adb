@@ -1,15 +1,15 @@
 package body Ada.Execution_Time.Interrupts is
 
-   package TMU  renames System.BB.TMU;
+   package SBT renames System.BB.Time;
 
    function Clock (I : Ada.Interrupts.Interrupt_ID) return CPU_Time is
-      use type TMU.Clock_Id;
-      C : constant TMU.Clock_Id := TMU.Interrupt_Clock (TMU.Interrupt_ID (I));
+      use type SBT.Clock_Id;
+      C : constant SBT.Clock_Id := SBT.Interrupt_Clock (SBT.Interrupt_ID (I));
    begin
       if C = null then
          return CPU_Time_First;
       else
-         return CPU_Time (TMU.Execution_Time (C));
+         return CPU_Time (SBT.Time_Of_Clock (C));
       end if;
    end Clock;
 

@@ -39,7 +39,7 @@
 
 with Ada.Real_Time;
 with Ada.Task_Identification;
-with System.BB.TMU;
+with System.BB.Time;
 
 package Ada.Execution_Time.Timers is
 
@@ -77,8 +77,8 @@ private
    type Timer (T : not null access constant
                Ada.Task_Identification.Task_Id) is tagged limited
       record
-         Desc    : aliased System.BB.TMU.Timer_Descriptor;
-         Id      : System.BB.TMU.Timer_Id;
+         Alarm   : aliased System.BB.Time.Alarm_Descriptor;
+         Id      : System.BB.Time.Alarm_Id;
          Handler : Timer_Handler;
         pragma Volatile (Handler);
       end record;

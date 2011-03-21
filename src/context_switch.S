@@ -74,9 +74,9 @@ context_switch:
 	/* First thread is now also running thread */
 	st.w	r8[0], r2
 	
-	/* Do TMU context switch */
+	/* Do timer context switch */
 	mov	r12, r2
-	call	tmu_context_switch
+	call	timer_context_switch
 
 	/* Load context of first thread */
 	mov	r9, r2

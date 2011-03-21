@@ -95,7 +95,7 @@ package body System.BB.Threads is
 
       --  Test if the alarm time is in the future
 
-      if T > Clock then
+      if T > Time_Of_Clock (Real_Time_Clock) then
 
          --  Update state of thread to Delayed
 
@@ -151,13 +151,13 @@ package body System.BB.Threads is
      (Environment_Thread : Thread_Id;
       Main_Priority      : System.Any_Priority)
    is
+      Success : Boolean;
    begin
       --  Perform some basic hardware initialization (clock, timer, and
       --  interrupt handlers).
 
       Peripherals.Initialize_Board;
       Interrupts.Initialize_Interrupts;
-      Time.Initialize_Timers;
 
       --  Initialize internal queues and the environment task
 
@@ -193,15 +193,19 @@ package body System.BB.Threads is
 
       Environment_Thread.Wakeup_Signaled := False;
 
-      --  Initialize the Time Management Unit
+      --  Initialize the timers
 
-      TMU.Initialize_TMU (TMU.Thread_Id (Environment_Thread));
+      Initialize_Timers (Time.Thread_Id (Environment_Thread));
 
       --  Initialize alarm timer
 
       Initialize_Alarm (Environment_Thread.Alarm'Access,
+                        Real_Time_Clock,
                         Wakeup_Delayed'Access,
-                        To_Address (Environment_Thread));
+                        To_Address (Environment_Thread),
+                        Success);
+
+      pragma Assert (Success);
 
       Protection.Leave_Kernel;
    end Initialize;
@@ -292,6 +296,7 @@ package body System.BB.Threads is
       Stack_Address : System.Address;
       Stack_Size    : System.Parameters.Size_Type)
    is
+      Success : Boolean;
    begin
       Protection.Enter_Kernel;
 
@@ -331,13 +336,17 @@ package body System.BB.Threads is
 
       --  Initialize execution time clock
 
-      TMU.Initialize_Thread_Clock (TMU.Thread_Id (Id));
+      Initialize_Thread_Clock (Time.Thread_Id (Id));
 
       --  Initialize alarm timer
 
       Initialize_Alarm (Id.Alarm'Access,
+                        Real_Time_Clock,
                         Wakeup_Delayed'Access,
-                        To_Address (Id));
+                        To_Address (Id),
+                        Success);
+
+      pragma Assert (Success);
 
       Protection.Leave_Kernel;
    end Thread_Create;

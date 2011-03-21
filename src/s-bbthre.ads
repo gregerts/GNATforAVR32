@@ -52,10 +52,9 @@ with System.BB.CPU_Primitives;
 --  Used for Context_Buffer
 
 with System.BB.Time;
---  Used for Alarm_Timer
-
-with System.BB.TMU;
---  Used for Timer
+--  Used for Clock_Descriptor
+--           Clock_Id
+--           Alarm_Descriptor
 
 with System.BB.Interrupts;
 --  Used for Interrupt_Set
@@ -90,10 +89,10 @@ package System.BB.Threads is
       --  counter, ...) are stored. This field supports context switches among
       --  threads.
 
-      Clock : aliased System.BB.TMU.Clock_Descriptor;
+      Clock : aliased System.BB.Time.Clock_Descriptor;
       --  Execution-time clock for this thread
 
-      Active_Clock : System.BB.TMU.Clock_Id;
+      Active_Clock : System.BB.Time.Clock_Id;
       --  Active execution time clock for this thread
 
       ATCB : System.Address;

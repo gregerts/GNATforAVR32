@@ -88,12 +88,6 @@ package body System.BB.Peripherals is
    Parity_None      : constant := 4;
    Charlength_8     : constant := 3;
    Stopbits_1       : constant := 0;
-   Timer_Clock_2    : constant := 1;
-   Timer_Clock_3    : constant := 2;
-   Timer_Clock_4    : constant := 3;
-   Timer_Clock_5    : constant := 4;
-   Up_No_Trigger    : constant := 0;
-   Up_RC_Trigger    : constant := 2;
 
    ---------------
    -- Registers --
@@ -116,12 +110,6 @@ package body System.BB.Peripherals is
 
    USART : aliased USART_Channel_Interface;
    for USART'Address use USART_Channel_1_Address;
-
-   Clock : aliased TC_Channel_Interface;
-   for Clock'Address use Timer_Counter_1_Address;
-
-   Alarm : aliased TC_Channel_Interface;
-   for Alarm'Address use Timer_Counter_2_Address;
 
    GPIO_Port_A : aliased GPIO_Port_Interface;
    for GPIO_Port_A'Address use GPIO_Port_A_Address;
@@ -152,9 +140,6 @@ package body System.BB.Peripherals is
    procedure Initialize_Interrupts;
    --  Procedure initializing the Interrupt Controller.
 
-   procedure Initialize_Timers;
-   --  Procedure initializing the Timer / Counter.
-
    procedure GPIO_Configure_Peripheral
      (Port        : access GPIO_Port_Interface;
       From        : GPIO_Pin;
@@ -179,8 +164,6 @@ package body System.BB.Peripherals is
       Initialize_Interrupts;
       --  Initialize the interrupt controller.
 
-      Initialize_Timers;
-      --  Initialize the timer / counter module.
    end Initialize_Board;
 
    ------------------------------
@@ -201,7 +184,7 @@ package body System.BB.Peripherals is
       --  Enable Oscillator 0
 
       Power_Manager.Osc_0 :=
-        (Mode => Osc_Mode_Crystal, Startup => 4, others => <>);
+        (Mode => Osc_Mode_Crystal, Startup => 7, others => <>);
 
       Main.Enable_Osc_0 := True;
       Power_Manager.Main := Main;
@@ -390,124 +373,6 @@ package body System.BB.Peripherals is
 
       return Group_To_Level (Group);
    end To_Level;
-
-   -----------------------
-   -- Initialize_Timers --
-   -----------------------
-
-   procedure Initialize_Timers is
-      C : Scaler_3;
-   begin
-
-      case Parameters.Timer_Division is
-         when 4 =>
-            C := Timer_Clock_2;
-         when 8 =>
-            C := Timer_Clock_3;
-         when 16 =>
-            C := Timer_Clock_4;
-         when 32 =>
-            C := Timer_Clock_5;
-         when others =>
-            C := Timer_Clock_2;
-      end case;
-
-      --  Initialize clock
-
-      Clock.Mode :=
-        (Clock_Select    => C,
-         Wave_Mode       => True,
-         Waveform_Select => Up_No_Trigger,
-         others          => <>);
-
-      Clock.Interrupt_Enable := (Counter_Overflow => True, others => <>);
-
-      Clock.Control :=
-        (Clock_Enable       => True,
-         Software_Trigger   => True,
-         others             => <>);
-
-      --  Initialize alarm
-
-      Alarm.Mode :=
-        (Clock_Select       => C,
-         Wave_Mode          => True,
-         Waveform_Select    => Up_RC_Trigger,
-         Stop_RC_Compare    => True,
-         Disable_RC_Compare => True,
-         others             => <>);
-
-      Alarm.Interrupt_Enable := (RC_Compare => True, others => <>);
-
-   end Initialize_Timers;
-
-   ---------------
-   -- Set_Alarm --
-   ---------------
-
-   procedure Set_Alarm (Ticks : Timer_Interval) is
-   begin
-
-      Alarm.RC.Value := Ticks;
-
-      Alarm.Control :=
-        (Clock_Enable     => True,
-         Software_Trigger => True,
-         others           => <>);
-
-   end Set_Alarm;
-
-   ------------------
-   -- Cancel_Alarm --
-   ------------------
-
-   procedure Cancel_Alarm is
-   begin
-      Alarm.Control := (Clock_Disable => True, others => <>);
-      Clear_Alarm_Interrupt;
-   end Cancel_Alarm;
-
-   -------------------
-   -- Pending_Clock --
-   -------------------
-
-   function Pending_Clock return Boolean is
-   begin
-      return (Requests (14) and 2) > 0;
-   end Pending_Clock;
-
-   ----------------
-   -- Read_Clock --
-   ----------------
-
-   function Read_Clock return Timer_Interval is
-   begin
-      return Clock.Counter.Value;
-   end Read_Clock;
-
-   --------------------------
-   -- Clear_Clock_Interupt --
-   --------------------------
-
-   procedure Clear_Clock_Interrupt is
-      Status : constant TC_Channel_Status_Register := Clock.Status;
-      pragma Unreferenced (Status);
-   begin
-      --  Interrupt cleared by reading status register.
-      null;
-   end Clear_Clock_Interrupt;
-
-   --------------------------
-   -- Clear_Alarm_Interupt --
-   --------------------------
-
-   procedure Clear_Alarm_Interrupt is
-      Status : constant TC_Channel_Status_Register := Alarm.Status;
-      pragma Unreferenced (Status);
-   begin
-      --  Interrupt cleared by reading status register.
-      null;
-   end Clear_Alarm_Interrupt;
 
    ------------------------
    -- Initialize_Console --

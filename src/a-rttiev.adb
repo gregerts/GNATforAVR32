@@ -79,9 +79,22 @@ package body Ada.Real_Time.Timing_Events is
    ----------------
 
    procedure Initialize (Event : in out Timing_Event) is
+      Success : Boolean;
    begin
-      Event.Id := Event.Desc'Unchecked_Access;
-      SBT.Initialize_Alarm (Event.Id, Execute_Handler'Access, Event'Address);
+      Protection.Enter_Kernel;
+
+      Event.Id := Event.Alarm'Unchecked_Access;
+
+      SBT.Initialize_Alarm (Event.Id,
+                            SBT.Real_Time_Clock,
+                            Execute_Handler'Access,
+                            Event'Address,
+                            Success);
+
+      Protection.Leave_Kernel_No_Change;
+
+      pragma Assert (Success);
+
    end Initialize;
 
    -----------------

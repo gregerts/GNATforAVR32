@@ -44,8 +44,11 @@ pragma Restrictions (No_Elaboration_Code);
 with System.BB.Peripherals;
 --  Used for Main_Clock_Frequency
 
-with System.Storage_Elements;
---  Used for Integer_Address
+with System.BB.Interrupts;
+--  Used for Interrupt_ID
+
+limited with System.BB.Threads;
+--  Used for limited view of Thread_Descriptor
 
 package System.BB.Time is
 
@@ -53,14 +56,20 @@ package System.BB.Time is
 
    type Time is mod 2 ** 64;
    for Time'Size use 64;
-   --  Time is represented at this level as a 64-bit natural number. The
-   --  upper half representing the number of clock periods (MSP), and the
-   --  lower half containing the number of hardware clock ticks (LSP).
+   --  Time is represented at this level as a 64-bit natural number
 
    type Time_Span is range -2 ** 63 .. 2 ** 63 - 1;
    for Time_Span'Size use 64;
    --  Time_Span represents the length of time intervals, and it is
    --  defined as a 64-bit signed integer.
+
+   ----------------
+   -- Identities --
+   ----------------
+
+   type Thread_Id is not null access all System.BB.Threads.Thread_Descriptor;
+
+   subtype Interrupt_ID is System.BB.Interrupts.Interrupt_ID;
 
    ---------------
    -- Constants --
@@ -71,8 +80,16 @@ package System.BB.Time is
    --  observed by calling the Clock function) remains constant. Tick is the
    --  average length of such intervals.
 
-   Ticks_Per_Second : constant := Peripherals.Timer_Frequency;
+   Ticks_Per_Second : constant := Peripherals.Main_Clock_Frequency;
    --  Number of ticks (or clock interrupts) per second
+
+   -----------
+   -- Clock --
+   -----------
+
+   type Clock_Descriptor is limited private;
+
+   type Clock_Id is access all Clock_Descriptor;
 
    ----------------------
    -- Alarm_Descriptor --
@@ -89,21 +106,52 @@ package System.BB.Time is
    --------------------
 
    procedure Initialize_Alarm
-     (Alarm   : not null Alarm_Id;
+     (Alarm   : Alarm_Id;
+      Clock   : Clock_Id;
       Handler : not null Alarm_Handler;
-      Data    : System.Address);
-   --  Creates an alarm timer with the given handler and data
+      Data    : System.Address;
+      Success : out Boolean);
+   --  Initializes alarm with the given clock, handler and data
 
-   procedure Initialize_Timers;
-   --  Initialize this package (clock and alarm handlers). Must be called
-   --  before any other functions.
+   procedure Initialize_Interrupt_Clock (Id : Interrupt_ID);
+   --  Initializes the clock for the given interrupt ID
 
-   ----------------
-   -- Operations --
-   ----------------
+   procedure Initialize_Thread_Clock (Id : Thread_Id);
+   --  Initializes the clock for the given thread
 
-   function Clock return Time;
-   --  Get the number of ticks elapsed since startup
+   procedure Initialize_Timers (Environment_Thread : Thread_Id);
+   --  Initializes the real-time clock and the clock of the
+   --  environment thread. Must be called before any other functions.
+
+   ----------------------
+   -- Clock operations --
+   ----------------------
+
+   function Monotonic_Clock return Time;
+   --  Returns time of the real-time clock
+
+   function Time_Of_Clock (Clock : Clock_Id) return Time;
+   --  Returns the time of the given clock
+
+   function Clock (Alarm : Alarm_Id) return Clock_Id;
+   pragma Inline_Always (Clock);
+   --  Returns the clock of the given alarm
+
+   function Interrupt_Clock (Id : Interrupt_ID) return Clock_Id;
+   pragma Inline_Always (Interrupt_Clock);
+   --  Returns the execution time clock for the given interrupt ID
+
+   function Real_Time_Clock return Clock_Id;
+   pragma Inline_Always (Real_Time_Clock);
+   --  Returns the real time clock
+
+   function Thread_Clock (Id : Thread_Id) return Clock_Id;
+   pragma Inline_Always (Thread_Clock);
+   --  Returns execution time clock for the given thread
+
+   ----------------------
+   -- Alarm operations --
+   ----------------------
 
    procedure Cancel (Alarm : Alarm_Id);
    --  Cancel alarm timer
@@ -117,18 +165,45 @@ package System.BB.Time is
    pragma Inline (Time_Of_Alarm);
    --  Get expiration time of alarm
 
+   -------------------------
+   -- Internal operations --
+   -------------------------
+
+   procedure Enter_Idle (Id : Thread_Id);
+   pragma Inline (Enter_Idle);
+   --  Enter idle mode
+
+   procedure Enter_Interrupt (Id : Interrupt_ID);
+   pragma Inline (Enter_Interrupt);
+   --  Enter interrupt mode
+
+   procedure Leave_Idle (Id : Thread_Id);
+   pragma Inline (Leave_Idle);
+   --  Leave idle mode
+
+   procedure Leave_Interrupt;
+   pragma Inline (Leave_Interrupt);
+   --  Leave interrupt mode
+
 private
+
+   ----------------------
+   -- Alarm_Descriptor --
+   ----------------------
 
    type Alarm_Descriptor is
       record
-         Timeout : Time;
-         --  Timeout of alarm or Time'First if alarm is not set
+         Clock : Clock_Id;
+         --  Clock of this alarm
 
          Handler : Alarm_Handler;
-         --  Handler of alarm, always non-null after initialization
+         --  Handler to be called when the alarm expires
 
          Data : System.Address;
-         --  Data to be passed when calling handler
+         --  Argument to be given when calling handler
+
+         Timeout : Time;
+         --  Timeout of alarm or Time'First if timer is not set
 
          Next, Prev : Alarm_Id;
          --  Next and previous elements when in alarm queue
@@ -136,5 +211,25 @@ private
       end record;
 
    pragma Suppress_Initialization (Alarm_Descriptor);
+
+   ----------------------
+   -- Clock_Descriptor --
+   ----------------------
+
+   type Clock_Descriptor is
+      record
+         Base_Time : Time;
+         pragma Volatile (Base_Time);
+         --  Base time of clock
+
+         First_Alarm : Alarm_Id;
+         --  Points to the first alarm of this clock
+
+         Capacity : Natural;
+         --  Remaining alarm capacity, no more alarms allowed if zero
+
+      end record;
+
+   pragma Suppress_Initialization (Clock_Descriptor);
 
 end System.BB.Time;

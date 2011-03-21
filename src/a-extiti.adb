@@ -45,10 +45,10 @@ package body Ada.Execution_Time.Timers is
 
    package Protection renames System.BB.Protection;
    package STPO renames System.Task_Primitives.Operations;
-   package TMU renames System.BB.TMU;
+   package SBT renames System.BB.Time;
    package EIT renames Ada.Execution_Time.Interrupts.Timers;
 
-   use type TMU.Timer_Id;
+   use type SBT.Alarm_Id;
    use type Ada.Task_Identification.Task_Id;
 
    type Timer_Access is access all Timer;
@@ -83,7 +83,7 @@ package body Ada.Execution_Time.Timers is
 
       Protection.Enter_Kernel;
 
-      TMU.Cancel (TM.Id);
+      SBT.Cancel (TM.Id);
 
       Cancelled  := TM.Handler /= null;
       TM.Handler := null;
@@ -125,24 +125,24 @@ package body Ada.Execution_Time.Timers is
    ----------------
 
    procedure Initialize (TM : in out Timer'Class) is
-      Clock : TMU.Clock_Id;
+      Clock : SBT.Clock_Id;
       Success : Boolean;
    begin
 
       pragma Assert (TM.Id = null);
 
       if TM in EIT.Interrupt_Timer'Class then
-         Clock := TMU.Interrupt_Clock
-           (TMU.Interrupt_ID (EIT.Interrupt_Timer (TM).I));
+         Clock := SBT.Interrupt_Clock
+           (SBT.Interrupt_ID (EIT.Interrupt_Timer (TM).I));
       else
          Clock := STPO.Task_Clock (To_Task_Id (TM.T.all));
       end if;
 
       Protection.Enter_Kernel;
 
-      TM.Id := TM.Desc'Unchecked_Access;
+      TM.Id := TM.Alarm'Unchecked_Access;
 
-      TMU.Initialize_Timer (TM.Id,
+      SBT.Initialize_Alarm (TM.Id,
                             Clock,
                             Execute_Handler'Access,
                             TM'Address,
@@ -172,7 +172,7 @@ package body Ada.Execution_Time.Timers is
          Initialize (TM);
       end if;
 
-      At_Time := CPU_Time (TMU.Execution_Time (TMU.Clock (TM.Id))) + In_Time;
+      At_Time := CPU_Time (SBT.Time_Of_Clock (SBT.Clock (TM.Id))) + In_Time;
 
       Set_Handler (TM, At_Time, Handler);
 
@@ -198,9 +198,9 @@ package body Ada.Execution_Time.Timers is
       TM.Handler := Handler;
 
       if Handler /= null then
-         TMU.Set (TM.Id, TMU.CPU_Time (At_Time));
+         SBT.Set (TM.Id, SBT.Time (At_Time));
       else
-         TMU.Cancel (TM.Id);
+         SBT.Cancel (TM.Id);
       end if;
 
       Protection.Leave_Kernel_No_Change;
@@ -212,13 +212,20 @@ package body Ada.Execution_Time.Timers is
    --------------------
 
    function Time_Remaining (TM : Timer) return Ada.Real_Time.Time_Span is
+      Now, Timeout : CPU_Time;
    begin
 
       if TM.Id = null then
          return Ada.Real_Time.Time_Span_Zero;
       end if;
 
-      return CPU_Time (TMU.Time_Remaining (TM.Id)) - 0;
+      loop
+         Timeout := CPU_Time (SBT.Time_Of_Alarm (TM.Id));
+         Now := CPU_Time (SBT.Time_Of_Clock (SBT.Clock (TM.Id)));
+         exit when Timeout = CPU_Time (SBT.Time_Of_Alarm (TM.Id));
+      end loop;
+
+      return Timeout - Now;
 
    end Time_Remaining;
 

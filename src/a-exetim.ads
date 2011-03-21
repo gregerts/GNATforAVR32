@@ -39,7 +39,7 @@
 
 with Ada.Task_Identification;
 with Ada.Real_Time;
-with System.BB.TMU;
+with System.BB.Time;
 
 package Ada.Execution_Time is
 
@@ -47,7 +47,7 @@ package Ada.Execution_Time is
 
    CPU_Time_First : constant CPU_Time;
    CPU_Time_Last  : constant CPU_Time;
-   CPU_Time_Unit  : constant := 1 / System.BB.TMU.CPU_Ticks_Per_Second;
+   CPU_Time_Unit  : constant := Ada.Real_Time.Time_Unit;
    CPU_Tick       : constant Ada.Real_Time.Time_Span;
 
    function Clock
@@ -88,10 +88,10 @@ package Ada.Execution_Time is
 
 private
 
-   type CPU_Time is new System.BB.TMU.CPU_Time;
+   type CPU_Time is new System.BB.Time.Time;
 
    CPU_Time_First : constant CPU_Time := CPU_Time'First;
-   CPU_Time_Last  : constant CPU_Time := CPU_Time'Last;
+   CPU_Time_Last  : constant CPU_Time := CPU_Time'Last - 1;
    CPU_Tick       : constant Ada.Real_Time.Time_Span := Ada.Real_Time.Tick;
 
    pragma Import (Intrinsic, "<");

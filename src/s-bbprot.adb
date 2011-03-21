@@ -55,7 +55,7 @@ with System.BB.Interrupts;
 --  Used for Current_Interrupt
 --           Delay_Context_Switch
 
-with System.BB.TMU;
+with System.BB.Time;
 --  Used for Enter_Idle
 --           Leave_Idle
 
@@ -141,7 +141,7 @@ package body System.BB.Protection is
 
          --  Enter TMU idle mode
 
-         TMU.Enter_Idle (TMU.Thread_Id (Self_Id));
+         Time.Enter_Idle (Time.Thread_Id (Self_Id));
 
          --  In the meantime, we put the task temporarily in the ready queue
          --  so interrupt handling is performed normally. Note that the task
@@ -173,7 +173,7 @@ package body System.BB.Protection is
 
          --  Leave TMU idle mode
 
-         TMU.Leave_Idle (TMU.Thread_Id (Self_Id));
+         Time.Leave_Idle (Time.Thread_Id (Self_Id));
 
       end if;
 

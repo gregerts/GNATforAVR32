@@ -41,9 +41,8 @@ pragma Restrictions (No_Elaboration_Code);
 with System.OS_Interface;
 --  used for Time
 
-with System.BB.TMU;
---  used for Timer_Id
---           CPU_Time
+with System.BB.Time;
+--  used for Clock_Id
 
 with System.Parameters;
 --  used for Size_Type
@@ -94,6 +93,10 @@ package System.Task_Primitives.Operations is
    RT_Resolution : constant := System.OS_Interface.Ticks_Per_Second;
    --  Number of ticks per second
 
+   function Task_Clock (T : ST.Task_Id) return System.BB.Time.Clock_Id;
+   pragma Inline (Task_Clock);
+   --  This function returns the exeuction time clock of the given task
+
    ----------------
    -- Extensions --
    ----------------
@@ -117,13 +120,5 @@ package System.Task_Primitives.Operations is
    pragma Inline (Is_Task_Context);
    --  This function returns True if the current execution is in the context
    --  of a task, and False if it is an interrupt context.
-
-   ---------
-   -- TMU --
-   ---------
-
-   function Task_Clock (T : ST.Task_Id) return System.BB.TMU.Clock_Id;
-   pragma Inline (Task_Clock);
-   --  This function returns the exeuction time of the given task
 
 end System.Task_Primitives.Operations;

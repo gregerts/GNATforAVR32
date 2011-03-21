@@ -244,9 +244,10 @@ package body System.Task_Primitives.Operations is
    -- Task_Clock --
    ----------------
 
-   function Task_Clock (T : ST.Task_Id) return TMU.Clock_Id is
+   function Task_Clock (T : ST.Task_Id) return System.BB.Time.Clock_Id is
    begin
-      return TMU.Thread_Clock (TMU.Thread_Id (T.Common.LL.Thread));
+      return System.BB.Time.Thread_Clock
+        (System.BB.Time.Thread_Id (T.Common.LL.Thread));
    end Task_Clock;
 
 end System.Task_Primitives.Operations;

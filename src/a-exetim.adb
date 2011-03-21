@@ -38,22 +38,14 @@
 with Ada.Unchecked_Conversion;
 with System.Tasking;
 with System.Task_Primitives.Operations;
-with System.OS_Interface;
 
 package body Ada.Execution_Time is
 
    package STPO renames System.Task_Primitives.Operations;
-   package OSI  renames System.OS_Interface;
-   package TMU  renames System.BB.TMU;
+   package SBT  renames System.BB.Time;
 
-   use type OSI.Time;
-   use type OSI.Time_Span;
-
-   --------------------------
-   -- Conversion constants --
-   --------------------------
-
-   CPU_Ticks : constant := TMU.CPU_Ticks_Per_Second / OSI.Ticks_Per_Second;
+   use type Ada.Real_Time.Time;
+   use type Ada.Real_Time.Time_Span;
 
    --------------------------
    -- Conversion functions --
@@ -63,21 +55,17 @@ package body Ada.Execution_Time is
       new Ada.Unchecked_Conversion (Ada.Task_Identification.Task_Id,
                                     System.Tasking.Task_Id);
 
-   function To_Time is
-      new Ada.Unchecked_Conversion (Ada.Real_Time.Time,
-                                    OSI.Time);
+   function To_CPU_Time is
+      new Ada.Unchecked_Conversion (Ada.Real_Time.Time, CPU_Time);
 
-   function To_Time_Span is
-      new Ada.Unchecked_Conversion (Ada.Real_Time.Time_Span,
-                                    OSI.Time_Span);
+   function To_CPU_Time is
+      new Ada.Unchecked_Conversion (Ada.Real_Time.Time_Span, CPU_Time);
 
    function To_Time is
-      new Ada.Unchecked_Conversion (CPU_Time,
-                                    Ada.Real_Time.Time);
+      new Ada.Unchecked_Conversion (CPU_Time, Ada.Real_Time.Time);
 
    function To_Time_Span is
-      new Ada.Unchecked_Conversion (CPU_Time,
-                                    Ada.Real_Time.Time_Span);
+      new Ada.Unchecked_Conversion (CPU_Time, Ada.Real_Time.Time_Span);
 
    -----------
    -- Clock --
@@ -89,7 +77,7 @@ package body Ada.Execution_Time is
       return CPU_Time
    is
    begin
-      return CPU_Time (TMU.Execution_Time (STPO.Task_Clock (To_Task_Id (T))));
+      return CPU_Time (SBT.Time_Of_Clock (STPO.Task_Clock (To_Task_Id (T))));
    end Clock;
 
    ---------
@@ -102,7 +90,7 @@ package body Ada.Execution_Time is
       return CPU_Time
    is
    begin
-      return Left + CPU_Time (To_Time_Span (Right) * CPU_Ticks);
+      return Left + To_CPU_Time (Right);
    end "+";
 
    ---------
@@ -115,7 +103,7 @@ package body Ada.Execution_Time is
       return CPU_Time
    is
    begin
-      return Right + Left;
+      return Right + To_CPU_Time (Left);
    end "+";
 
    ---------
@@ -128,7 +116,7 @@ package body Ada.Execution_Time is
       return CPU_Time
    is
    begin
-      return Left - CPU_Time (To_Time_Span (Right) * CPU_Ticks);
+      return Left - To_CPU_Time (Right);
    end "-";
 
    ---------
@@ -141,7 +129,7 @@ package body Ada.Execution_Time is
       return Ada.Real_Time.Time_Span
    is
    begin
-      return To_Time_Span ((Left - Right) / CPU_Ticks);
+      return To_Time_Span (Left - Right);
    end "-";
 
    -----------
@@ -154,7 +142,7 @@ package body Ada.Execution_Time is
       TS : out Ada.Real_Time.Time_Span)
    is
    begin
-      Ada.Real_Time.Split (To_Time (T / CPU_Ticks), SC, TS);
+      Ada.Real_Time.Split (To_Time (T), SC, TS);
    end Split;
 
    -------------
@@ -167,7 +155,7 @@ package body Ada.Execution_Time is
       return CPU_Time
    is
    begin
-      return CPU_Time (To_Time (Ada.Real_Time.Time_Of (SC, TS)) * CPU_Ticks);
+      return To_CPU_Time (Ada.Real_Time.Time_Of (SC, TS));
    end Time_Of;
 
 end Ada.Execution_Time;

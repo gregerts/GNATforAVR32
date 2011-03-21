@@ -9,7 +9,7 @@
 --        Copyright (C) 1999-2002 Universidad Politecnica de Madrid         --
 --             Copyright (C) 2003-2005 The European Space Agency            --
 --                     Copyright (C) 2003-2007, AdaCore                     --
---             Copyright (C) 2008-2009, Kristoffer N. Gregertsen            --
+--             Copyright (C) 2008-2011, Kristoffer N. Gregertsen            --
 --                                                                          --
 -- GNARL is free software; you can  redistribute it  and/or modify it under --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -39,68 +39,138 @@
 
 pragma Restrictions (No_Elaboration_Code);
 
-with System.BB.Interrupts;
---  Used for Attach_Handler
+with System.BB.CPU_Primitives;
+with System.BB.Parameters;
+with System.BB.Threads;
 
 package body System.BB.Time is
 
-   use type Peripherals.Timer_Interval;
+   package CPU renames System.BB.CPU_Primitives;
+   package SBP renames System.BB.Parameters;
 
-   subtype Timer_Interval is Peripherals.Timer_Interval;
+   use type CPU.Word;
+
+   subtype Word is CPU.Word;
+
+   type Pool_Index is range 0 .. SBP.Interrupt_Clocks + 1;
+   for Pool_Index'Size use 8;
+
+   type Stack_Index is new Interrupts.Interrupt_Level;
+
+   type Clock_Stack is array (Stack_Index) of Clock_Id;
+   pragma Suppress_Initialization (Clock_Stack);
 
    -----------------------
    -- Local definitions --
    -----------------------
 
-   Alarm_Interrupt : constant := Peripherals.TC_2;
-   Clock_Interrupt : constant := Peripherals.TC_1;
-   --  Clock and alarm interrupts
+   Max_Compare : constant := Word'Last - 2 ** 16;
+   --  Maximal value set to COMPARE register
 
-   Clock_Period : constant := 2 ** Timer_Interval'Size;
-   --  Period between clock overflows
+   Pool : array (Pool_Index) of aliased Clock_Descriptor;
+   --  Pool of clocks
 
-   Base_Time : Time := 0;
-   pragma Volatile (Base_Time);
-   --  Base of clock (i.e. MSP), stored in memory
+   Last : Pool_Index := 1;
+   --  Pointing to last allocated clock in pool
 
-   Last_Alarm : aliased Alarm_Descriptor := (Handler => null,
-                                             Data    => System.Null_Address,
-                                             Timeout => Time'Last,
-                                             Next    => null,
-                                             Prev    => null);
-   --  Last alarm in queue
+   RTC : constant Clock_Id := Pool (0)'Access;
+   --  The real-time clock
 
-   First_Alarm : Alarm_Id := Last_Alarm'Access;
-   --  First alarm in queue
+   Idle : constant Clock_Id := Pool (1)'Access;
+   --  Clock of the pseudo idle thread
 
-   Pending_Alarm : Alarm_Id := null;
-   --  Alarm corrensponding to the hardware timer if set
+   Lookup : array (Interrupt_ID) of Pool_Index;
+   --  Array for translating interrupt IDs to interrupt clock index
 
-   Defer_Update : Boolean := False;
-   --  Flags that alarm timer updates should be deferred
+   Stack : Clock_Stack;
+   --  Stack of timers
+
+   Top : Stack_Index;
+   --  Index of stack top
+
+   Sentinel : aliased Alarm_Descriptor;
+   --  Sentinel last in all alarm queues
+
+   Defer_Updates : Boolean := False;
+   --  True when updates to COMPARE are to be deferred
 
    -----------------------
    -- Local subprograms --
    -----------------------
 
-   procedure Clock_Handler (Interrupt : Interrupts.Interrupt_ID);
-   --  Handler for the clock interrupt
+   function Active (Clock : Clock_Id) return Boolean;
+   pragma Inline_Always (Active);
+   --  Returns true when the given clock is active (running)
+
+   procedure Alarm_Wrapper (Clock : Clock_Id);
+   --  Calls all expired alarm handlers for the given clock
 
    procedure Clear (Alarm : Alarm_Id);
    pragma Inline_Always (Clear);
-   --  Procedure to clear an alarm
+   --  Clears the given timer
 
-   procedure Update_Alarm_Timer;
-   --  Procedure that updates the hardware alarm timer
+   procedure Compare_Handler (Id : Interrupts.Interrupt_ID);
+   --  Handler for the COMPARE interrupt
+
+   procedure Context_Switch (First : Thread_Id);
+   pragma Export (Asm, Context_Switch, "timer_context_switch");
+   --  Changes time context to first thread
+
+   function Get_Compare (Clock : Clock_Id) return Word;
+   --  Computes the COMPARE value for the given clock
+
+   procedure Initialize_Clock
+     (Clock    : Clock_Id;
+      Capacity : Natural);
+   --  Initializes the given clock
+
+   procedure Swap_Clock (A, B : Clock_Id);
+   pragma Inline_Always (Swap_Clock);
+   --  Swaps execution time clock from A to B
+
+   procedure Update_Compare (Clock : Clock_Id);
+   pragma Inline (Update_Compare);
+   --  Timeout of Clock.First_Alarm has changed, update COMPARE if needed
+
+   ------------
+   -- Active --
+   ------------
+
+   function Active (Clock : Clock_Id) return Boolean is
+   begin
+      return Clock = RTC or else Clock = Stack (Top);
+   end Active;
+
+   -------------------
+   -- Alarm_Wrapper --
+   -------------------
+
+   procedure Alarm_Wrapper (Clock : Clock_Id) is
+      Now : constant Time := Time_Of_Clock (Clock);
+      Alarm : Alarm_Id := Clock.First_Alarm;
+
+   begin
+
+      while Alarm.Timeout <= Now loop
+
+         Clock.First_Alarm := Alarm.Next;
+         Clock.First_Alarm.Prev := null;
+
+         Clear (Alarm);
+
+         Alarm.Handler (Alarm.Data);
+         Alarm := Clock.First_Alarm;
+
+      end loop;
+
+   end Alarm_Wrapper;
 
    ------------
    -- Cancel --
    ------------
 
-   procedure Cancel (Alarm : Alarm_Id)
-   is
+   procedure Cancel (Alarm : Alarm_Id) is
    begin
-
       pragma Assert (Alarm /= null);
 
       --  Nothing to be done if the alarm is not set
@@ -113,12 +183,13 @@ package body System.BB.Time is
 
       if Alarm.Prev = null then
 
-         pragma Assert (Alarm = First_Alarm);
+         pragma Assert (Alarm.Clock /= null);
+         pragma Assert (Alarm.Clock.First_Alarm = Alarm);
 
-         First_Alarm     := Alarm.Next;
+         Alarm.Clock.First_Alarm := Alarm.Next;
          Alarm.Next.Prev := null;
 
-         Update_Alarm_Timer;
+         Update_Compare (Alarm.Clock);
 
       else
 
@@ -137,7 +208,7 @@ package body System.BB.Time is
 
    procedure Clear (Alarm : Alarm_Id) is
    begin
-      Alarm.Timeout := Time'First;
+      Alarm.Timeout := Time'Last;
       Alarm.Next    := null;
       Alarm.Prev    := null;
    end Clear;
@@ -146,102 +217,197 @@ package body System.BB.Time is
    -- Clock --
    -----------
 
-   function Clock return Time is
-      B : Time;
-      C : Timer_Interval;
-
+   function Clock (Alarm : Alarm_Id) return Clock_Id is
    begin
-
-      --  Clock is sum of base time and peripheral clock, read again
-      --  if base time is updated by clock interrupt after being read.
-
-      loop
-         B := Base_Time;
-         C := Peripherals.Read_Clock;
-         exit when B = Base_Time;
-      end loop;
-
-      --  If a clock interrupt is pending the task has the highest
-      --  priority or is executing within kernel. It is therefore safe
-      --  to clear interrupt flag and update base time.
-
-      if Peripherals.Pending_Clock then
-
-         Peripherals.Clear_Clock_Interrupt;
-
-         B := B + Clock_Period;
-         C := Peripherals.Read_Clock;
-
-         Base_Time := B;
-
-      end if;
-
-      return B + Time (C);
-
+      return Alarm.Clock;
    end Clock;
 
-   -------------------
-   -- Clock_Handler --
-   -------------------
+   ---------------------
+   -- Compare_Handler --
+   ---------------------
 
-   procedure Clock_Handler (Interrupt : Interrupts.Interrupt_ID) is
-      Now : constant Time := Clock;
+   procedure Compare_Handler (Id : Interrupts.Interrupt_ID) is
    begin
 
-      --  Make sure we are handling the right interrupt
+      pragma Assert (Id = Peripherals.COMPARE);
 
-      pragma Assert (Interrupt = Alarm_Interrupt
-                       or Interrupt = Clock_Interrupt);
+      --  Defer updates while within this handler
 
-      --  Clear alarm interrupt
+      Defer_Updates := True;
 
-      Peripherals.Clear_Alarm_Interrupt;
+      --  Call alarm handlers of execution time clock second from top
+      --  of stack (no alarms for COMPARE interrupt) and RTC
 
-      --  Handle expired alarms, defer updates to alarm timer
+      Alarm_Wrapper (Stack (Top - 1));
+      Alarm_Wrapper (RTC);
 
-      Defer_Update := True;
+      --  COMPARE value will be updated properly when leaving interrupt level
 
-      while First_Alarm.Timeout <= Now loop
+      Defer_Updates := False;
 
-         declare
-            Alarm : constant Alarm_Id := First_Alarm;
-         begin
-            pragma Assert (Alarm.Handler /= null);
+   end Compare_Handler;
 
-            First_Alarm      := Alarm.Next;
-            First_Alarm.Prev := null;
+   --------------------
+   -- Context_Switch --
+   --------------------
 
-            Clear (Alarm);
-            Alarm.Handler (Alarm.Data);
-         end;
+   procedure Context_Switch (First : Thread_Id) is
+      A : constant Clock_Id := Stack (0);
+      B : constant Clock_Id := First.Active_Clock;
 
-      end loop;
+   begin
+      pragma Assert (Top = 0);
 
-      --  Clear the defer update flag and update alarm timer
+      Swap_Clock (A, B);
+      Stack (0) := B;
 
-      Defer_Update := False;
+   end Context_Switch;
 
-      Update_Alarm_Timer;
+   ----------------
+   -- Enter_Idle --
+   ----------------
 
-   end Clock_Handler;
+   procedure Enter_Idle (Id : Thread_Id) is
+      A : constant Clock_Id := Id.Active_Clock;
+      B : constant Clock_Id := Idle;
+
+   begin
+      pragma Assert (Top = 0 and then A = Stack (0));
+      pragma Assert (A = Id.Clock'Access);
+
+      Id.Active_Clock := B;
+      Stack (0) := B;
+
+      Swap_Clock (A, B);
+
+   end Enter_Idle;
+
+   ---------------------
+   -- Enter_Interrupt --
+   ---------------------
+
+   procedure Enter_Interrupt (Id : Interrupt_ID) is
+      A : constant Clock_Id := Stack (Top);
+      B : constant Clock_Id := Pool (Lookup (Id))'Access;
+
+   begin
+      pragma Assert (Top < Stack'Last);
+      pragma Assert (Lookup (Id) > 0);
+
+      Top         := Top + 1;
+      Stack (Top) := B;
+
+      Swap_Clock (A, B);
+
+   end Enter_Interrupt;
+
+   -----------------
+   -- Get_Compare --
+   -----------------
+
+   function Get_Compare (Clock : Clock_Id) return Word is
+      Base  : constant Time     := Clock.Base_Time;
+      Alarm : constant Alarm_Id := Clock.First_Alarm;
+
+   begin
+
+      if Alarm.Timeout > (Base + Max_Compare) then
+         return Max_Compare;
+      elsif Alarm.Timeout > Base then
+         return Word (Alarm.Timeout - Base);
+      else
+         return 1;
+      end if;
+
+   end Get_Compare;
+
+   ----------------------
+   -- Initialize_Clock --
+   ----------------------
+
+   procedure Initialize_Clock
+     (Clock    : Clock_Id;
+      Capacity : Natural)
+   is
+   begin
+      Clock.all := (Base_Time   => Time'First,
+                    First_Alarm => Sentinel'Access,
+                    Capacity    => Capacity);
+   end Initialize_Clock;
+
+   --------------------------------
+   -- Initialize_Interrupt_Clock --
+   --------------------------------
+
+   procedure Initialize_Interrupt_Clock (Id : Interrupt_ID) is
+   begin
+      pragma Assert (Id /= Interrupts.No_Interrupt);
+      pragma Assert (Lookup (Id) = 0);
+      pragma Assert (Last < Pool_Index'Last);
+
+      --  Allocate next clock in Pool to Id
+
+      Last := Last + 1;
+      Lookup (Id) := Last;
+
+      --  Initialize clock, no alarms allowed for highest priority
+
+      if Interrupts.Priority_Of_Interrupt (Id) < Any_Priority'Last then
+         Initialize_Clock (Pool (Last)'Access, 1);
+      else
+         Initialize_Clock (Pool (Last)'Access, 0);
+      end if;
+
+   end Initialize_Interrupt_Clock;
+
+   -----------------------------
+   -- Initialize_Thread_Clock --
+   -----------------------------
+
+   procedure Initialize_Thread_Clock (Id : Thread_Id) is
+   begin
+      pragma Assert (Id /= null and then Id.Active_Clock = null);
+
+      --  Active clock of thread is thread clock
+
+      Id.Active_Clock := Id.Clock'Access;
+
+      --  Only one alarm for execution time clocks in Ravenscar
+
+      Initialize_Clock (Id.Active_Clock, 1);
+
+   end Initialize_Thread_Clock;
 
    ----------------------
    -- Initialize_Alarm --
    ----------------------
 
    procedure Initialize_Alarm
-     (Alarm   : not null Alarm_Id;
+     (Alarm   : Alarm_Id;
+      Clock   : Clock_Id;
       Handler : not null Alarm_Handler;
-      Data    : System.Address)
+      Data    : System.Address;
+      Success : out Boolean)
    is
    begin
+      pragma Assert (Alarm /= null);
 
-      pragma Assert (Alarm.Handler = null);
+      if Clock /= null and then Clock.Capacity > 0 then
 
-      Alarm.Handler := Handler;
-      Alarm.Data    := Data;
+         Clock.Capacity := Clock.Capacity - 1;
 
-      Clear (Alarm);
+         Alarm.all := (Clock   => Clock,
+                       Handler => Handler,
+                       Data    => Data,
+                       Timeout => Time'Last,
+                       Next    => null,
+                       Prev    => null);
+
+         Success := True;
+
+      else
+         Success := False;
+      end if;
 
    end Initialize_Alarm;
 
@@ -249,16 +415,107 @@ package body System.BB.Time is
    -- Initialize_Timers --
    -----------------------
 
-   procedure Initialize_Timers is
+   procedure Initialize_Timers (Environment_Thread : Thread_Id) is
+      Count : constant Word := CPU.Swap_Count;
    begin
+      --  Initialize execution time clock of environment thread
 
-      --  Install clock handler for both clock overflow and hardware
-      --  alarm timer interrupts.
+      Initialize_Thread_Clock (Environment_Thread);
+      Environment_Thread.Clock.Base_Time := Time (Count);
 
-      Interrupts.Attach_Handler (Clock_Handler'Access, Alarm_Interrupt);
-      Interrupts.Attach_Handler (Clock_Handler'Access, Clock_Interrupt);
+      --  Initialize execution time clock for idling, no alarms
+
+      Initialize_Clock (Idle, 0);
+
+      --  Initialize real-time clock, no limit on alarms
+
+      Initialize_Clock (RTC, Natural'Last);
+      RTC.Base_Time := Time (Count);
+
+      --  Initialize sentinel alarm
+
+      Sentinel.Timeout := Time'Last;
+
+      --  Install compare handler
+
+      Interrupts.Attach_Handler (Compare_Handler'Access, Peripherals.COMPARE);
+
+      --  Activate clock of environment thread
+
+      Stack (0) := Environment_Thread.Clock'Access;
+
+      --  Set COMPARE to maximal value, no alarms set at this point
+
+      CPU.Adjust_Compare (Max_Compare);
 
    end Initialize_Timers;
+
+   ---------------------
+   -- Interrupt_Clock --
+   ---------------------
+
+   function Interrupt_Clock (Id : Interrupt_ID) return Clock_Id is
+      I : constant Pool_Index := Lookup (Id);
+   begin
+      if I > 0 then
+         return Pool (I)'Access;
+      else
+         return null;
+      end if;
+   end Interrupt_Clock;
+
+   ----------------
+   -- Leave_Idle --
+   ----------------
+
+   procedure Leave_Idle (Id : Thread_Id) is
+      A : constant Clock_Id := Id.Active_Clock;
+      B : constant Clock_Id := Id.Clock'Access;
+
+   begin
+      pragma Assert (Top = 0 and then A = Stack (0));
+      pragma Assert (A = Idle);
+
+      Id.Active_Clock := B;
+      Stack (0) := B;
+
+      Swap_Clock (A, B);
+
+   end Leave_Idle;
+
+   ---------------------
+   -- Leave_Interrupt --
+   ---------------------
+
+   procedure Leave_Interrupt is
+      A : constant Clock_Id := Stack (Top);
+   begin
+      pragma Assert (Top > 0);
+
+      Stack (Top) := null;
+      Top := Top - 1;
+
+      Swap_Clock (A, Stack (Top));
+
+   end Leave_Interrupt;
+
+   ---------------------
+   -- Monotonic_Clock --
+   ---------------------
+
+   function Monotonic_Clock return Time is
+   begin
+      return Time_Of_Clock (RTC);
+   end Monotonic_Clock;
+
+   ---------------------
+   -- Real_Time_Clock --
+   ---------------------
+
+   function Real_Time_Clock return Clock_Id is
+   begin
+      return RTC;
+   end Real_Time_Clock;
 
    ---------
    -- Set --
@@ -268,14 +525,20 @@ package body System.BB.Time is
      (Alarm   : Alarm_Id;
       Timeout : Time)
    is
-      Aux : Alarm_Id := First_Alarm;
+      Clock : constant Clock_Id := Alarm.Clock;
+      Aux : Alarm_Id;
+
    begin
+
+      pragma Assert (Clock /= null);
 
       --  Set alarm timeout
 
       Alarm.Timeout := Timeout;
 
       --  Search for element Aux where Aux.Timeout > Timeout
+
+      Aux := Clock.First_Alarm;
 
       while Aux.Timeout <= Timeout loop
          Aux := Aux.Next;
@@ -290,13 +553,69 @@ package body System.BB.Time is
       --  Check if this alarm is to be first in queue
 
       if Alarm.Prev = null then
-         First_Alarm := Alarm;
-         Update_Alarm_Timer;
+         Clock.First_Alarm := Alarm;
+         Update_Compare (Clock);
       else
          Alarm.Prev.Next := Alarm;
       end if;
 
    end Set;
+
+   ----------------
+   -- Swap_Clock --
+   ----------------
+
+   procedure Swap_Clock (A, B : Clock_Id) is
+      Count : constant Word := CPU.Swap_Count;
+   begin
+      pragma Assert (A /= null);
+      pragma Assert (B /= null);
+      pragma Assert (A /= B);
+
+      A.Base_Time := A.Base_Time + Time (Count);
+      RTC.Base_Time := RTC.Base_Time + Time (Count);
+
+      Update_Compare (B);
+
+   end Swap_Clock;
+
+   -------------------
+   -- Time_Of_Clock --
+   -------------------
+
+   function Time_Of_Clock (Clock : Clock_Id) return Time is
+      Base  : Time;
+      Count : Word;
+
+   begin
+      pragma Assert (Clock /= null);
+
+      --  If clock is not active return base time
+
+      if not Active (Clock) then
+         return Clock.Base_Time;
+      end if;
+
+      --  Else the time of clock is sum of base time and count
+
+      loop
+         Base  := Clock.Base_Time;
+         Count := CPU.Get_Count;
+         exit when Base = Clock.Base_Time;
+      end loop;
+
+      return Base + Time (Count);
+
+   end Time_Of_Clock;
+
+   ------------------
+   -- Thread_Clock --
+   ------------------
+
+   function Thread_Clock (Id : Thread_Id) return Clock_Id is
+   begin
+      return Id.Clock'Access;
+   end Thread_Clock;
 
    -------------------
    -- Time_Of_Alarm --
@@ -307,43 +626,28 @@ package body System.BB.Time is
       return Alarm.Timeout;
    end Time_Of_Alarm;
 
-   ------------------------
-   -- Update_Alarm_Timer --
-   ------------------------
+   --------------------
+   -- Update_Compare --
+   --------------------
 
-   procedure Update_Alarm_Timer is
-      Now, Diff : Time;
+   procedure Update_Compare (Clock : Clock_Id) is
+      C : Word;
    begin
-      --  Return if updates are deferred
 
-      if Defer_Update or else Pending_Alarm = First_Alarm then
-         return;
+      if not Defer_Updates and then Active (Clock) then
+
+         C := Get_Compare (Clock);
+
+         if Clock = RTC then
+            C := Word'Min (C, Get_Compare (Stack (Top)));
+         else
+            C := Word'Min (C, Get_Compare (RTC));
+         end if;
+
+         CPU.Adjust_Compare (C);
+
       end if;
 
-      --  Cancel any pending hardware alarm
-
-      if Pending_Alarm /= null then
-         Peripherals.Cancel_Alarm;
-         Pending_Alarm := null;
-      end if;
-
-      --  Find time remaining to first alarm
-
-      Now := Clock;
-
-      if First_Alarm.Timeout > Now then
-         Diff := First_Alarm.Timeout - Now;
-      else
-         Diff := 1;
-      end if;
-
-      --  Set timer if alarm is within a clock period
-
-      if Diff < Clock_Period then
-         Peripherals.Set_Alarm (Timer_Interval (Diff));
-         Pending_Alarm := First_Alarm;
-      end if;
-
-   end Update_Alarm_Timer;
+   end Update_Compare;
 
 end System.BB.Time;

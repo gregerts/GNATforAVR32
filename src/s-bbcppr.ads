@@ -124,18 +124,13 @@ package System.BB.CPU_Primitives is
    -- COUNT / COMPARE handling --
    ------------------------------
 
-   function Get_Count return Word;
-   pragma Inline_Always (Get_Count);
-
    procedure Adjust_Compare (Compare : Word);
    pragma Inline_Always (Adjust_Compare);
 
-   procedure Reset_Count (Compare : Word);
-   pragma Inline_Always (Reset_Count);
+   function Get_Count return Word;
+   pragma Inline_Always (Get_Count);
 
-   procedure Swap_Count
-     (Compare : Word;
-      Count   : out Word);
+   function Swap_Count return Word;
    pragma Inline_Always (Swap_Count);
 
 private
