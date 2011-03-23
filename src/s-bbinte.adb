@@ -205,9 +205,6 @@ package body System.BB.Interrupts is
          return;
       end if;
 
-      --  Activate clock for current interrupt
-      Time.Enter_Interrupt (Interrupt);
-
       --  Store the interrupt being handled
       Interrupt_Being_Handled := Interrupt;
 
@@ -215,6 +212,9 @@ package body System.BB.Interrupts is
       --  corresponding to the interrupt being handled. It comprises
       --  also the appropriate interrupt masking.
       Threads.Queues.Change_Priority (Self_Id, To_Priority (Level));
+
+      --  Activate clock for current interrupt
+      Time.Enter_Interrupt (Interrupt);
 
       --  Restore interrupts priort to calling handler
       CPU_Primitives.Restore_Interrupts;

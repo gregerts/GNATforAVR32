@@ -54,7 +54,7 @@ package System.BB.Time is
 
    pragma Preelaborate;
 
-   type Time is mod 2 ** 64;
+   type Time is mod 2 ** 63;
    for Time'Size use 64;
    --  Time is represented at this level as a 64-bit natural number
 
