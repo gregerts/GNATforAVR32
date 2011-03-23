@@ -133,7 +133,11 @@ package body System.Tasking.Protected_Objects.Single_Entry is
          raise Program_Error;
       end if;
 
-      STPO.Set_Priority (Self_Id, Object.Ceiling);
+      --  Increase task priority if necessary
+
+      if Object.Ceiling > Caller_Priority then
+         STPO.Set_Priority (Self_Id, Object.Ceiling);
+      end if;
 
       --  Update the protected object's owner
 
@@ -313,7 +317,12 @@ package body System.Tasking.Protected_Objects.Single_Entry is
       Self_Id.Common.Protected_Action_Nesting :=
         Self_Id.Common.Protected_Action_Nesting - 1;
 
-      STPO.Set_Priority (Self_Id, Object.Caller_Priority);
+      --  Restore task priority if necessary
+
+      if Object.Caller_Priority < Object.Ceiling then
+         STPO.Set_Priority (Self_Id, Object.Caller_Priority);
+      end if;
+
    end Unlock_Entry;
 
 end System.Tasking.Protected_Objects.Single_Entry;
