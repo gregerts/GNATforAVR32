@@ -134,7 +134,7 @@ package System.BB.Time is
    --  Returns the time of the given clock
 
    function Clock (Alarm : Alarm_Id) return Clock_Id;
-   pragma Inline_Always (Clock);
+   pragma Inline (Clock);
    --  Returns the clock of the given alarm
 
    function Interrupt_Clock (Id : Interrupt_ID) return Clock_Id;
@@ -194,7 +194,7 @@ private
    type Alarm_Descriptor is
       record
          Timeout : Time;
-         --  Timeout of alarm or Time'Last if timer is not set
+         --  Timeout of alarm when set
 
          Clock : Clock_Id;
          --  Clock of this alarm

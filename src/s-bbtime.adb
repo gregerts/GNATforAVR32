@@ -52,13 +52,13 @@ package body System.BB.Time is
 
    subtype Word is CPU.Word;
 
-   type Pool_Index is range 0 .. SBP.Interrupt_Clocks + 1;
-   for Pool_Index'Size use 8;
-
    type Stack_Index is new Interrupts.Interrupt_Level;
 
    type Clock_Stack is array (Stack_Index) of Clock_Id;
    pragma Suppress_Initialization (Clock_Stack);
+
+   type Pool_Index is range 0 .. SBP.Interrupt_Clocks + 1;
+   for Pool_Index'Size use 8;
 
    -----------------------
    -- Local definitions --
@@ -105,10 +105,6 @@ package body System.BB.Time is
    procedure Alarm_Wrapper (Clock : Clock_Id);
    --  Calls all expired alarm handlers for the given clock
 
-   procedure Clear (Alarm : Alarm_Id);
-   pragma Inline_Always (Clear);
-   --  Clears the given timer
-
    procedure Compare_Handler (Id : Interrupts.Interrupt_ID);
    --  Handler for the COMPARE interrupt
 
@@ -124,9 +120,6 @@ package body System.BB.Time is
      (Clock    : Clock_Id;
       Capacity : Natural);
    --  Initializes the given clock
-
-   procedure Overflow_Handler (Data : System.Address);
-   --  Handler of sentinel, indicates system overflow
 
    function Remaining (Clock : Clock_Id) return Time_Span;
    pragma Inline_Always (Remaining);
@@ -172,7 +165,8 @@ package body System.BB.Time is
          exit when Alarm.Timeout > Now;
 
          Clock.First_Alarm := Alarm.Next;
-         Clear (Alarm);
+         Alarm.Next := null;
+
          Alarm.Handler (Alarm.Data);
 
       end loop;
@@ -185,7 +179,7 @@ package body System.BB.Time is
 
    procedure Cancel (Alarm : Alarm_Id) is
       Clock : constant Clock_Id := Alarm.Clock;
-      Aux : Alarm_Id := Clock.First_Alarm;
+      Aux : Alarm_Id;
 
    begin
 
@@ -197,7 +191,7 @@ package body System.BB.Time is
 
       --  Check if Alarm is first in queue
 
-      if Alarm = Aux then
+      if Alarm = Clock.First_Alarm then
 
          Clock.First_Alarm := Alarm.Next;
 
@@ -207,6 +201,8 @@ package body System.BB.Time is
 
       else
 
+         Aux := Clock.First_Alarm;
+
          while Aux.Next /= Alarm loop
             Aux := Aux.Next;
          end loop;
@@ -215,19 +211,9 @@ package body System.BB.Time is
 
       end if;
 
-      Clear (Alarm);
+      Alarm.Next := null;
 
    end Cancel;
-
-   -----------
-   -- Clear --
-   -----------
-
-   procedure Clear (Alarm : Alarm_Id) is
-   begin
-      Alarm.Timeout := Time'Last;
-      Alarm.Next    := null;
-   end Clear;
 
    -----------
    -- Clock --
@@ -247,8 +233,7 @@ package body System.BB.Time is
 
       pragma Assert (Id = Peripherals.COMPARE);
 
-      --  Call alarm handlers for execution time clock second from top
-      --  of stack (no alarms for the COMPARE interrupt)
+      --  Call alarm handlers for interrupted execution time clock
 
       Alarm_Wrapper (Stack (Top - 1));
 
@@ -287,7 +272,7 @@ package body System.BB.Time is
    procedure Enter_Idle (Id : Thread_Id) is
    begin
       pragma Assert (Top = 0);
-      pragma Assert (Active (Id.Active_Clock));
+      pragma Assert (ETC = Id.Active_Clock);
       pragma Assert (Id.Active_Clock = Id.Clock'Access);
 
       Id.Active_Clock := Idle;
@@ -413,7 +398,6 @@ package body System.BB.Time is
       --  Initialize sentinel alarm
 
       Sentinel.Timeout := Time'Last;
-      Sentinel.Handler := Overflow_Handler'Access;
 
       --  Initialize execution time clock of environment thread
 
@@ -501,15 +485,6 @@ package body System.BB.Time is
    end Monotonic_Clock;
 
    ---------------------
-   -- Oveflow_Handler --
-   ---------------------
-
-   procedure Overflow_Handler (Data : System.Address) is
-   begin
-      raise Program_Error;
-   end Overflow_Handler;
-
-   ---------------------
    -- Real_Time_Clock --
    ---------------------
 
@@ -537,7 +512,7 @@ package body System.BB.Time is
       Timeout : Time)
    is
       Clock : constant Clock_Id := Alarm.Clock;
-      Aux : Alarm_Id := Clock.First_Alarm;
+      Aux : Alarm_Id;
 
    begin
 
@@ -554,9 +529,11 @@ package body System.BB.Time is
 
       --  Check if alarm is to be first in queue
 
-      if Timeout < Aux.Timeout then
+      if Timeout < Clock.First_Alarm.Timeout then
 
-         Alarm.Next := Aux;
+         --  Insert alarm first in queue, update COMPARE in needed
+
+         Alarm.Next := Clock.First_Alarm;
          Clock.First_Alarm := Alarm;
 
          if Active (Clock) then
@@ -564,6 +541,10 @@ package body System.BB.Time is
          end if;
 
       else
+
+         --  Find element Aux where Aux.Next.Timeout > Timeout
+
+         Aux := Clock.First_Alarm;
 
          while Aux.Next.Timeout <= Timeout loop
             Aux := Aux.Next;
@@ -643,7 +624,11 @@ package body System.BB.Time is
 
    function Time_Of_Alarm (Alarm : Alarm_Id) return Time is
    begin
-      return Alarm.Timeout;
+      if Alarm.Next /= null then
+         return Alarm.Timeout;
+      else
+         return Time'First;
+      end if;
    end Time_Of_Alarm;
 
    --------------------
