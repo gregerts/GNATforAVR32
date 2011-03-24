@@ -228,6 +228,9 @@ private
          Capacity : Natural;
          --  Remaining alarm capacity, no more alarms allowed if zero
 
+         Sentinel : aliased Alarm_Descriptor;
+         --  Always the last alarm of the clock
+
       end record;
 
    pragma Suppress_Initialization (Clock_Descriptor);

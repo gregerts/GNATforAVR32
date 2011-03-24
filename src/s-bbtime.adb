@@ -113,6 +113,10 @@ package body System.BB.Time is
    pragma Export (Asm, Context_Switch, "timer_context_switch");
    --  Changes time context to first thread
 
+   function Defer_Updates return Boolean;
+   pragma Inline_Always (Defer_Updates);
+   --  Returns true if COMPARE updates are to be deferred
+
    procedure Initialize_Clock
      (Clock    : Clock_Id;
       Capacity : Natural);
@@ -121,8 +125,12 @@ package body System.BB.Time is
    procedure Overflow_Handler (Data : System.Address);
    --  Handler of sentinel, indicates system overflow
 
-   procedure Swap_Clock (A, B : Clock_Id);
-   --  Swaps execution time clock from A to B
+   function Remaining (Clock : Clock_Id) return Time_Span;
+   pragma Inline_Always (Remaining);
+   --  Returns time remaining until first alarm of clock
+
+   procedure Swap_ETC (Clock : Clock_Id);
+   --  Swaps ETC to the given clock
 
    procedure Update_Compare;
    --  Update COMPARE as timeout of active clock has changed
@@ -145,6 +153,8 @@ package body System.BB.Time is
       Now   : Time;
 
    begin
+
+      pragma Assert (Clock /= ETC);
 
       if Clock = RTC then
          Now := Clock.Base_Time + Time (CPU.Get_Count);
@@ -230,16 +240,17 @@ package body System.BB.Time is
    ---------------------
 
    procedure Compare_Handler (Id : Interrupts.Interrupt_ID) is
-      ETC : constant Clock_Id := Stack (Top - 1);
-
    begin
 
       pragma Assert (Id = Peripherals.COMPARE);
 
-      --  Call alarm handlers of execution time clock second from top
-      --  of stack (no alarms for COMPARE interrupt) and RTC
+      --  Call alarm handlers for execution time clock second from top
+      --  of stack (no alarms for the COMPARE interrupt)
 
-      Alarm_Wrapper (ETC);
+      Alarm_Wrapper (Stack (Top - 1));
+
+      --  Call alarm handlers for real-time clock
+
       Alarm_Wrapper (RTC);
 
    end Compare_Handler;
@@ -249,33 +260,37 @@ package body System.BB.Time is
    --------------------
 
    procedure Context_Switch (First : Thread_Id) is
-      A : constant Clock_Id := Stack (0);
-      B : constant Clock_Id := First.Active_Clock;
-
    begin
       pragma Assert (Top = 0);
 
-      Stack (0) := B;
-      Swap_Clock (A, B);
+      Stack (0) := First.Active_Clock;
+      Swap_ETC (First.Active_Clock);
 
    end Context_Switch;
+
+   -------------------
+   -- Defer_Updates --
+   -------------------
+
+   function Defer_Updates return Boolean is
+   begin
+      return Threads.Get_Priority (Threads.Thread_Self) = Any_Priority'Last;
+   end Defer_Updates;
 
    ----------------
    -- Enter_Idle --
    ----------------
 
    procedure Enter_Idle (Id : Thread_Id) is
-      A : constant Clock_Id := Id.Active_Clock;
-      B : constant Clock_Id := Idle;
-
    begin
-      pragma Assert (Top = 0 and then A = Stack (0));
-      pragma Assert (A = Id.Clock'Access);
+      pragma Assert (Top = 0);
+      pragma Assert (Active (Id.Active_Clock));
+      pragma Assert (Id.Active_Clock = Id.Clock'Access);
 
-      Id.Active_Clock := B;
-      Stack (0) := B;
+      Id.Active_Clock := Idle;
+      Stack (0) := Idle;
 
-      Swap_Clock (A, B);
+      Swap_ETC (Idle);
 
    end Enter_Idle;
 
@@ -284,17 +299,15 @@ package body System.BB.Time is
    ---------------------
 
    procedure Enter_Interrupt (Id : Interrupt_ID) is
-      A : constant Clock_Id := Stack (Top);
-      B : constant Clock_Id := Pool (Lookup (Id))'Access;
-
+      Clock : constant Clock_Id := Pool (Lookup (Id))'Access;
    begin
       pragma Assert (Top < Stack'Last);
       pragma Assert (Lookup (Id) > 0);
 
       Top         := Top + 1;
-      Stack (Top) := B;
+      Stack (Top) := Clock;
 
-      Swap_Clock (A, B);
+      Swap_ETC (Clock);
 
    end Enter_Interrupt;
 
@@ -401,7 +414,7 @@ package body System.BB.Time is
    -----------------------
 
    procedure Initialize_Timers (Environment_Thread : Thread_Id) is
-      Count : constant Word := CPU.Swap_Count;
+      Count : constant Word := CPU.Swap_Count (Max_Compare);
    begin
       --  Initialize execution time clock of environment thread
 
@@ -451,17 +464,16 @@ package body System.BB.Time is
    ----------------
 
    procedure Leave_Idle (Id : Thread_Id) is
-      A : constant Clock_Id := Id.Active_Clock;
-      B : constant Clock_Id := Id.Clock'Access;
-
+      Clock : constant Clock_Id := Id.Clock'Access;
    begin
-      pragma Assert (Top = 0 and then A = Stack (0));
-      pragma Assert (A = Idle);
+      pragma Assert (Top = 0);
+      pragma Assert (ETC = Idle);
+      pragma Assert (Id.Active_Clock = Idle);
 
-      Id.Active_Clock := B;
-      Stack (0) := B;
+      Id.Active_Clock := Clock;
+      Stack (0) := Clock;
 
-      Swap_Clock (A, B);
+      Swap_ETC (Clock);
 
    end Leave_Idle;
 
@@ -470,14 +482,13 @@ package body System.BB.Time is
    ---------------------
 
    procedure Leave_Interrupt is
-      A : constant Clock_Id := Stack (Top);
    begin
       pragma Assert (Top > 0);
 
       Stack (Top) := null;
       Top := Top - 1;
 
-      Swap_Clock (A, Stack (Top));
+      Swap_ETC (Stack (Top));
 
    end Leave_Interrupt;
 
@@ -507,6 +518,16 @@ package body System.BB.Time is
    begin
       return RTC;
    end Real_Time_Clock;
+
+   ---------------
+   -- Remaining --
+   ---------------
+
+   function Remaining (Clock : Clock_Id) return Time_Span is
+      Alarm : constant Alarm_Id := Clock.First_Alarm;
+   begin
+      return Time_Span (Alarm.Timeout) - Time_Span (Clock.Base_Time);
+   end Remaining;
 
    ---------
    -- Set --
@@ -540,7 +561,7 @@ package body System.BB.Time is
          Aux := Aux.Next;
       end loop;
 
-      --  Insert before Aux (always before Last_Alarm)
+      --  Insert before Aux (always before sentinel)
 
       Alarm.Next := Aux;
       Alarm.Prev := Aux.Prev;
@@ -565,26 +586,23 @@ package body System.BB.Time is
 
    end Set;
 
-   ----------------
-   -- Swap_Clock --
-   ----------------
+   --------------
+   -- Swap_ETC --
+   --------------
 
-   procedure Swap_Clock (A, B : Clock_Id) is
-      Count : constant Word := CPU.Swap_Count;
+   procedure Swap_ETC (Clock : Clock_Id) is
+      Count : constant Word := CPU.Swap_Count (Max_Compare);
    begin
-      pragma Assert (A /= null);
-      pragma Assert (B /= null);
-      pragma Assert (A /= B);
-      pragma Assert (A = ETC);
+      pragma Assert (Clock /= null);
 
-      A.Base_Time := A.Base_Time + Time (Count);
       RTC.Base_Time := RTC.Base_Time + Time (Count);
+      ETC.Base_Time := ETC.Base_Time + Time (Count);
 
-      ETC := B;
+      ETC := Clock;
 
       Update_Compare;
 
-   end Swap_Clock;
+   end Swap_ETC;
 
    -------------------
    -- Time_Of_Clock --
@@ -638,22 +656,19 @@ package body System.BB.Time is
    --------------------
 
    procedure Update_Compare is
-      subtype TS is Time_Span;
-      D : TS;
-
+      Diff : Time_Span;
    begin
 
-      if Threads.Get_Priority (Threads.Thread_Self) < Any_Priority'Last then
+      if not Defer_Updates then
 
-         D := TS (RTC.First_Alarm.Timeout) - TS (RTC.Base_Time);
-         D := TS'Min (D, TS (ETC.First_Alarm.Timeout) - TS (ETC.Base_Time));
+         Diff := Time_Span'Min (Remaining (RTC), Remaining (ETC));
 
-         pragma Assert (D >= TS (Integer'First));
+         pragma Assert (Diff >= Time_Span (Integer'First));
 
-         if D > Max_Compare then
+         if Diff > Max_Compare then
             CPU.Adjust_Compare (Max_Compare);
          else
-            CPU.Adjust_Compare (Word (Integer'Max (Integer (D), 0)));
+            CPU.Adjust_Compare (Word (Integer'Max (Integer (Diff), 0)));
          end if;
 
       end if;

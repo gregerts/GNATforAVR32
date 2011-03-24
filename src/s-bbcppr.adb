@@ -204,15 +204,18 @@ package body System.BB.CPU_Primitives is
    -- Swap_Count --
    ----------------
 
-   function Swap_Count return Word is
+   function Swap_Count (Compare : Word) return Word is
       Count : Word;
       Zero : constant Word := 0;
    begin
 
+      pragma Assert (Compare > 0);
+
       SMC.Asm ("mfsr    %0, 264" & ASCII.LF & ASCII.HT &
                "mtsr    268, %1" & ASCII.LF & ASCII.HT &
-               "mtsr    264, %1",
-               Inputs => Word'Asm_Input ("r", Zero),
+               "mtsr    264, %2",
+               Inputs => (Word'Asm_Input ("r", Compare),
+                          Word'Asm_Input ("r", Zero)),
                Outputs => Word'Asm_Output ("+r", Count),
                Volatile => True);
 
