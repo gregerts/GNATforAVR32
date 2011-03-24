@@ -73,14 +73,14 @@ package body System.BB.Time is
    Top : Stack_Index;
    --  Index of stack top
 
-   ETC : Clock_Id;
-   --  The currently running execution time clock =Stack (Top)
-
    Pool : array (Pool_Index) of aliased Clock_Descriptor;
    --  Pool of clocks
 
    Last : Pool_Index := 1;
    --  Pointing to last allocated clock in pool
+
+   Lookup : array (Interrupt_ID) of Pool_Index;
+   --  Array for translating interrupt IDs to interrupt clock index
 
    RTC : constant Clock_Id := Pool (0)'Access;
    --  The real-time clock
@@ -88,11 +88,8 @@ package body System.BB.Time is
    Idle : constant Clock_Id := Pool (1)'Access;
    --  Clock of the pseudo idle thread
 
-   Lookup : array (Interrupt_ID) of Pool_Index;
-   --  Array for translating interrupt IDs to interrupt clock index
-
-   Sentinel : aliased Alarm_Descriptor;
-   --  Sentinel last in all alarm queues
+   ETC : Clock_Id;
+   --  The currently running execution time clock = Stack (Top)
 
    -----------------------
    -- Local subprograms --
@@ -120,6 +117,9 @@ package body System.BB.Time is
      (Clock    : Clock_Id;
       Capacity : Natural);
    --  Initializes the given clock
+
+   procedure Overflow_Handler (Data : System.Address);
+   --  Handler of sentinel, indicates system overflow
 
    procedure Swap_Clock (A, B : Clock_Id);
    --  Swaps execution time clock from A to B
@@ -307,9 +307,17 @@ package body System.BB.Time is
       Capacity : Natural)
    is
    begin
-      Clock.all := (Base_Time   => Time'First,
-                    First_Alarm => Sentinel'Access,
-                    Capacity    => Capacity);
+
+      Clock.Sentinel := (Timeout => Time'Last,
+                         Clock   => Clock,
+                         Handler => Overflow_Handler'Access,
+                         Data    => Clock.all'Address,
+                         others  => <>);
+
+      Clock.Base_Time   := Time'First;
+      Clock.Capacity    := Capacity;
+      Clock.First_Alarm := Clock.Sentinel'Access;
+
    end Initialize_Clock;
 
    --------------------------------
@@ -409,10 +417,6 @@ package body System.BB.Time is
       Initialize_Clock (RTC, Natural'Last);
       RTC.Base_Time := Time (Count);
 
-      --  Initialize sentinel alarm
-
-      Sentinel.Timeout := Time'Last;
-
       --  Install compare handler
 
       Interrupts.Attach_Handler (Compare_Handler'Access, Peripherals.COMPARE);
@@ -487,6 +491,15 @@ package body System.BB.Time is
    end Monotonic_Clock;
 
    ---------------------
+   -- Oveflow_Handler --
+   ---------------------
+
+   procedure Overflow_Handler (Data : System.Address) is
+   begin
+      raise Program_Error;
+   end Overflow_Handler;
+
+   ---------------------
    -- Real_Time_Clock --
    ---------------------
 
@@ -511,6 +524,10 @@ package body System.BB.Time is
       pragma Assert (Clock /= null);
       pragma Assert (Timeout < Time'Last);
 
+      --  Remove alarm from queue if necessary
+
+      Cancel (Alarm);
+
       --  Set alarm timeout
 
       Alarm.Timeout := Timeout;
@@ -529,9 +546,6 @@ package body System.BB.Time is
       Alarm.Prev := Aux.Prev;
       Aux.Prev := Alarm;
 
-      pragma Assert (Alarm.Prev = null or else
-                     Alarm.Prev.Timeout <= Timeout);
-
       pragma Assert (Timeout < Alarm.Next.Timeout);
 
       --  Check if this alarm is to be first in queue
@@ -545,6 +559,7 @@ package body System.BB.Time is
          end if;
 
       else
+         pragma Assert (Alarm.Prev.Timeout <= Timeout);
          Alarm.Prev.Next := Alarm;
       end if;
 
