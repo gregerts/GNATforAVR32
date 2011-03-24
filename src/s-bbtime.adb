@@ -73,6 +73,9 @@ package body System.BB.Time is
    Top : Stack_Index;
    --  Index of stack top
 
+   ETC : Clock_Id;
+   --  The currently running execution time clock = Stack (Top)
+
    Pool : array (Pool_Index) of aliased Clock_Descriptor;
    --  Pool of clocks
 
@@ -88,8 +91,8 @@ package body System.BB.Time is
    Idle : constant Clock_Id := Pool (1)'Access;
    --  Clock of the pseudo idle thread
 
-   ETC : Clock_Id;
-   --  The currently running execution time clock = Stack (Top)
+   Sentinel : aliased Alarm_Descriptor;
+   --  Always the last alarm in the queue of every clock
 
    -----------------------
    -- Local subprograms --
@@ -149,7 +152,7 @@ package body System.BB.Time is
    -------------------
 
    procedure Alarm_Wrapper (Clock : Clock_Id) is
-      Alarm : Alarm_Id := Clock.First_Alarm;
+      Alarm : Alarm_Id;
       Now   : Time;
 
    begin
@@ -162,15 +165,15 @@ package body System.BB.Time is
          Now := Clock.Base_Time;
       end if;
 
-      while Alarm.Timeout <= Now loop
+      loop
+
+         Alarm := Clock.First_Alarm;
+
+         exit when Alarm.Timeout > Now;
 
          Clock.First_Alarm := Alarm.Next;
-         Clock.First_Alarm.Prev := null;
-
          Clear (Alarm);
-
          Alarm.Handler (Alarm.Data);
-         Alarm := Clock.First_Alarm;
 
       end loop;
 
@@ -181,8 +184,10 @@ package body System.BB.Time is
    ------------
 
    procedure Cancel (Alarm : Alarm_Id) is
+      Clock : constant Clock_Id := Alarm.Clock;
+      Aux : Alarm_Id := Clock.First_Alarm;
+
    begin
-      pragma Assert (Alarm /= null);
 
       --  Nothing to be done if the alarm is not set
 
@@ -192,22 +197,21 @@ package body System.BB.Time is
 
       --  Check if Alarm is first in queue
 
-      if Alarm.Prev = null then
+      if Alarm = Aux then
 
-         pragma Assert (Alarm.Clock /= null);
-         pragma Assert (Alarm.Clock.First_Alarm = Alarm);
+         Clock.First_Alarm := Alarm.Next;
 
-         Alarm.Clock.First_Alarm := Alarm.Next;
-         Alarm.Next.Prev := null;
-
-         if Active (Alarm.Clock) then
+         if Active (Clock) then
             Update_Compare;
          end if;
 
       else
 
-         Alarm.Prev.Next := Alarm.Next;
-         Alarm.Next.Prev := Alarm.Prev;
+         while Aux.Next /= Alarm loop
+            Aux := Aux.Next;
+         end loop;
+
+         Aux.Next := Alarm.Next;
 
       end if;
 
@@ -223,7 +227,6 @@ package body System.BB.Time is
    begin
       Alarm.Timeout := Time'Last;
       Alarm.Next    := null;
-      Alarm.Prev    := null;
    end Clear;
 
    -----------
@@ -312,6 +315,38 @@ package body System.BB.Time is
    end Enter_Interrupt;
 
    ----------------------
+   -- Initialize_Alarm --
+   ----------------------
+
+   procedure Initialize_Alarm
+     (Alarm   : Alarm_Id;
+      Clock   : Clock_Id;
+      Handler : not null Alarm_Handler;
+      Data    : System.Address;
+      Success : out Boolean)
+   is
+   begin
+      pragma Assert (Alarm /= null);
+
+      if Clock /= null and then Clock.Capacity > 0 then
+
+         Clock.Capacity := Clock.Capacity - 1;
+
+         Alarm.all := (Timeout => Time'Last,
+                       Clock   => Clock,
+                       Handler => Handler,
+                       Data    => Data,
+                       Next    => null);
+
+         Success := True;
+
+      else
+         Success := False;
+      end if;
+
+   end Initialize_Alarm;
+
+   ----------------------
    -- Initialize_Clock --
    ----------------------
 
@@ -320,17 +355,9 @@ package body System.BB.Time is
       Capacity : Natural)
    is
    begin
-
-      Clock.Sentinel := (Timeout => Time'Last,
-                         Clock   => Clock,
-                         Handler => Overflow_Handler'Access,
-                         Data    => Clock.all'Address,
-                         others  => <>);
-
-      Clock.Base_Time   := Time'First;
-      Clock.Capacity    := Capacity;
-      Clock.First_Alarm := Clock.Sentinel'Access;
-
+      Clock.all := (Base_Time   => Time'First,
+                    Capacity    => Capacity,
+                    First_Alarm => Sentinel'Access);
    end Initialize_Clock;
 
    --------------------------------
@@ -376,39 +403,6 @@ package body System.BB.Time is
 
    end Initialize_Thread_Clock;
 
-   ----------------------
-   -- Initialize_Alarm --
-   ----------------------
-
-   procedure Initialize_Alarm
-     (Alarm   : Alarm_Id;
-      Clock   : Clock_Id;
-      Handler : not null Alarm_Handler;
-      Data    : System.Address;
-      Success : out Boolean)
-   is
-   begin
-      pragma Assert (Alarm /= null);
-
-      if Clock /= null and then Clock.Capacity > 0 then
-
-         Clock.Capacity := Clock.Capacity - 1;
-
-         Alarm.all := (Clock   => Clock,
-                       Handler => Handler,
-                       Data    => Data,
-                       Timeout => Time'Last,
-                       Next    => null,
-                       Prev    => null);
-
-         Success := True;
-
-      else
-         Success := False;
-      end if;
-
-   end Initialize_Alarm;
-
    -----------------------
    -- Initialize_Timers --
    -----------------------
@@ -416,6 +410,11 @@ package body System.BB.Time is
    procedure Initialize_Timers (Environment_Thread : Thread_Id) is
       Count : constant Word := CPU.Swap_Count (Max_Compare);
    begin
+      --  Initialize sentinel alarm
+
+      Sentinel.Timeout := Time'Last;
+      Sentinel.Handler := Overflow_Handler'Access;
+
       --  Initialize execution time clock of environment thread
 
       Initialize_Thread_Clock (Environment_Thread);
@@ -538,7 +537,7 @@ package body System.BB.Time is
       Timeout : Time)
    is
       Clock : constant Clock_Id := Alarm.Clock;
-      Aux : Alarm_Id;
+      Aux : Alarm_Id := Clock.First_Alarm;
 
    begin
 
@@ -553,26 +552,11 @@ package body System.BB.Time is
 
       Alarm.Timeout := Timeout;
 
-      --  Search for element Aux where Aux.Timeout > Timeout
+      --  Check if alarm is to be first in queue
 
-      Aux := Clock.First_Alarm;
+      if Timeout < Aux.Timeout then
 
-      while Aux.Timeout <= Timeout loop
-         Aux := Aux.Next;
-      end loop;
-
-      --  Insert before Aux (always before sentinel)
-
-      Alarm.Next := Aux;
-      Alarm.Prev := Aux.Prev;
-      Aux.Prev := Alarm;
-
-      pragma Assert (Timeout < Alarm.Next.Timeout);
-
-      --  Check if this alarm is to be first in queue
-
-      if Alarm.Prev = null then
-
+         Alarm.Next := Aux;
          Clock.First_Alarm := Alarm;
 
          if Active (Clock) then
@@ -580,8 +564,19 @@ package body System.BB.Time is
          end if;
 
       else
-         pragma Assert (Alarm.Prev.Timeout <= Timeout);
-         Alarm.Prev.Next := Alarm;
+
+         while Aux.Next.Timeout <= Timeout loop
+            Aux := Aux.Next;
+         end loop;
+
+         --  Insert after Aux (always before sentinel)
+
+         Alarm.Next := Aux.Next;
+         Aux.Next := Alarm;
+
+         pragma Assert (Aux.Timeout <= Timeout);
+         pragma Assert (Timeout < Alarm.Next.Timeout);
+
       end if;
 
    end Set;

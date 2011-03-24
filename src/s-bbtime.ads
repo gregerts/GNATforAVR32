@@ -193,6 +193,9 @@ private
 
    type Alarm_Descriptor is
       record
+         Timeout : Time;
+         --  Timeout of alarm or Time'Last if timer is not set
+
          Clock : Clock_Id;
          --  Clock of this alarm
 
@@ -202,11 +205,8 @@ private
          Data : System.Address;
          --  Argument to be given when calling handler
 
-         Timeout : Time;
-         --  Timeout of alarm or Time'First if timer is not set
-
-         Next, Prev : Alarm_Id;
-         --  Next and previous elements when in alarm queue
+         Next : Alarm_Id;
+         --  Next alarm in queue when set, null otherwise
 
       end record;
 
@@ -227,9 +227,6 @@ private
 
          Capacity : Natural;
          --  Remaining alarm capacity, no more alarms allowed if zero
-
-         Sentinel : aliased Alarm_Descriptor;
-         --  Always the last alarm of the clock
 
       end record;
 
