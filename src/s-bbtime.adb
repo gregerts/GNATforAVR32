@@ -125,7 +125,7 @@ package body System.BB.Time is
    pragma Inline_Always (Remaining);
    --  Returns time remaining until first alarm of clock
 
-   procedure Swap_ETC (Clock : Clock_Id);
+   procedure Update_ETC (Clock : Clock_Id);
    --  Swaps ETC to the given clock
 
    procedure Update_Compare;
@@ -252,7 +252,7 @@ package body System.BB.Time is
       pragma Assert (Top = 0);
 
       Stack (0) := First.Active_Clock;
-      Swap_ETC (First.Active_Clock);
+      Update_ETC (First.Active_Clock);
 
    end Context_Switch;
 
@@ -278,7 +278,7 @@ package body System.BB.Time is
       Id.Active_Clock := Idle;
       Stack (0) := Idle;
 
-      Swap_ETC (Idle);
+      Update_ETC (Idle);
 
    end Enter_Idle;
 
@@ -295,7 +295,7 @@ package body System.BB.Time is
       Top         := Top + 1;
       Stack (Top) := Clock;
 
-      Swap_ETC (Clock);
+      Update_ETC (Clock);
 
    end Enter_Interrupt;
 
@@ -456,7 +456,7 @@ package body System.BB.Time is
       Id.Active_Clock := Clock;
       Stack (0) := Clock;
 
-      Swap_ETC (Clock);
+      Update_ETC (Clock);
 
    end Leave_Idle;
 
@@ -471,7 +471,7 @@ package body System.BB.Time is
       Stack (Top) := null;
       Top := Top - 1;
 
-      Swap_ETC (Stack (Top));
+      Update_ETC (Stack (Top));
 
    end Leave_Interrupt;
 
@@ -562,24 +562,6 @@ package body System.BB.Time is
 
    end Set;
 
-   --------------
-   -- Swap_ETC --
-   --------------
-
-   procedure Swap_ETC (Clock : Clock_Id) is
-      Count : constant Word := CPU.Swap_Count (Max_Compare);
-   begin
-      pragma Assert (Clock /= null);
-
-      RTC.Base_Time := RTC.Base_Time + Time (Count);
-      ETC.Base_Time := ETC.Base_Time + Time (Count);
-
-      ETC := Clock;
-
-      Update_Compare;
-
-   end Swap_ETC;
-
    -------------------
    -- Time_Of_Clock --
    -------------------
@@ -654,5 +636,35 @@ package body System.BB.Time is
       end if;
 
    end Update_Compare;
+
+   ----------------
+   -- Update_ETC --
+   ----------------
+
+   procedure Update_ETC (Clock : Clock_Id) is
+      Count : constant Word := CPU.Swap_Count (Max_Compare);
+      Diff : Time_Span;
+
+   begin
+      pragma Assert (Clock /= null);
+
+      RTC.Base_Time := RTC.Base_Time + Time (Count);
+      ETC.Base_Time := ETC.Base_Time + Time (Count);
+
+      ETC := Clock;
+
+      if not Defer_Updates then
+
+         Diff := Time_Span'Min (Remaining (RTC), Remaining (ETC));
+
+         pragma Assert (Diff >= Time_Span (Integer'First));
+
+         if Diff < Max_Compare then
+            CPU.Adjust_Compare (Word (Integer'Max (Integer (Diff), 0)));
+         end if;
+
+      end if;
+
+   end Update_ETC;
 
 end System.BB.Time;
