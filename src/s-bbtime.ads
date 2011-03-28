@@ -54,7 +54,7 @@ package System.BB.Time is
 
    pragma Preelaborate;
 
-   type Time is mod 2 ** 63;
+   type Time is mod 2 ** 64;
    for Time'Size use 64;
    --  Time is represented at this level as a 64-bit natural number
 
@@ -219,7 +219,7 @@ private
    type Clock_Descriptor is
       record
          Base_Time : Time;
-         pragma Volatile (Base_Time);
+         --  pragma Volatile (Base_Time);
          --  Base time of clock
 
          First_Alarm : Alarm_Id;

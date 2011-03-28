@@ -166,6 +166,15 @@ package body System.BB.CPU_Primitives is
                Volatile => True);
    end Wait_For_Interrupts;
 
+   -------------
+   -- Barrier --
+   -------------
+
+   procedure Barrier is
+   begin
+      SMC.Asm ("", Clobber => "memory", Volatile => True);
+   end Barrier;
+
    ---------------
    -- Get_Count --
    ---------------

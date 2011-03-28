@@ -120,6 +120,13 @@ package System.BB.CPU_Primitives is
    pragma Inline_Always (Wait_For_Interrupts);
    --  Sleep until one or more interrupts has occured
 
+   ---------------------
+   -- Memory handling --
+   ---------------------
+
+   procedure Barrier;
+   pragma Inline_Always (Barrier);
+
    ------------------------------
    -- COUNT / COMPARE handling --
    ------------------------------
