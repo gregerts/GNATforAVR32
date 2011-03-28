@@ -128,13 +128,15 @@ package System.BB.Time is
    ----------------------
 
    function Monotonic_Clock return Time;
+   pragma Inline (Monotonic_Clock);
    --  Returns time of the real-time clock
 
    function Time_Of_Clock (Clock : Clock_Id) return Time;
+   pragma Inline (Time_Of_Clock);
    --  Returns the time of the given clock
 
    function Clock (Alarm : Alarm_Id) return Clock_Id;
-   pragma Inline (Clock);
+   pragma Inline_Always (Clock);
    --  Returns the clock of the given alarm
 
    function Interrupt_Clock (Id : Interrupt_ID) return Clock_Id;

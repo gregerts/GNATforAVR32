@@ -62,7 +62,7 @@ package body System.BB.Time is
    -- Local definitions --
    -----------------------
 
-   Max_Compare : constant := CPU.Word'Last / 2 - 1;
+   Max_Compare : constant := CPU.Word'Last - 2**16 + 1;
    --  Maximal value set to COMPARE register
 
    Pool : array (Pool_Index) of aliased Clock_Descriptor;
@@ -104,6 +104,7 @@ package body System.BB.Time is
    --  Returns true when the given clock is active (running)
 
    procedure Alarm_Wrapper (Clock : Clock_Id);
+   pragma Inline (Alarm_Wrapper);
    --  Calls all expired alarm handlers for the given clock
 
    procedure Compare_Handler (Id : Interrupts.Interrupt_ID);
@@ -134,7 +135,7 @@ package body System.BB.Time is
 
    function Active (Clock : Clock_Id) return Boolean is
    begin
-      return Clock = RTC or Clock = ETC;
+      return Clock = RTC or else Clock = ETC;
    end Active;
 
    -------------------
@@ -230,8 +231,8 @@ package body System.BB.Time is
 
       Defer_Updates := True;
 
-      Alarm_Wrapper (Stack (Top - 1));
       Alarm_Wrapper (RTC);
+      Alarm_Wrapper (Stack (Top - 1));
 
       Defer_Updates := False;
 
@@ -634,7 +635,8 @@ package body System.BB.Time is
       RTC.Base_Time := RTC.Base_Time + Time (Count);
       ETC.Base_Time := ETC.Base_Time + Time (Count);
 
-      ETC  := Clock;
+      ETC := Clock;
+
       Diff := Time'Min (Remaining (RTC), Remaining (Clock));
 
       if Diff < Max_Compare then

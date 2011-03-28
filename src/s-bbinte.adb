@@ -186,12 +186,15 @@ package body System.BB.Interrupts is
       Previous_Interrupt : constant Interrupt_ID :=
         Interrupt_Being_Handled;
 
+      Handler : constant Interrupt_Handler :=
+        Interrupt_Handlers_Table (Interrupt);
+
    begin
       --  This must be an external interrupt
       pragma Assert (Level > 0);
 
       --  Return if no handler is registered for this interrupt
-      if Interrupt_Handlers_Table (Interrupt) = null then
+      if Handler = null then
          return;
       end if;
 
@@ -210,7 +213,7 @@ package body System.BB.Interrupts is
       CPU_Primitives.Restore_Interrupts;
 
       --  Call the user handler
-      Interrupt_Handlers_Table (Interrupt).all (Interrupt);
+      Handler.all (Interrupt);
 
       --  Restore interrupts
       CPU_Primitives.Disable_Interrupts;
