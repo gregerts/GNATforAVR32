@@ -84,8 +84,6 @@ begin
    ETP.Register (T_D'Identity);
    ETP.Register (Current_Task);
    ETP.Register (COMPARE);
-   ETP.Register (TC_1);
-   ETP.Register (TC_2);
    ETP.Register (S_I.Identity);
 
 end Test;

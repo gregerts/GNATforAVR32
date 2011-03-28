@@ -2,7 +2,7 @@
 
 C = 60e6;
 
-data = receive(1000);
+data = receive(100);
 
 [l s] = size(data);
 

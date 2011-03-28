@@ -16,7 +16,7 @@ package body Test is
    type Data is mod 2**16;
    for Data'Size use 16;
 
-   type Data_Array is array (1 .. N, 1 .. 4) of Data;
+   type Data_Array is array (1 .. N, 1 .. 3) of Data;
    type Data_Access is access all Data_Array;
 
    function To_Count is new Ada.Unchecked_Conversion (Time, Count);
@@ -68,8 +68,7 @@ package body Test is
 
          D (L, 1) := Data (To_Count (Now - Next));
          D (L, 2) := Data (X);
-         D (L, 3) := Data (To_Count (Next) mod 2**16);
-         D (L, 4) := D (L, 1) xor D (L, 2) xor D (L, 3);
+         D (L, 3) := D (L, 1) xor D (L, 2);
 
          L := L + 1;
 

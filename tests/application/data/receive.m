@@ -7,10 +7,10 @@ function data = receive (n)
   system("avr32program reset -r 2> /dev/null");
 
   % Configure USART to 56700 bauds, ignore CR
-  system("stty -F /dev/ttyS0 57600 igncr");
+  system("stty -F /dev/ttyUSB0 115200 igncr");
 
   % Open USART file
-  usart = fopen("/dev/ttyS0", "r");
+  usart = fopen("/dev/ttyUSB0", "r");
 
   % Sync with device
   while (!strcmp("SYNC",fgetl(usart))); endwhile
