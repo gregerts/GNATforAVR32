@@ -57,14 +57,13 @@ package System.BB.Interrupts is
    Max_Interrupt : constant := SBP.Interrupts;
    --  Number of interrupts vary among different implimentations.
 
-   subtype Interrupt_Level is Natural range 0 .. SBP.Interrupt_Levels;
-   --  Type that defines the range of possible interrupt levels.
+   type Interrupt_Level is range 0 .. SBP.Interrupt_Levels - 1;
+   for Interrupt_Level'Size use 8;
+   --  Type that defines the range of hardware interrupt levels.
 
-   subtype Interrupt_ID is Natural range 0 .. Max_Interrupt;
-   --  Type that defines the range of the interrupt ID.
-
-   No_Level : constant Interrupt_Level := 0;
-   --  Special value indicating no interrupt level.
+   type Interrupt_ID is range 0 .. Max_Interrupt;
+   for Interrupt_ID'Size use 8;
+   --  Type that defines the range of the interrupt IDs.
 
    No_Interrupt : constant Interrupt_ID := 0;
    --  Special value indicating no interrupt.

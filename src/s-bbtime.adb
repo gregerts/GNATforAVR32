@@ -46,7 +46,9 @@ with System.BB.Threads;
 package body System.BB.Time is
 
    package CPU renames System.BB.CPU_Primitives;
+
    use type CPU.Word;
+   use type Interrupts.Interrupt_ID;
 
    type Stack_Index is new Interrupts.Interrupt_Level;
 

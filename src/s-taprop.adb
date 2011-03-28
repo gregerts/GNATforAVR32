@@ -236,6 +236,7 @@ package body System.Task_Primitives.Operations is
    ---------------------
 
    function Is_Task_Context return Boolean is
+      use type System.OS_Interface.Interrupt_ID;
    begin
       return System.OS_Interface.Current_Interrupt = No_Interrupt;
    end Is_Task_Context;

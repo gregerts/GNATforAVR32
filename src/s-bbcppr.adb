@@ -130,7 +130,7 @@ package body System.BB.CPU_Primitives is
      (Level : System.BB.Interrupts.Interrupt_Level)
    is
       use Interfaces;
-      Mask : constant Unsigned_32 := Shift_Left (2, Level) - 2;
+      Mask : constant Unsigned_32 := Shift_Left (2, Integer (Level)) - 2;
       Aux : Word;
    begin
       SMC.Asm ("mfsr    %0, 0"         & ASCII.LF & ASCII.HT &

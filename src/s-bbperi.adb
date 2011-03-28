@@ -41,42 +41,63 @@ pragma Restrictions (No_Elaboration_Code);
 
 with Ada.Unchecked_Conversion;
 with Interfaces;
-with System.Machine_Code;
 with System.BB.Peripherals.Registers;
 
 use System.BB.Peripherals.Registers;
 
 package body System.BB.Peripherals is
 
-   package SMC renames System.Machine_Code;
-
    use type SBI.Interrupt_Level;
    use type SBI.Interrupt_ID;
+
+   subtype Interrupt_Group is Natural range 0 .. (SBP.Interrupt_Groups - 1);
+   subtype Interrupt_Line is Natural range 0 .. 15;
+
+   --------------------------------
+   -- Interrupt ID look-up table --
+   --------------------------------
+
+   type Interrupt_ID_Table is
+     array (Interrupt_Group, Interrupt_Line) of SBI.Interrupt_ID;
+
+   pragma Suppress_Initialization (Interrupt_ID_Table);
+   pragma Pack (Interrupt_ID_Table);
+
+   To_Interrupt_ID : constant Interrupt_ID_Table :=
+     (0 => (COMPARE, others => 0),
+      1 => (EIM_0, EIM_1, EIM_2, EIM_3, EIM_4,
+            RTC, PM, FREQM, others => 0),
+      2 => (GPIO_0, GPIO_1, GPIO_2, GPIO_3, GPIO_4, GPIO_5, GPIO_6, GPIO_7,
+            GPIO_8, GPIO_9, GPIO_10, GPIO_11, GPIO_12, GPIO_13,
+            others => 0),
+      3 => (PDCA_0, PDCA_1, PDCA_2, PDCA_3, PDCA_4, PDCA_5, PDCA_6, PDCA_7,
+            PDCA_8, PDCA_9, PDCA_10, PDCA_11, PDCA_12, PDCA_13, PDCA_14,
+            others => 0),
+      4 => (FLASHC, others => 0),
+      5 => (USART_0, others => 0),
+      6 => (USART_1, others => 0),
+      7 => (USART_2, others => 0),
+      8 => (USART_3, others => 0),
+      9 => (SPI_0, others => 0),
+      10 => (SPI_1, others => 0),
+      11 => (TWI, others => 0),
+      12 => (PWM, others => 0),
+      13 => (SSC, others => 0),
+      14 => (TC_0, TC_1, TC_2, others => 0),
+      15 => (ADC, others => 0),
+      16 => (MACB, others => 0),
+      17 => (USB, others => 0),
+      18 => (SDRAMC, others => 0));
+
+   pragma Export (ASM, To_Interrupt_ID, "to_interrupt_id");
 
    -------------------------------------------
    -- Mapping of interrupt groups to levels --
    -------------------------------------------
 
-   Group_To_Level : constant array (Interrupt_Group) of SBI.Interrupt_Level
-     := (Group_0_Level,
-         Group_1_Level,
-         Group_2_Level,
-         Group_3_Level,
-         Group_4_Level,
-         Group_5_Level,
-         Group_6_Level,
-         Group_7_Level,
-         Group_8_Level,
-         Group_9_Level,
-         Group_10_Level,
-         Group_11_Level,
-         Group_12_Level,
-         Group_13_Level,
-         Group_14_Level,
-         Group_15_Level,
-         Group_16_Level,
-         Group_17_Level,
-         Group_18_Level);
+   Group_To_Level : constant
+     array (Interrupt_Group) of SBI.Interrupt_Level :=
+     (0 | 14 => 3, others => 0);
 
    ------------------------------------------------
    -- Constants used for configurating registers --
@@ -104,9 +125,6 @@ package body System.BB.Peripherals is
 
    Priorities : aliased Interrupt_Priority_Array;
    for Priorities'Address use Interrupt_Priority_Address;
-
-   Causes : aliased Interrupt_Cause_Array;
-   for Causes'Address use Interrupt_Cause_Address;
 
    USART : aliased USART_Channel_Interface;
    for USART'Address use USART_Channel_1_Address;
@@ -173,11 +191,9 @@ package body System.BB.Peripherals is
    procedure Initialize_Power_Manager is
 
       Main : Main_Clock_Control_Register := Power_Manager.Main;
-      Peripheral : Scaler_3;
 
       pragma Warnings (Off, SBP.Flash_Wait_State);
       pragma Warnings (Off, SBP.Clock_Multiplication);
-      pragma Warnings (Off, SBP.Peripheral_Division);
 
    begin
 
@@ -192,45 +208,6 @@ package body System.BB.Peripherals is
       while not Power_Manager.Status.Osc_0_Ready loop
          null;
       end loop;
-
-      --  Switch to Oscillator 0
-
-      Main.Clock_Select := Select_Osc_0;
-      Power_Manager.Main := Main;
-
-      --  Setup PBA and PBB clock scaling
-
-      if SBP.Peripheral_Division > 1 then
-
-         case SBP.Peripheral_Division is
-            when 2 =>
-               Peripheral := 0;
-            when 4 =>
-               Peripheral := 1;
-            when 8 =>
-               Peripheral := 2;
-            when 16 =>
-               Peripheral := 3;
-            when 32 =>
-               Peripheral := 4;
-            when 64 =>
-               Peripheral := 5;
-            when 128 =>
-               Peripheral := 6;
-            when 256 =>
-               Peripheral := 7;
-            when others =>
-               Peripheral := 7;
-         end case;
-
-         Power_Manager.Clock_Select :=
-           (PBA_Div    => True,
-            PBA_Select => Peripheral,
-            PBB_Div    => True,
-            PBB_Select => Peripheral,
-            others     => <>);
-
-      end if;
 
       --  Enable PPL 0 in necessary
 
@@ -258,7 +235,15 @@ package body System.BB.Peripherals is
          end if;
 
          --  Switch to PPL 0
+
          Main.Clock_Select  := Select_PPL_0;
+         Power_Manager.Main := Main;
+
+      else
+
+         --  Switch to Oscillator 0
+
+         Main.Clock_Select := Select_Osc_0;
          Power_Manager.Main := Main;
 
       end if;
@@ -270,77 +255,20 @@ package body System.BB.Peripherals is
    ---------------------------
 
    procedure Initialize_Interrupts is
-
-      Level       : SBI.Interrupt_Level;
-      Priority    : Interrupt_Priority_Register;
+      Pri : Interrupt_Priority_Register;
       Autovectors : Autovector_Array;
-
       pragma Import (Asm, Autovectors, "autovectors");
-
    begin
+
       --  Initialize all groups to their predefined level.
+
       for I in Interrupt_Group loop
-         Level               := Group_To_Level (I);
-         Priority.Level      := Scaler_2  (Level) - 1;
-         Priority.Autovector := Scaler_14 (Autovectors (Level));
-         Priorities (I)      := Priority;
+         Pri.Level      := Scaler_2 (Group_To_Level (I));
+         Pri.Autovector := Scaler_14 (Autovectors (Group_To_Level (I)));
+         Priorities (I) := Pri;
       end loop;
 
    end Initialize_Interrupts;
-
-   ----------------------
-   -- Get_Interrupt_ID --
-   ----------------------
-
-   function Get_Interrupt_ID
-     (Level : SBI.Interrupt_Level)
-      return SBI.Interrupt_ID
-   is
-      Interrupt : SBI.Interrupt_ID;
-      Group     : Interrupt_Group;
-      Line      : Natural;
-      Aux       : Scaler_32;
-   begin
-      --  Assert that it is a external interrupt level.
-      pragma Assert (Level > 0);
-
-      --  Get Group from Interrupt Cause Register.
-      Group := Interrupt_Group (Causes (4 - Level).Cause);
-
-      --  Get Line from Interrupt Request Register by subtracting the
-      --  number of leading zeros in request register from 32.
-      Aux := Requests (Group);
-
-      SMC.Asm ("clz %0, %1",
-               Inputs => Scaler_32'Asm_Input ("r", Aux),
-               Outputs => Scaler_32'Asm_Output ("=r", Aux));
-
-      Line := Natural (32 - Aux);
-
-      --  Determine Interrupt_ID from Group and Line.
-      if Line > 0 then
-         case Group is
-            when 0 =>
-               Interrupt := COMPARE;
-            when 1 =>
-               Interrupt := EIM_0 + SBI.Interrupt_ID (Line) - 1;
-            when 2 =>
-               Interrupt := GPIO_0 + SBI.Interrupt_ID (Line) - 1;
-            when 3 =>
-               Interrupt := PDCA_0 + SBI.Interrupt_ID (Line) - 1;
-            when 4 .. 13 =>
-               Interrupt := FLASHC + SBI.Interrupt_ID (Group - 4);
-            when 14 =>
-               Interrupt := TC_0 + SBI.Interrupt_ID (Line) - 1;
-            when 15 .. 18 =>
-               Interrupt := ADC + SBI.Interrupt_ID (Group - 15);
-         end case;
-      else
-         Interrupt := SBI.No_Interrupt;
-      end if;
-
-      return Interrupt;
-   end Get_Interrupt_ID;
 
    --------------
    -- To_Level --
@@ -349,29 +277,18 @@ package body System.BB.Peripherals is
    function To_Level
      (Interrupt : SBI.Interrupt_ID) return SBI.Interrupt_Level
    is
-      Group : Interrupt_Group;
    begin
-      --  This is a UC3A specific mapping of interrupts to groups.
-      case (Interrupt) is
-         when ADC .. SDRAMC =>
-            Group := 15 + Interrupt_Group (Interrupt - ADC);
-         when TC_0 .. TC_2 =>
-            Group := 14;
-         when FLASHC .. SSC =>
-            Group := 4 + Interrupt_Group (Interrupt - FLASHC);
-         when PDCA_0 .. PDCA_14 =>
-            Group := 3;
-         when GPIO_0 .. GPIO_13 =>
-            Group := 2;
-         when EIM_0 .. FREQM =>
-            Group := 1;
-         when COMPARE =>
-            Group := 0;
-         when others =>
-            Group := 0;
-      end case;
 
-      return Group_To_Level (Group);
+      pragma Assert (Interrupt /= SBI.No_Interrupt);
+
+      for I in Interrupt_Group loop
+         if To_Interrupt_ID (I, 0) > Interrupt then
+            return Group_To_Level (I - 1);
+         end if;
+      end loop;
+
+      return SBI.Interrupt_Level'First;
+
    end To_Level;
 
    ------------------------
@@ -381,7 +298,7 @@ package body System.BB.Peripherals is
    procedure Initialize_Console is
 
       Baud : constant := SBP.USART_Baudrate;
-      Freq : constant := Peripheral_Frequency;
+      Freq : constant := Main_Clock_Frequency;
 
       pragma Warnings (Off, Baud);
       pragma Warnings (Off, Freq);

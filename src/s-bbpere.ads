@@ -108,9 +108,6 @@ package System.BB.Peripherals.Registers is
    Interrupt_Request_Address :
      constant System.Address := System'To_Address (16#FFFF0800# + 256);
 
-   Interrupt_Cause_Address :
-     constant System.Address := System'To_Address (16#FFFF0800# + 512);
-
    Power_Manager_Address :
      constant System.Address := System'To_Address (16#FFFF0C00#);
 
@@ -427,38 +424,6 @@ package System.BB.Peripherals.Registers is
 
    pragma Atomic_Components (Interrupt_Priority_Array);
    pragma Suppress_Initialization (Interrupt_Priority_Array);
-
-   ---------------------------------
-   -- Interrupt Cause Register --
-   ---------------------------------
-
-   type Interrupt_Cause_Register is
-      record
-         Cause    : Scaler_6;
-         Unused_A : Scaler_2;
-         Unused_B : Scaler_24;
-      end record;
-
-   for Interrupt_Cause_Register use
-      record
-         Cause    at 0 range 26 .. 31;
-         Unused_A at 0 range 24 .. 25;
-         Unused_B at 0 range 0 .. 23;
-      end record;
-
-   for Interrupt_Cause_Register'Size use 32;
-
-   pragma Suppress_Initialization (Interrupt_Cause_Register);
-
-   ---------------------------
-   -- Interrupt Cause Array --
-   ---------------------------
-
-   type Interrupt_Cause_Array is
-     array (0 .. 3) of Interrupt_Cause_Register;
-
-   pragma Atomic_Components (Interrupt_Cause_Array);
-   pragma Suppress_Initialization (Interrupt_Cause_Array);
 
    ----------------------------
    -- USART Control Register --
