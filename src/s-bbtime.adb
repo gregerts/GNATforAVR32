@@ -62,7 +62,7 @@ package body System.BB.Time is
    -- Local definitions --
    -----------------------
 
-   Max_Compare : constant := CPU.Word'Last - 2**16 + 1;
+   Max_Compare : constant := CPU.Word'Last - 2 ** 16;
    --  Maximal value set to COMPARE register
 
    Pool : array (Pool_Index) of aliased Clock_Descriptor;
@@ -120,6 +120,7 @@ package body System.BB.Time is
    --  Initializes the given clock
 
    function Remaining (Clock : Clock_Id) return Time;
+   pragma Pure_Function (Remaining);
    pragma Inline_Always (Remaining);
    --  Returns shortes remaining time until A or B timeout
 
@@ -378,7 +379,7 @@ package body System.BB.Time is
    -----------------------
 
    procedure Initialize_Timers (Environment_Thread : Thread_Id) is
-      Count : constant CPU.Word := CPU.Swap_Count (Max_Compare);
+      Count : constant CPU.Word := CPU.Swap_Count;
    begin
       --  Initialize sentinel alarm
 
@@ -406,6 +407,10 @@ package body System.BB.Time is
 
       ETC := Environment_Thread.Clock'Access;
       Stack (0) := ETC;
+
+      --  Update COMPARE for first time
+
+      Update_Compare;
 
    end Initialize_Timers;
 
@@ -626,7 +631,7 @@ package body System.BB.Time is
    ----------------
 
    procedure Update_ETC (Clock : Clock_Id) is
-      Count : constant CPU.Word := CPU.Swap_Count (Max_Compare);
+      Count : constant CPU.Word := CPU.Swap_Count;
       Diff : Time;
 
    begin
@@ -639,7 +644,9 @@ package body System.BB.Time is
 
       Diff := Time'Min (Remaining (RTC), Remaining (Clock));
 
-      if Diff < Max_Compare then
+      if Diff > Max_Compare then
+         CPU.Adjust_Compare (Max_Compare);
+      else
          CPU.Adjust_Compare (CPU.Word (Diff));
       end if;
 
