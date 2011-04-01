@@ -105,14 +105,6 @@ package System.BB.Time is
    -- Initialization --
    --------------------
 
-   procedure Initialize_Alarm
-     (Alarm   : Alarm_Id;
-      Clock   : Clock_Id;
-      Handler : not null Alarm_Handler;
-      Data    : System.Address;
-      Success : out Boolean);
-   --  Initializes alarm with the given clock, handler and data
-
    procedure Initialize_Interrupt_Clock (Id : Interrupt_ID);
    --  Initializes the clock for the given interrupt ID
 
@@ -127,15 +119,7 @@ package System.BB.Time is
    -- Clock operations --
    ----------------------
 
-   function Monotonic_Clock return Time;
-   pragma Inline (Monotonic_Clock);
-   --  Returns time of the real-time clock
-
-   function Time_Of_Clock (Clock : Clock_Id) return Time;
-   pragma Inline (Time_Of_Clock);
-   --  Returns the time of the given clock
-
-   function Clock (Alarm : Alarm_Id) return Clock_Id;
+   function Clock (Alarm : not null Alarm_Id) return Clock_Id;
    pragma Inline_Always (Clock);
    --  Returns the clock of the given alarm
 
@@ -143,9 +127,17 @@ package System.BB.Time is
    pragma Inline_Always (Interrupt_Clock);
    --  Returns the execution time clock for the given interrupt ID
 
+   function Monotonic_Clock return Time;
+   pragma Inline (Monotonic_Clock);
+   --  Returns time of the real-time clock
+
    function Real_Time_Clock return Clock_Id;
    pragma Inline_Always (Real_Time_Clock);
    --  Returns the real time clock
+
+   function Time_Of_Clock (Clock : not null Clock_Id) return Time;
+   pragma Inline (Time_Of_Clock);
+   --  Returns the time of the given clock
 
    function Thread_Clock (Id : Thread_Id) return Clock_Id;
    pragma Inline_Always (Thread_Clock);
@@ -155,15 +147,23 @@ package System.BB.Time is
    -- Alarm operations --
    ----------------------
 
-   procedure Cancel (Alarm : Alarm_Id);
+   procedure Initialize_Alarm
+     (Alarm   : not null Alarm_Id;
+      Clock   : not null Clock_Id;
+      Handler : not null Alarm_Handler;
+      Data    : System.Address;
+      Success : out Boolean);
+   --  Initializes alarm with the given clock, handler and data
+
+   procedure Cancel (Alarm : not null Alarm_Id);
    --  Cancel alarm timer
 
    procedure Set
-     (Alarm   : Alarm_Id;
+     (Alarm   : not null Alarm_Id;
       Timeout : Time);
    --  Set alarm timer
 
-   function Time_Of_Alarm (Alarm : Alarm_Id) return Time;
+   function Time_Of_Alarm (Alarm : not null Alarm_Id) return Time;
    pragma Inline (Time_Of_Alarm);
    --  Get expiration time of alarm
 
@@ -190,6 +190,26 @@ package System.BB.Time is
 private
 
    ----------------------
+   -- Clock_Descriptor --
+   ----------------------
+
+   type Clock_Descriptor is
+      record
+         Base_Time : Time;
+         --  pragma Volatile (Base_Time);
+         --  Base time of clock
+
+         First_Alarm : Alarm_Id;
+         --  Points to the first alarm of this clock
+
+         Capacity : Natural;
+         --  Remaining alarm capacity, no more alarms allowed if zero
+
+      end record;
+
+   pragma Suppress_Initialization (Clock_Descriptor);
+
+   ----------------------
    -- Alarm_Descriptor --
    ----------------------
 
@@ -213,25 +233,5 @@ private
       end record;
 
    pragma Suppress_Initialization (Alarm_Descriptor);
-
-   ----------------------
-   -- Clock_Descriptor --
-   ----------------------
-
-   type Clock_Descriptor is
-      record
-         Base_Time : Time;
-         --  pragma Volatile (Base_Time);
-         --  Base time of clock
-
-         First_Alarm : Alarm_Id;
-         --  Points to the first alarm of this clock
-
-         Capacity : Natural;
-         --  Remaining alarm capacity, no more alarms allowed if zero
-
-      end record;
-
-   pragma Suppress_Initialization (Clock_Descriptor);
 
 end System.BB.Time;

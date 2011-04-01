@@ -89,7 +89,7 @@ package body System.BB.Time is
    Idle : constant Clock_Id := Pool (1)'Access;
    --  Clock of the pseudo idle thread
 
-   Sentinel : aliased Alarm_Descriptor;
+   Sentinel : aliased Alarm_Descriptor := (Timeout => Time'Last, others => <>);
    --  Always the last alarm in the queue of every clock
 
    Defer_Updates : Boolean := False;
@@ -151,9 +151,13 @@ package body System.BB.Time is
 
       pragma Assert (Clock /= ETC);
 
+      --  Only the real time clock can be active
+
       if Clock = RTC then
          Now := Now + Time (CPU.Get_Count);
       end if;
+
+      --  Call all expired alarm handlers
 
       while Alarm.Timeout <= Now loop
 
@@ -172,11 +176,13 @@ package body System.BB.Time is
    -- Cancel --
    ------------
 
-   procedure Cancel (Alarm : Alarm_Id) is
+   procedure Cancel (Alarm : not null Alarm_Id) is
       Clock : constant Clock_Id := Alarm.Clock;
       Aux : Alarm_Id;
 
    begin
+
+      pragma Assert (Clock /= null);
 
       --  Nothing to be done if the alarm is not set
 
@@ -190,7 +196,7 @@ package body System.BB.Time is
 
          Clock.First_Alarm := Alarm.Next;
 
-         if Active (Clock) then
+         if not Defer_Updates and then Active (Clock) then
             Update_Compare;
          end if;
 
@@ -214,7 +220,7 @@ package body System.BB.Time is
    -- Clock --
    -----------
 
-   function Clock (Alarm : Alarm_Id) return Clock_Id is
+   function Clock (Alarm : not null Alarm_Id) return Clock_Id is
    begin
       return Alarm.Clock;
    end Clock;
@@ -228,7 +234,7 @@ package body System.BB.Time is
 
       pragma Assert (Id = Peripherals.COMPARE);
 
-      --  Call alarm handlers while deferring updates to COMPARE
+      --  Call alarm handlers while deferring COMPARE updates
 
       Defer_Updates := True;
 
@@ -291,16 +297,15 @@ package body System.BB.Time is
    ----------------------
 
    procedure Initialize_Alarm
-     (Alarm   : Alarm_Id;
-      Clock   : Clock_Id;
+     (Alarm   : not null Alarm_Id;
+      Clock   : not null Clock_Id;
       Handler : not null Alarm_Handler;
       Data    : System.Address;
       Success : out Boolean)
    is
    begin
-      pragma Assert (Alarm /= null);
 
-      if Clock /= null and then Clock.Capacity > 0 then
+      if Clock.Capacity > 0 then
 
          Clock.Capacity := Clock.Capacity - 1;
 
@@ -379,16 +384,11 @@ package body System.BB.Time is
    -----------------------
 
    procedure Initialize_Timers (Environment_Thread : Thread_Id) is
-      Count : constant CPU.Word := CPU.Swap_Count;
+      Clock : constant Clock_Id := Environment_Thread.Clock'Access;
    begin
-      --  Initialize sentinel alarm
-
-      Sentinel.Timeout := Time'Last;
-
       --  Initialize execution time clock of environment thread
 
       Initialize_Thread_Clock (Environment_Thread);
-      Environment_Thread.Clock.Base_Time := Time (Count);
 
       --  Initialize execution time clock for idling, no alarms
 
@@ -397,20 +397,17 @@ package body System.BB.Time is
       --  Initialize real-time clock, no limit on alarms
 
       Initialize_Clock (RTC, Natural'Last);
-      RTC.Base_Time := Time (Count);
-
-      --  Install compare handler
-
-      Interrupts.Attach_Handler (Compare_Handler'Access, Peripherals.COMPARE);
 
       --  Activate clock of environment thread
 
-      ETC := Environment_Thread.Clock'Access;
-      Stack (0) := ETC;
+      ETC := Clock;
+      Stack (0) := Clock;
 
-      --  Update COMPARE for first time
+      Update_ETC (Clock);
 
-      Update_Compare;
+      --  Install COMPATE interrupt handler
+
+      Interrupts.Attach_Handler (Compare_Handler'Access, Peripherals.COMPARE);
 
    end Initialize_Timers;
 
@@ -494,7 +491,7 @@ package body System.BB.Time is
    ---------
 
    procedure Set
-     (Alarm   : Alarm_Id;
+     (Alarm   : not null Alarm_Id;
       Timeout : Time)
    is
       Clock : constant Clock_Id := Alarm.Clock;
@@ -522,7 +519,7 @@ package body System.BB.Time is
          Alarm.Next := Clock.First_Alarm;
          Clock.First_Alarm := Alarm;
 
-         if Active (Clock) then
+         if not Defer_Updates and then Active (Clock) then
             Update_Compare;
          end if;
 
@@ -552,12 +549,11 @@ package body System.BB.Time is
    -- Time_Of_Clock --
    -------------------
 
-   function Time_Of_Clock (Clock : Clock_Id) return Time is
+   function Time_Of_Clock (Clock : not null Clock_Id) return Time is
       Base  : Time;
       Count : CPU.Word;
 
    begin
-      pragma Assert (Clock /= null);
 
       --  If clock is not active return base time
 
@@ -595,7 +591,7 @@ package body System.BB.Time is
    -- Time_Of_Alarm --
    -------------------
 
-   function Time_Of_Alarm (Alarm : Alarm_Id) return Time is
+   function Time_Of_Alarm (Alarm : not null Alarm_Id) return Time is
    begin
       if Alarm.Next /= null then
          return Alarm.Timeout;
@@ -609,21 +605,10 @@ package body System.BB.Time is
    --------------------
 
    procedure Update_Compare is
-      Diff : Time;
+      Diff : constant Time :=
+        Time'Min (Time'Min (Remaining (RTC), Remaining (ETC)), Max_Compare);
    begin
-
-      if not Defer_Updates then
-
-         Diff := Time'Min (Remaining (RTC), Remaining (ETC));
-
-         if Diff > Max_Compare then
-            CPU.Adjust_Compare (Max_Compare);
-         else
-            CPU.Adjust_Compare (CPU.Word (Diff));
-         end if;
-
-      end if;
-
+      CPU.Adjust_Compare (CPU.Word (Diff));
    end Update_Compare;
 
    ----------------
@@ -632,8 +617,6 @@ package body System.BB.Time is
 
    procedure Update_ETC (Clock : Clock_Id) is
       Count : constant CPU.Word := CPU.Swap_Count;
-      Diff : Time;
-
    begin
       pragma Assert (Clock /= null);
 
@@ -642,13 +625,7 @@ package body System.BB.Time is
 
       ETC := Clock;
 
-      Diff := Time'Min (Remaining (RTC), Remaining (Clock));
-
-      if Diff > Max_Compare then
-         CPU.Adjust_Compare (Max_Compare);
-      else
-         CPU.Adjust_Compare (CPU.Word (Diff));
-      end if;
+      Update_Compare;
 
    end Update_ETC;
 
