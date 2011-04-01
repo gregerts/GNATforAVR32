@@ -12,9 +12,11 @@ project Test is
 
   package Compiler is
      for Default_Switches ("Ada")
-       use ("-gnata",
+       use ("-gnatn",
             "-g",
-            "-O2");
+            "-O2",
+	    "-march=ucr1",
+	    "-mpart=uc3a0512");
   end Compiler;
 
   package Linker is

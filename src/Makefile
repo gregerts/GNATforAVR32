@@ -2,6 +2,10 @@
 INSTALL_DIR = ../build
 RTS_NAME    = ravenscar
 
+# Machine settings
+MARCH = ucr1
+MPART = uc3a0512
+
 # Source files for Ravenscar LIBGNAT
 LIBGNAT_ADA_SRC = \
 system.ads   \
@@ -78,8 +82,8 @@ LIBGNARL_ALIS = $(LIBGNARL_SRC:.ads=.ali)
 ADA_SRC = $(LIBGNAT_ADA_SRC) $(LIBGNARL_SRC)
 
 # Compiler flags
-ADA_FLAGS = -O2 -gnatapg -g
-ASM_FLAGS =
+ADA_FLAGS = -O2 -gnatnpg -g -march=$(MARCH) -mpart=$(MPART)
+ASM_FLAGS = -march=$(MARCH) -mpart=$(MPART)
 
 # Utils
 CC	    = /usr/local/bin/avr32-gcc
@@ -111,7 +115,7 @@ libgnarl.a: $(LIBGNARL_OBJS) $(LIBGNARL_ALIS)
 	$(RANLIB) $@
 
 ada_crt0.o: ada_crt0.S
-	$(CC) -c ada_crt0.S
+	$(CC) -c $(ASM_FLAGS) ada_crt0.S
 
 s-traceb.ali s-traceb.o: s-traceb.adb s-traceb.ads
 	$(CC) -c $(ADA_FLAGS) -fno-optimize-sibling-calls s-traceb.adb
