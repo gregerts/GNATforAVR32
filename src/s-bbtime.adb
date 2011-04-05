@@ -72,16 +72,16 @@ package body System.BB.Time is
    --  Pointing to last allocated clock in pool
 
    Lookup : array (Interrupt_ID) of Pool_Index;
-   --  Array for translating interrupt IDs to interrupt clock index
+   --  Array for translating interrupt IDs to pool index
 
    Stack : Clock_Stack;
-   --  Stack of timers
+   --  Stack of interrupted timers
 
-   Top : Stack_Index;
-   --  Index of stack top
+   Top : Stack_Index := 0;
+   --  Index of free place on stack
 
    ETC : Clock_Id;
-   --  The currently running execution time clock = Stack (Top)
+   --  The currently running execution time clock
 
    RTC : constant Clock_Id := Pool (0)'Access;
    --  The real-time clock
@@ -251,11 +251,7 @@ package body System.BB.Time is
 
    procedure Context_Switch (First : Thread_Id) is
    begin
-      pragma Assert (Top = 0);
-
-      Stack (0) := First.Active_Clock;
       Update_ETC (First.Active_Clock);
-
    end Context_Switch;
 
    ----------------
@@ -264,12 +260,10 @@ package body System.BB.Time is
 
    procedure Enter_Idle (Id : Thread_Id) is
    begin
-      pragma Assert (Top = 0);
       pragma Assert (ETC = Id.Active_Clock);
       pragma Assert (Id.Active_Clock = Id.Clock'Access);
 
       Id.Active_Clock := Idle;
-      Stack (0) := Idle;
 
       Update_ETC (Idle);
 
@@ -280,15 +274,13 @@ package body System.BB.Time is
    ---------------------
 
    procedure Enter_Interrupt (Id : Interrupt_ID) is
-      Clock : constant Clock_Id := Pool (Lookup (Id))'Access;
    begin
       pragma Assert (Top < Stack'Last);
-      pragma Assert (Lookup (Id) > 0);
 
-      Top         := Top + 1;
-      Stack (Top) := Clock;
+      Stack (Top) := ETC;
+      Top := Top + 1;
 
-      Update_ETC (Clock);
+      Update_ETC (Interrupt_Clock (Id));
 
    end Enter_Interrupt;
 
@@ -401,8 +393,6 @@ package body System.BB.Time is
       --  Activate clock of environment thread
 
       ETC := Clock;
-      Stack (0) := Clock;
-
       Update_ETC (Clock);
 
       --  Install COMPATE interrupt handler
@@ -432,12 +422,10 @@ package body System.BB.Time is
    procedure Leave_Idle (Id : Thread_Id) is
       Clock : constant Clock_Id := Id.Clock'Access;
    begin
-      pragma Assert (Top = 0);
       pragma Assert (ETC = Idle);
       pragma Assert (Id.Active_Clock = Idle);
 
       Id.Active_Clock := Clock;
-      Stack (0) := Clock;
 
       Update_ETC (Clock);
 
@@ -451,7 +439,6 @@ package body System.BB.Time is
    begin
       pragma Assert (Top > 0);
 
-      Stack (Top) := null;
       Top := Top - 1;
 
       Update_ETC (Stack (Top));
