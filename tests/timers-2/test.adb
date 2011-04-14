@@ -21,20 +21,25 @@ package body Test is
       end Initialize;
 
       procedure Handler (Event : in out Timing_Event) is
+	 Now : Time := Clock;
       begin
+	 pragma Assert (Now > Next);
+	 pragma Assert ((Now - Next) < Microseconds (50));
+	 
          Next := Next + Milliseconds (Period);
          Toggle_Pin (Port, Pin);
          Event.Set_Handler (Next, Handler'Access);
+	 
       end Handler;
 
    end Worker;
 
    --  Workers
 
-   A : Worker (Port_B, 27, 1000);
-   B : Worker (Port_B, 28,  500);
-   C : Worker (Port_B, 29,  250);
-   D : Worker (Port_B, 30,  125);
+   A : Worker (Port_B, 27, 100);
+   B : Worker (Port_B, 28, 5);
+   C : Worker (Port_B, 29, 3);
+   D : Worker (Port_B, 30, 2);
 
 begin
 
