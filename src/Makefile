@@ -82,7 +82,7 @@ LIBGNARL_ALIS = $(LIBGNARL_SRC:.ads=.ali)
 ADA_SRC = $(LIBGNAT_ADA_SRC) $(LIBGNARL_SRC)
 
 # Compiler flags
-ADA_FLAGS = -O2 -gnatnpg -g -march=$(MARCH) -mpart=$(MPART)
+ADA_FLAGS = -O2 -gnatanpg -g -march=$(MARCH) -mpart=$(MPART)
 ASM_FLAGS = -march=$(MARCH) -mpart=$(MPART)
 
 # Utils
