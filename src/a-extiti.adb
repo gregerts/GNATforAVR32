@@ -197,10 +197,10 @@ package body Ada.Execution_Time.Timers is
 
       TM.Handler := Handler;
 
+      SBT.Cancel (TM.Id);
+
       if Handler /= null then
          SBT.Set (TM.Id, SBT.Time (At_Time));
-      else
-         SBT.Cancel (TM.Id);
       end if;
 
       Protection.Leave_Kernel_No_Change;

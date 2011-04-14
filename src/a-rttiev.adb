@@ -108,11 +108,11 @@ package body Ada.Real_Time.Timing_Events is
    is
    begin
 
-      Protection.Enter_Kernel;
-
       if Event.Id = null then
          Initialize (Event);
       end if;
+
+      Protection.Enter_Kernel;
 
       Event.Handler := Handler;
 

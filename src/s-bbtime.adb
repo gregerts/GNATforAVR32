@@ -122,7 +122,7 @@ package body System.BB.Time is
    function Remaining (Clock : Clock_Id) return Time;
    pragma Pure_Function (Remaining);
    pragma Inline_Always (Remaining);
-   --  Returns shortes remaining time until A or B timeout
+   --  Returns shortest remaining time until A or B timeout
 
    procedure Update_ETC (Clock : Clock_Id);
    --  Swaps ETC to the given clock
@@ -144,29 +144,33 @@ package body System.BB.Time is
    -------------------
 
    procedure Alarm_Wrapper (Clock : Clock_Id) is
-      Alarm : Alarm_Id := Clock.First_Alarm;
-      Now   : Time     := Clock.Base_Time;
+      Alarm : Alarm_Id;
+      Now : Time;
 
    begin
 
-      pragma Assert (Clock /= ETC);
-
       --  Only the real time clock can be active
 
+      pragma Assert (Clock /= ETC);
+
       if Clock = RTC then
-         Now := Now + Time (CPU.Get_Count);
+         Now := Clock.Base_Time + Time (CPU.Get_Count);
+      else
+         Now := Clock.Base_Time;
       end if;
 
       --  Call all expired alarm handlers
 
-      while Alarm.Timeout <= Now loop
+      loop
+
+         Alarm := Clock.First_Alarm;
+         exit when Alarm.Timeout > Now;
+
+         --  Remove Alarm from queue and call handler
 
          Clock.First_Alarm := Alarm.Next;
          Alarm.Next := null;
-
          Alarm.Handler (Alarm.Data);
-
-         Alarm := Clock.First_Alarm;
 
       end loop;
 
@@ -194,6 +198,8 @@ package body System.BB.Time is
 
       if Alarm = Clock.First_Alarm then
 
+         --  Remove Alarm from head of queue, update COMPARE if needed
+
          Clock.First_Alarm := Alarm.Next;
 
          if not Defer_Updates and then Active (Clock) then
@@ -202,11 +208,15 @@ package body System.BB.Time is
 
       else
 
+         --  Find element Aux before Alarm in queue
+
          Aux := Clock.First_Alarm;
 
          while Aux.Next /= Alarm loop
             Aux := Aux.Next;
          end loop;
+
+         --  Remove alarm from queue
 
          Aux.Next := Alarm.Next;
 
@@ -376,7 +386,6 @@ package body System.BB.Time is
    -----------------------
 
    procedure Initialize_Timers (Environment_Thread : Thread_Id) is
-      Clock : constant Clock_Id := Environment_Thread.Clock'Access;
    begin
       --  Initialize execution time clock of environment thread
 
@@ -392,10 +401,10 @@ package body System.BB.Time is
 
       --  Activate clock of environment thread
 
-      ETC := Clock;
-      Update_ETC (Clock);
+      ETC := Environment_Thread.Clock'Access;
+      Update_ETC (ETC);
 
-      --  Install COMPATE interrupt handler
+      --  Install COMPARE interrupt handler
 
       Interrupts.Attach_Handler (Compare_Handler'Access, Peripherals.COMPARE);
 
@@ -488,20 +497,17 @@ package body System.BB.Time is
 
       pragma Assert (Clock /= null);
       pragma Assert (Timeout < Time'Last);
+      pragma Assert (Alarm.Next = null);
 
-      --  Remove alarm from queue if necessary
-
-      Cancel (Alarm);
-
-      --  Set alarm timeout
+      --  Set timeout
 
       Alarm.Timeout := Timeout;
 
-      --  Check if alarm is to be first in queue
+      --  Check if Alarm is to be first in queue
 
       if Timeout < Clock.First_Alarm.Timeout then
 
-         --  Insert alarm first in queue, update COMPARE in needed
+         --  Insert Alarm first in queue, update COMPARE in needed
 
          Alarm.Next := Clock.First_Alarm;
          Clock.First_Alarm := Alarm;
@@ -592,10 +598,9 @@ package body System.BB.Time is
    --------------------
 
    procedure Update_Compare is
-      Diff : constant Time :=
-        Time'Min (Time'Min (Remaining (RTC), Remaining (ETC)), Max_Compare);
+      Diff : constant Time := Time'Min (Remaining (RTC), Remaining (ETC));
    begin
-      CPU.Adjust_Compare (CPU.Word (Diff));
+      CPU.Adjust_Compare (CPU.Word (Time'Min (Diff, Max_Compare)));
    end Update_Compare;
 
    ----------------
