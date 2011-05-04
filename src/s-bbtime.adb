@@ -120,9 +120,8 @@ package body System.BB.Time is
    --  Initializes the given clock
 
    function Remaining (Clock : Clock_Id) return Time;
-   pragma Pure_Function (Remaining);
    pragma Inline_Always (Remaining);
-   --  Returns shortest remaining time until A or B timeout
+   --  Returns time until first alarm of clock expires
 
    procedure Update_ETC (Clock : Clock_Id);
    --  Swaps ETC to the given clock
@@ -284,13 +283,15 @@ package body System.BB.Time is
    ---------------------
 
    procedure Enter_Interrupt (Id : Interrupt_ID) is
+      I : constant Pool_Index := Lookup (Id);
    begin
       pragma Assert (Top < Stack'Last);
+      pragma Assert (I > 0);
 
       Stack (Top) := ETC;
       Top := Top + 1;
 
-      Update_ETC (Interrupt_Clock (Id));
+      Update_ETC (Pool (I)'Access);
 
    end Enter_Interrupt;
 
