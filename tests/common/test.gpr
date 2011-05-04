@@ -23,6 +23,8 @@ project Test is
      for Default_Switches ("Ada")
        use ("--GCC=/usr/local/bin/avr32-gcc",
             "-nostartfiles",
+	    "--relax",
+	    "--direct-data",
 	    "-T../../build/avr32gnat_uc3a0512.x",
 	    "../../build/ada_crt0.o");
   end Linker;
