@@ -236,6 +236,7 @@ package body System.Task_Primitives.Operations is
    ---------------------
 
    function Is_Task_Context return Boolean is
+      use type System.OS_Interface.Interrupt_ID;
    begin
       return System.OS_Interface.Current_Interrupt = No_Interrupt;
    end Is_Task_Context;
@@ -244,9 +245,10 @@ package body System.Task_Primitives.Operations is
    -- Task_Timer --
    ----------------
 
-   function Task_Timer (T : ST.Task_Id) return TMU.Timer_Id is
+   function Task_Clock (T : ST.Task_Id) return System.BB.TMU.Clock_Id is
    begin
-      return TMU.Thread_Timer (TMU.Thread_Id (T.Common.LL.Thread));
-   end Task_Timer;
+      return System.BB.TMU.Thread_Clock
+        (System.BB.TMU.Thread_Id (T.Common.LL.Thread));
+   end Task_Clock;
 
 end System.Task_Primitives.Operations;

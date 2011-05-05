@@ -67,63 +67,80 @@ package System.BB.TMU is
    subtype Interrupt_ID is System.BB.Interrupts.Interrupt_ID;
 
    -----------
-   -- Timer --
+   -- Clock --
    -----------
 
-   type Timer_Descriptor is limited private;
+   type Clock_Descriptor is limited private;
 
-   type Timer_Id is access all Timer_Descriptor;
+   type Clock_Id is access all Clock_Descriptor;
 
-   type Timer_Handler is access procedure (Data : System.Address);
+   ----------------------
+   -- Alarm_Descriptor --
+   ----------------------
+
+   type Alarm_Descriptor is limited private;
+
+   type Alarm_Id is access all Alarm_Descriptor;
+
+   type Alarm_Handler is access procedure (Data : System.Address);
 
    --------------------
    -- Initialization --
    --------------------
 
-   procedure Initialize_Interrupt_Timer (Id : Interrupt_ID);
-   --  Initializes the timer for the given interrupt ID
+   procedure Initialize_Interrupt_Clock (Id : Interrupt_ID);
+   --  Initializes the clock for the given interrupt ID
 
-   procedure Initialize_Thread_Timer (Id : Thread_Id);
-   --  Initializes the timer for the given thread
+   procedure Initialize_Thread_Clock (Id : Thread_Id);
+   --  Initializes the clock for the given thread
 
    procedure Initialize_TMU (Environment_Thread : Thread_Id);
    --  Initialize this package. Must be called before any other
    --  procedures and functions in this package.
 
    ----------------------
-   -- Timer operations --
+   -- Clock operations --
    ----------------------
 
-   procedure Bind
-     (TM      : Timer_Id;
-      Handler : Timer_Handler;
+   function Clock (Alarm : not null Alarm_Id) return Clock_Id;
+   pragma Inline_Always (Clock);
+   --  Returns the clock of the given alarm
+
+   function Interrupt_Clock (Id : Interrupt_ID) return Clock_Id;
+   pragma Inline_Always (Interrupt_Clock);
+   --  Returns the execution time clock for the given interrupt ID
+
+   function Time_Of_Clock (Clock : not null Clock_Id) return CPU_Time;
+   pragma Inline (Time_Of_Clock);
+   --  Returns the time of the given clock
+
+   function Thread_Clock (Id : Thread_Id) return Clock_Id;
+   pragma Inline_Always (Thread_Clock);
+   --  Returns execution time clock for the given thread
+
+   ----------------------
+   -- Alarm operations --
+   ----------------------
+
+   procedure Initialize_Alarm
+     (Alarm   : not null Alarm_Id;
+      Clock   : not null Clock_Id;
+      Handler : not null Alarm_Handler;
       Data    : System.Address;
       Success : out Boolean);
-   --  Binds the timer to the given handler and data. Success set to
-   --  false if the timer is already bound.
+   --  Initializes alarm with the given clock, handler and data
 
-   procedure Cancel (TM : Timer_Id);
-   --  Cancels the timer
-
-   function Clock (TM : Timer_Id) return CPU_Time;
-   pragma Inline_Always (Clock);
-   --  Returns the execution time clock for the given timer
-
-   function Interrupt_Timer (Id : Interrupt_ID) return Timer_Id;
-   pragma Inline_Always (Interrupt_Timer);
-   --  Get the timer associated with the given interrupt
+   procedure Cancel (Alarm : not null Alarm_Id);
+   --  Cancel alarm timer
 
    procedure Set
-     (TM      : Timer_Id;
+     (Alarm   : not null Alarm_Id;
       Timeout : CPU_Time);
-   --  Sets the timer, may overwrite an already pending timeout
+   --  Set alarm timer
 
-   function Thread_Timer (Id : Thread_Id) return Timer_Id;
-   pragma Inline_Always (Thread_Timer);
-   --  Get the timer associated with the given thread
-
-   function Time_Remaining (TM : Timer_Id) return CPU_Time;
-   --  Returns time remaining before timeout or 0 if no timeout
+   function Time_Of_Alarm (Alarm : not null Alarm_Id) return CPU_Time;
+   pragma Inline (Time_Of_Alarm);
+   --  Get expiration time of alarm
 
    -------------------------
    -- Internal operations --
@@ -147,31 +164,45 @@ package System.BB.TMU is
 
 private
 
-   type Timer_State is (Uninitialized, Free, Cleared, Set);
-
    ----------------------
-   -- Timer_Descriptor --
+   -- Clock_Descriptor --
    ----------------------
 
-   type Timer_Descriptor is
+   type Clock_Descriptor is
       record
-         Compare : CPU_Time;
-         --  Timeout if timer is set, else CPU_Time'Last
-
          Count : CPU_Time;
-         --  Current time of clock if not active
+         --  Count value of clock if not active
 
-         Handler : Timer_Handler;
-         --  Handler to be called when the timer expires
+         First_Alarm : Alarm_Id;
+         --  Points to the first alarm of this clock
+
+         Capacity : Natural;
+         --  Remaining alarm capacity, no more alarms allowed if zero
+
+      end record;
+
+   pragma Suppress_Initialization (Clock_Descriptor);
+
+   ----------------------
+   -- Alarm_Descriptor --
+   ----------------------
+
+   type Alarm_Descriptor is
+      record
+         Timeout : CPU_Time;
+         --  Timeout of alarm when set
+
+         Clock : Clock_Id;
+         --  Clock of this alarm
+
+         Handler : Alarm_Handler;
+         --  Handler to be called when the alarm expires
 
          Data : System.Address;
          --  Argument to be given when calling handler
 
-         State : Timer_State;
-         --  State of the timer, initially uninitialized
-
       end record;
 
-   pragma Suppress_Initialization (Timer_Descriptor);
+   pragma Suppress_Initialization (Alarm_Descriptor);
 
 end System.BB.TMU;

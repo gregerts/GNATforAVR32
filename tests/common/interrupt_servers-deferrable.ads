@@ -1,7 +1,9 @@
 with Ada.Task_Identification, Ada.Execution_Time.Timers,
-  Ada.Real_Time.Timing_Events, Epoch_Support, System;
+  Ada.Execution_Time.Interrupts.Timers, Ada.Real_Time.Timing_Events,
+  Epoch_Support, System;
 use Ada.Task_Identification, Ada.Execution_Time.Timers,
-  Ada.Real_Time.Timing_Events, Epoch_Support, System;
+  Ada.Execution_Time.Interrupts.Timers, Ada.Real_Time.Timing_Events,
+  Epoch_Support, System;
 
 package Interrupt_Servers.Deferrable is
 
@@ -9,17 +11,13 @@ package Interrupt_Servers.Deferrable is
      (Param : access Interrupt_Server_Parameters) is
       limited new Interrupt_Server with private;
 
-   procedure Register
-     (S : in out Deferrable_Interrupt_Server;
-      I : Any_Interrupt_State);
+   procedure Initialize (S : in out Deferrable_Interrupt_Server);
 
 private
 
-   type State_Array is array (1 .. 10) of Any_Interrupt_State;
-
    protected type Mechanism (Param : access Interrupt_Server_Parameters) is
 
-      procedure Register (I : Any_Interrupt_State);
+      procedure Initialize;
 
       pragma Priority (Any_Priority'Last);
 
@@ -35,8 +33,7 @@ private
       Next : Time;
 
       Disabled : Boolean := True;
-      Registered : Natural := 0;
-      States : State_Array;
+      State : Any_Interrupt_State := null;
 
    end Mechanism;
 

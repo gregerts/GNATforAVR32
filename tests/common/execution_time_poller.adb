@@ -1,10 +1,13 @@
-with Ada.Execution_Time, Ada.Task_Identification, Ada.Real_Time.Timing_Events,
+with Ada.Execution_Time, Ada.Execution_Time.Interrupts,
+  Ada.Task_Identification, Ada.Real_Time.Timing_Events,
   GNAT.IO, System, Epoch_Support, Utilities;
-use Ada.Execution_Time, Ada.Task_Identification, Ada.Real_Time.Timing_Events,
+use Ada.Execution_Time, Ada.Execution_Time.Interrupts,
+  Ada.Task_Identification, Ada.Real_Time.Timing_Events,
   GNAT.IO, System, Epoch_Support, Utilities;
 
 package body Execution_Time_Poller is
 
+   type Interrupt_Array is array (Positive range <>) of Interrupt_ID;
    type Task_Array is array (Positive range <>) of Task_Id;
    type CPU_Time_Array is array (Positive range <>) of CPU_Time;
 
@@ -13,7 +16,7 @@ package body Execution_Time_Poller is
 
    protected Poller is
 
-      procedure Start;
+      procedure Start (P : Time_Span);
       entry Wait;
 
    private
@@ -21,6 +24,8 @@ package body Execution_Time_Poller is
       pragma Priority (Any_Priority'Last);
 
       procedure Handler (Event : in out Timing_Event);
+
+      Period : Time_Span;
 
       Event : Timing_Event;
       Next  : Time;
@@ -33,50 +38,52 @@ package body Execution_Time_Poller is
       pragma Storage_Size (256);
    end Idle_Task;
 
+   ---------------
+   -- Constants --
+   ---------------
+
+   Max_Interrupts : constant := 5;
+   Max_Tasks      : constant := 10;
+
    ----------
    -- Data --
    ----------
 
-   Tasks : access Task_Array;
-   Last  : Natural;
+   Interrupts     : Interrupt_Array (1 .. Max_Interrupts);
+   Last_Interrupt : Natural := 0;
 
-   Major_Period   : Time_Span;
-   Polling_Time   : Time;
+   Tasks     : Task_Array (1 .. Max_Tasks);
+   Last_Task : Natural := 0;
 
-   Interrupt_Time : CPU_Time_Array (Interrupt_Priority);
-   Task_Time      : access CPU_Time_Array;
+   Polling_Time : Time;
+
+   Interrupt_Time : CPU_Time_Array (1 .. Max_Interrupts);
+   Task_Time      : CPU_Time_Array (1 .. Max_Tasks);
    Idle_Time      : CPU_Time;
-
-   ----------------
-   -- Initialize --
-   ----------------
-
-   procedure Initialize
-     (N : Positive;
-      P : Time_Span)
-   is
-   begin
-
-      Major_Period := P;
-
-      Tasks     := new Task_Array (1 .. N);
-      Task_Time := new CPU_Time_Array (1 .. N);
-
-      Last := 0;
-
-   end Initialize;
 
    --------------
    -- Register --
    --------------
 
-   procedure Register (Tid : Task_Id) is
+   procedure Register (T : Task_Id) is
    begin
+      pragma Assert (Last_Task < Tasks'Length);
 
-      pragma Assert (Tasks /= null and then Last < Tasks'Length);
+      Last_Task := Last_Task + 1;
+      Tasks (Last_Task) := T;
 
-      Last := Last + 1;
-      Tasks (Last) := Tid;
+   end Register;
+
+   --------------
+   -- Register --
+   --------------
+
+   procedure Register (I : Interrupt_ID) is
+   begin
+      pragma Assert (Last_Interrupt < Interrupts'Length);
+
+      Last_Interrupt := Last_Interrupt + 1;
+      Interrupts (Last_Interrupt) := I;
 
    end Register;
 
@@ -84,12 +91,10 @@ package body Execution_Time_Poller is
    -- Run --
    ---------
 
-   procedure Run is
+   procedure Run (P : Time_Span) is
    begin
 
-      pragma Assert (Task_Time /= null);
-
-      Poller.Start;
+      Poller.Start (P);
 
       delay until Epoch;
 
@@ -103,13 +108,13 @@ package body Execution_Time_Poller is
          Put (Polling_Time);
          Put (':');
 
-         for I in reverse System.Interrupt_Priority loop
-            Put (Interrupt_Time (I));
+         for I in 1 .. Last_Task loop
+            Put (Task_Time (I));
             Put (':');
          end loop;
 
-         for I in 1 .. Last loop
-            Put (Task_Time (I));
+         for I in 1 .. Last_Interrupt loop
+            Put (Interrupt_Time (I));
             Put (':');
          end loop;
 
@@ -131,11 +136,12 @@ package body Execution_Time_Poller is
       -- Start --
       -----------
 
-      procedure Start is
+      procedure Start (P : Time_Span) is
       begin
 
-         Done := False;
-         Next := Epoch_Support.Epoch + Major_Period;
+         Period := P;
+         Done   := False;
+         Next   := Epoch_Support.Epoch + Period;
 
          Event.Set_Handler (Next, Handler'Access);
 
@@ -161,11 +167,11 @@ package body Execution_Time_Poller is
 
             Polling_Time := Clock;
 
-            for I in reverse System.Interrupt_Priority loop
-               Interrupt_Time (I) := Interrupt_Clock (I);
+            for I in 1 .. Last_Interrupt loop
+               Interrupt_Time (I) := Clock (Interrupts (I));
             end loop;
 
-            for I in 1 .. Last loop
+            for I in 1 .. Last_Task loop
                Task_Time (I) := Clock (Tasks (I));
             end loop;
 
@@ -175,7 +181,7 @@ package body Execution_Time_Poller is
 
          end if;
 
-         Next := Next + Major_Period;
+         Next := Next + Period;
 
          Event.Set_Handler (Next, Handler'Access);
 

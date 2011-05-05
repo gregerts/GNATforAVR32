@@ -6,8 +6,6 @@ package body Test is
 
    package ETP renames Execution_Time_Poller;
 
-
-
    --------------
    -- Periodic --
    --------------
@@ -28,12 +26,10 @@ package body Test is
 
    procedure Run is
    begin
-      ETP.Run;
+      ETP.Run (Microseconds (Major_Period));
    end Run;
 
 begin
-
-   ETP.Initialize (5, Microseconds (Major_Period));
 
    ETP.Register (T_A'Identity);
    ETP.Register (T_B'Identity);

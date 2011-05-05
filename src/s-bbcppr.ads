@@ -120,6 +120,26 @@ package System.BB.CPU_Primitives is
    pragma Inline_Always (Wait_For_Interrupts);
    --  Sleep until one or more interrupts has occured
 
+   ---------------------
+   -- Memory handling --
+   ---------------------
+
+   procedure Barrier;
+   pragma Inline_Always (Barrier);
+
+   ------------------------------
+   -- COUNT / COMPARE handling --
+   ------------------------------
+
+   procedure Adjust_Compare (Compare : Word);
+   pragma Inline_Always (Adjust_Compare);
+
+   function Get_Count return Word;
+   pragma Inline_Always (Get_Count);
+
+   function Swap_Count return Word;
+   pragma Inline_Always (Swap_Count);
+
 private
 
    subtype Range_Of_Context is Natural range 0 .. Context_Buffer_Capacity - 1;

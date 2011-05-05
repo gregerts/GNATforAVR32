@@ -52,10 +52,10 @@ with System.BB.CPU_Primitives;
 --  Used for Context_Buffer
 
 with System.BB.Time;
---  Used for Alarm_Timer
+--  Used for Alarm_Descriptor
 
 with System.BB.TMU;
---  Used for Timer
+--  Used for Clock_Descriptor
 
 with System.BB.Interrupts;
 --  Used for Interrupt_Set
@@ -90,11 +90,11 @@ package System.BB.Threads is
       --  counter, ...) are stored. This field supports context switches among
       --  threads.
 
-      TM : aliased System.BB.TMU.Timer_Descriptor;
-      --  Execution-time timer for this thread
+      Clock : aliased System.BB.TMU.Clock_Descriptor;
+      --  Execution-time clock for this thread
 
-      Active_TM : System.BB.TMU.Timer_Id;
-      --  Active execution time timer for this thread
+      Active_Clock : System.BB.TMU.Clock_Id;
+      --  Active execution time clock for this thread
 
       ATCB : System.Address;
       --  Address of the Ada Task Control Block corresponding to the Ada task
@@ -120,7 +120,7 @@ package System.BB.Threads is
       --  Points to the ready thread that is in the next position for
       --  execution.
 
-      Alarm : System.BB.Time.Alarm_Id;
+      Alarm : aliased System.BB.Time.Alarm_Descriptor;
       --  Alarm used to wakeup the thread
 
       State : Thread_States;

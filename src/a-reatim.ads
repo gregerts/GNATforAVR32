@@ -49,7 +49,7 @@ package Ada.Real_Time is
    Time_First : constant Time;
    Time_Last  : constant Time;
    Time_Unit  : constant :=
-                  1.0 / Duration (System.OS_Interface.Ticks_Per_Second);
+                  1.0 / System.OS_Interface.Ticks_Per_Second;
 
    type Time_Span is private;
    Time_Span_First : constant Time_Span;

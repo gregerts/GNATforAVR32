@@ -43,19 +43,34 @@
 
 	/* Set global interrupt mask */
 	ssrf	SR_GM
-	nop
-	nop
 
+	/* Get group causing interrupt */	
+	mov	r9, (INT_CONTROLLER + INT_REQUEST)
+	ld.ub	r8, r9[(INT_CAUSE - INT_REQUEST) + 4 * (3 - \level) + 3]
+	lsl	r8, 2
+
+	/* Get highest interrupt line, abort handler if no line set */
+	ld.w	r9, r9[r8]
+	cp.w	r9, 0
+	breq	0f
+	clz	r9, r9
+	rsub	r9, r9, 31
+
+	/* Get interrupt ID from 8-bit array (16 * group + line) */
+	add	r9, r9, r8 << 2
+	lda.w	r8, to_interrupt_id
+	ld.ub	r12, r8[r9]
+	
 	/* Load stack pointer for interrupt level from stack table */
 	lda.w	r8, interrupt_stack_table
 	mov 	r9, sp
-	ld.w	sp, r8[4 * \level]
+	ld.w	sp, r8[\level << 2]
 
 	/* Push task stack pointer on interrupt stack */
 	st.w	--sp, r9
 
-	/* Call interrupt_wrapper (level) */
-	mov	r12, \level
+	/* Call interrupt_wrapper (interrupt, level) */
+	mov	r11, \level
 	call	interrupt_wrapper
 
 	/* Pop task stack pointer from interrupt stack */
@@ -67,7 +82,8 @@
 	cp.w	r12, 0
 	breq	0f
 	call	context_switch
-0:	
+0:
+	/* Return from interrupt, restoring R8 .. R12 LR PC SR */
 	rete
 .endm
 
@@ -158,16 +174,16 @@ _evba:
 	.balign 4
 
 _int_0:
-	INTERRUPT_HANDLER 1
+	INTERRUPT_HANDLER INT_0
 
 _int_1:
-	INTERRUPT_HANDLER 2
+	INTERRUPT_HANDLER INT_1
 
 _int_2:
-	INTERRUPT_HANDLER 3
+	INTERRUPT_HANDLER INT_2
 
 _int_3:
-	INTERRUPT_HANDLER 4
+	INTERRUPT_HANDLER INT_3
 
 /*************************************************************
  * Interrupt autovectors
@@ -177,8 +193,7 @@ _int_3:
 	.global autovectors
 	.type autovectors, @object
 autovectors:
-	.word	0,\
-		(_int_0 - _evba),\
+	.word	(_int_0 - _evba),\
 		(_int_1 - _evba),\
 		(_int_2 - _evba),\
 		(_int_3 - _evba)

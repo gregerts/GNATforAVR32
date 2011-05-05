@@ -95,7 +95,7 @@ package body System.BB.Threads is
 
       --  Test if the alarm time is in the future
 
-      if T > Clock then
+      if T > Monotonic_Clock then
 
          --  Update state of thread to Delayed
 
@@ -107,7 +107,7 @@ package body System.BB.Threads is
 
          --  Set alarm for waking up thread
 
-         Set (Self_Id.Alarm, T);
+         Set (Self_Id.Alarm'Access, T);
 
       else
          --  The alarm time is not in the future, yield the CPU
@@ -193,14 +193,15 @@ package body System.BB.Threads is
 
       Environment_Thread.Wakeup_Signaled := False;
 
-      --  Initialize the Time Management Unit
+      --  Initialize the timers
 
       TMU.Initialize_TMU (TMU.Thread_Id (Environment_Thread));
 
-      --  Create alarm timer
+      --  Initialize alarm timer
 
-      Environment_Thread.Alarm := Create (Wakeup_Delayed'Access,
-                                          To_Address (Environment_Thread));
+      Initialize_Alarm (Environment_Thread.Alarm'Access,
+                        Wakeup_Delayed'Access,
+                        To_Address (Environment_Thread));
 
       Protection.Leave_Kernel;
    end Initialize;
@@ -328,13 +329,15 @@ package body System.BB.Threads is
 
       Initialize_Context (Id.Context'Access, Code, Arg, Id.Top_Of_Stack);
 
-      --  Initialize execution time timer
+      --  Initialize execution time clock
 
-      TMU.Initialize_Thread_Timer (TMU.Thread_Id (Id));
+      TMU.Initialize_Thread_Clock (TMU.Thread_Id (Id));
 
-      --  Create alarm timer
+      --  Initialize alarm timer
 
-      Id.Alarm := Create (Wakeup_Delayed'Access, To_Address (Id));
+      Initialize_Alarm (Id.Alarm'Access,
+                        Wakeup_Delayed'Access,
+                        To_Address (Id));
 
       Protection.Leave_Kernel;
    end Thread_Create;

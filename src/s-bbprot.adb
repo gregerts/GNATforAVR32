@@ -187,7 +187,9 @@ package body System.BB.Protection is
       --  to the software priority of the task that is executing.
 
       CPU_Primitives.Enable_Interrupts
-        (Integer'Max (Integer (Self_Id.Active_Priority) - Priority'Last, 0));
+        (Interrupts.Interrupt_Level
+           (Any_Priority'Max (Self_Id.Active_Priority, Priority'Last)
+              - Priority'Last));
 
    end Leave_Kernel;
 

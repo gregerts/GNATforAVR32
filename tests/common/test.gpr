@@ -14,14 +14,19 @@ project Test is
      for Default_Switches ("Ada")
        use ("-gnatan",
             "-g",
-            "-O2");
+            "-O2",
+	    "-march=ucr1",
+	    "-mpart=uc3a0512");
   end Compiler;
 
   package Linker is
      for Default_Switches ("Ada")
        use ("--GCC=/usr/local/bin/avr32-gcc",
             "-nostartfiles",
-	    "-T../../build/avr32gnat_uc3a0512.x");
+	    "--relax",
+	    "--direct-data",
+	    "-T../../build/avr32gnat_uc3a0512.x",
+	    "../../build/ada_crt0.o");
   end Linker;
 
 end Test;

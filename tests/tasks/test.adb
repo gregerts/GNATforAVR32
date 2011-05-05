@@ -43,6 +43,6 @@ begin
 
    Configure_GPIO (Port_B, Range_To_Mask (27, 30), Output => True);
 
-   Clear_Pins (Port_B, Range_To_Mask (27, 30));
+   Set_Pins (Port_B, Range_To_Mask (27, 30));
 
 end Test;

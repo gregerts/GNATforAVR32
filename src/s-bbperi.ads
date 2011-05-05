@@ -69,9 +69,9 @@ package System.BB.Peripherals is
    --  Procedure that performs the hardware initialization of the board.
    --  Should be called before any other operations in this package.
 
-   ------------------------------------------------
-   -- Clock and timer definitions and primitives --
-   ------------------------------------------------
+   -----------------------
+   -- Board frequencies --
+   -----------------------
 
    Main_Clock_Frequency : constant :=
      (SBP.Clock_Frequency * SBP.Clock_Multiplication * 10 ** 6);
@@ -80,40 +80,6 @@ package System.BB.Peripherals is
    Peripheral_Frequency : constant :=
      Main_Clock_Frequency / SBP.Peripheral_Division;
    --  Frequency of peripheral clock in Hz
-
-   Timer_Frequency : constant :=
-     Peripheral_Frequency / SBP.Timer_Division;
-   --  Frequency of timer clock in Hz
-
-   type Timer_Interval is mod 2 ** 16;
-   for Timer_Interval'Size use 16;
-   --  This type represents any interval that we can measure within a
-   --  Clock_Interrupt_Period.
-
-   procedure Set_Alarm (Ticks : Timer_Interval);
-   --  Set an alarm that will expire after the specified number of
-   --  clock ticks.
-
-   procedure Cancel_Alarm;
-   --  Cancel any previous set alarm.
-
-   function Pending_Clock return Boolean;
-   pragma Inline (Pending_Clock);
-   --  Returns true if there is a pending clock interrupt
-
-   function Read_Clock return Timer_Interval;
-   pragma Inline (Read_Clock);
-   --  Read the value contained in the clock hardware counter, and
-   --  return the number of ticks elapsed since the last clock
-   --  interrupt, that is, since the clock counter was last reloaded.
-
-   procedure Clear_Clock_Interrupt;
-   pragma Inline (Clear_Clock_Interrupt);
-   --  Acknowledge the clock interrupt
-
-   procedure Clear_Alarm_Interrupt;
-   pragma Inline (Clear_Alarm_Interrupt);
-   --  Acknowledge the event interrupt
 
    ------------------------------------
    -- TMU definitions and primitives --
@@ -142,22 +108,13 @@ package System.BB.Peripherals is
    -- Interrupts --
    ----------------
 
-   subtype Interrupt_Group is Natural range 0 .. (SBP.Interrupt_Groups - 1);
-   --  Type that defines the range of possible interrupt groups.
-
    function To_Level
      (Interrupt : SBI.Interrupt_ID) return SBI.Interrupt_Level;
-   pragma Inline (To_Level);
    --  Function returning the level of an interrupt ID.
-
-   function Get_Interrupt_ID
-     (Level : SBI.Interrupt_Level) return SBI.Interrupt_ID;
-   pragma Inline (Get_Interrupt_ID);
-   --  Function returning the ID of the pending interrupt.
 
    --  Constants defining the external interrupts
 
-   TMUC    : constant := 59; --  Group 19
+   TMU     : constant := 59; --  Group 19
    SDRAMC  : constant := 58; --  Group 18
    USB     : constant := 57; --  Group 17
    MACB    : constant := 56; --  Group 16
@@ -216,28 +173,6 @@ package System.BB.Peripherals is
    EIM_1   : constant := 3;
    EIM_0   : constant := 2;
    COMPARE : constant := 1;  --  Group 0
-
-   --  Constants defining levels of the external interrupt groups
-   Group_0_Level  : constant := 1;
-   Group_1_Level  : constant := 1;
-   Group_2_Level  : constant := 1;
-   Group_3_Level  : constant := 1;
-   Group_4_Level  : constant := 1;
-   Group_5_Level  : constant := 1;
-   Group_6_Level  : constant := 1;
-   Group_7_Level  : constant := 1;
-   Group_8_Level  : constant := 1;
-   Group_9_Level  : constant := 1;
-   Group_10_Level : constant := 1;
-   Group_11_Level : constant := 1;
-   Group_12_Level : constant := 1;
-   Group_13_Level : constant := 1;
-   Group_14_Level : constant := 4;
-   Group_15_Level : constant := 1;
-   Group_16_Level : constant := 1;
-   Group_17_Level : constant := 1;
-   Group_18_Level : constant := 1;
-   Group_19_Level : constant := 4;
 
    --------------------
    -- Output Console --

@@ -9,7 +9,7 @@
 --        Copyright (C) 1999-2002 Universidad Politecnica de Madrid         --
 --             Copyright (C) 2003-2005 The European Space Agency            --
 --                     Copyright (C) 2003-2007, AdaCore                     --
---             Copyright (C) 2008-2009, Kristoffer N. Gregertsen            --
+--             Copyright (C) 2008-2011, Kristoffer N. Gregertsen            --
 --                                                                          --
 -- GNARL is free software; you can  redistribute it  and/or modify it under --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -39,69 +39,53 @@
 
 pragma Restrictions (No_Elaboration_Code);
 
+with System.BB.CPU_Primitives;
 with System.BB.Interrupts;
---  Used for Attach_Handler
+with System.BB.Parameters;
 
 package body System.BB.Time is
 
-   use type Peripherals.Timer_Interval;
+   package CPU renames System.BB.CPU_Primitives;
 
-   subtype Timer_Interval is Peripherals.Timer_Interval;
+   use type CPU.Word;
+   use type Interrupts.Interrupt_ID;
 
    -----------------------
    -- Local definitions --
    -----------------------
 
-   Alarm_Interrupt : constant := Peripherals.TC_2;
-   Clock_Interrupt : constant := Peripherals.TC_1;
-   --  Clock and alarm interrupts
+   Max_Compare : constant := CPU.Word'Last - 2 ** 16;
+   --  Maximal value set to COMPARE register
 
-   Clock_Period : constant := 2 ** Timer_Interval'Size;
-   --  Period between clock overflows
+   Sentinel : aliased Alarm_Descriptor := (Timeout => Time'Last, others => <>);
+   --  Always the last alarm in the queue of every clock
 
-   Base_Time : Time := 0;
-   pragma Volatile (Base_Time);
-   --  Base of clock (i.e. MSP), stored in memory
+   First_Alarm : Alarm_Id := Sentinel'Access;
+   --  First alarm of the real-time clock
 
-   Last_Alarm : aliased Alarm_Descriptor := (Handler => null,
-                                             Data    => System.Null_Address,
-                                             Timeout => Time'Last,
-                                             Next    => null,
-                                             Prev    => null);
-   --  Last alarm in queue
+   Base_Time : Time := Time'First;
+   --  Base time of the real-time clock
 
-   First_Alarm : Alarm_Id := Last_Alarm'Access;
-   --  First alarm in queue
-
-   Pending_Alarm : Alarm_Id := null;
-   --  Alarm corrensponding to the hardware timer if set
-
-   Defer_Update : Boolean := False;
-   --  Flags that alarm timer updates should be deferred
+   Defer_Updates : Boolean := False;
+   --  True if updates to COMPARE are to be deferred
 
    -----------------------
    -- Local subprograms --
    -----------------------
 
-   procedure Clock_Handler (Interrupt : Interrupts.Interrupt_ID);
-   --  Handler for the clock interrupt
+   procedure Compare_Handler (Id : Interrupts.Interrupt_ID);
+   --  Handler for the COMPARE interrupt
 
-   procedure Clear (Alarm : Alarm_Id);
-   pragma Inline_Always (Clear);
-   --  Procedure to clear an alarm
-
-   procedure Update_Alarm_Timer;
-   --  Procedure that updates the hardware alarm timer
+   procedure Update_Compare;
+   --  Update COMPARE as timeout of active clock has changed
 
    ------------
    -- Cancel --
    ------------
 
-   procedure Cancel (Alarm : Alarm_Id)
-   is
+   procedure Cancel (Alarm : not null Alarm_Id) is
+      Aux : Alarm_Id;
    begin
-
-      pragma Assert (Alarm /= null);
 
       --  Nothing to be done if the alarm is not set
 
@@ -111,157 +95,89 @@ package body System.BB.Time is
 
       --  Check if Alarm is first in queue
 
-      if Alarm.Prev = null then
+      if Alarm = First_Alarm then
 
-         pragma Assert (Alarm = First_Alarm);
+         --  Remove Alarm from head of queue, update COMPARE if needed
 
-         First_Alarm     := Alarm.Next;
-         Alarm.Next.Prev := null;
+         First_Alarm := Alarm.Next;
 
-         Update_Alarm_Timer;
+         if not Defer_Updates then
+            Update_Compare;
+         end if;
 
       else
 
-         Alarm.Prev.Next := Alarm.Next;
-         Alarm.Next.Prev := Alarm.Prev;
+         --  Find element Aux before Alarm in queue
+
+         Aux := First_Alarm;
+
+         while Aux.Next /= Alarm loop
+            Aux := Aux.Next;
+         end loop;
+
+         --  Remove alarm from queue
+
+         Aux.Next := Alarm.Next;
 
       end if;
 
-      Clear (Alarm);
+      Alarm.Next := null;
 
    end Cancel;
 
-   -----------
-   -- Clear --
-   -----------
+   ---------------------
+   -- Compare_Handler --
+   ---------------------
 
-   procedure Clear (Alarm : Alarm_Id) is
-   begin
-      Alarm.Timeout := Time'First;
-      Alarm.Next    := null;
-      Alarm.Prev    := null;
-   end Clear;
-
-   -----------
-   -- Clock --
-   -----------
-
-   function Clock return Time is
-      B : Time;
-      C : Timer_Interval;
-
+   procedure Compare_Handler (Id : Interrupts.Interrupt_ID) is
+      Alarm : Alarm_Id;
    begin
 
-      --  Clock is sum of base time and peripheral clock, read again
-      --  if base time is updated by clock interrupt after being read.
+      pragma Assert (Id = Peripherals.COMPARE);
+
+      --  Update base time of real time clock
+
+      Base_Time := Base_Time + Time (CPU.Swap_Count);
+
+      --  Call all expired alarm handlers, defer COMPARE updates
+
+      Defer_Updates := True;
 
       loop
-         B := Base_Time;
-         C := Peripherals.Read_Clock;
-         exit when B = Base_Time;
-      end loop;
 
-      --  If a clock interrupt is pending the task has the highest
-      --  priority or is executing within kernel.
+         Alarm := First_Alarm;
+         exit when Alarm.Timeout > Base_Time;
 
-      if Peripherals.Pending_Clock then
-         B := B + Clock_Period;
-         C := Peripherals.Read_Clock;
-      end if;
+         --  Remove Alarm from queue and call handler
 
-      return B + Time (C);
-
-   end Clock;
-
-   -------------------
-   -- Clock_Handler --
-   -------------------
-
-   procedure Clock_Handler (Interrupt : Interrupts.Interrupt_ID) is
-      Now : Time;
-   begin
-
-      --  Make sure we are handling the right interrupt
-
-      pragma Assert (Interrupt = Alarm_Interrupt
-                       or Interrupt = Clock_Interrupt);
-
-      --  Clear alarm interrupt, possible pending alarm is handled
-
-      Peripherals.Clear_Alarm_Interrupt;
-
-      --  Read the time, update base time if and clear clock
-      --  overflow interrupt if necessary.
-
-      declare
-         B : Time           := Base_Time;
-         C : Timer_Interval := Peripherals.Read_Clock;
-      begin
-
-         if Peripherals.Pending_Clock then
-
-            Peripherals.Clear_Clock_Interrupt;
-
-            B := B + Clock_Period;
-            C := Peripherals.Read_Clock;
-
-            Base_Time := B;
-
-         end if;
-
-         Now := B + Time (C);
-
-      end;
-
-      --  Exit loop when first alarm is in the future. Else remove
-      --  first alarm from queue, clear it and call its handler.
-      --  Defer updates to hardware timer to end of handler
-
-      Defer_Update := True;
-
-      while First_Alarm.Timeout <= Now loop
-
-         declare
-            Alarm : constant Alarm_Id := First_Alarm;
-         begin
-            pragma Assert (Alarm.Handler /= null);
-
-            First_Alarm      := Alarm.Next;
-            First_Alarm.Prev := null;
-
-            Clear (Alarm);
-            Alarm.Handler (Alarm.Data);
-         end;
+         First_Alarm := Alarm.Next;
+         Alarm.Next := null;
+         Alarm.Handler (Alarm.Data);
 
       end loop;
 
-      --  Clear the defer update flag and update alarm timer
+      Defer_Updates := False;
 
-      Defer_Update := False;
+      --  Now update COMPARE register to reflect new alarm status
 
-      Update_Alarm_Timer;
+      Update_Compare;
 
-   end Clock_Handler;
+   end Compare_Handler;
 
-   ------------
-   -- Create --
-   ------------
+   ----------------------
+   -- Initialize_Alarm --
+   ----------------------
 
-   function Create
-     (Handler : not null Alarm_Handler;
-      Data    : System.Address) return Alarm_Id
+   procedure Initialize_Alarm
+     (Alarm   : not null Alarm_Id;
+      Handler : not null Alarm_Handler;
+      Data    : System.Address)
    is
-      Alarm : constant Alarm_Id := new Alarm_Descriptor;
    begin
-
       Alarm.Handler := Handler;
       Alarm.Data    := Data;
-
-      Clear (Alarm);
-
-      return Alarm;
-
-   end Create;
+      Alarm.Next    := null;
+   end Initialize_Alarm;
 
    -----------------------
    -- Initialize_Timers --
@@ -269,49 +185,92 @@ package body System.BB.Time is
 
    procedure Initialize_Timers is
    begin
+      --  Install COMPARE interrupt handler
 
-      --  Install clock handler for both clock overflow and hardware
-      --  alarm timer interrupts.
+      Interrupts.Attach_Handler (Compare_Handler'Access, Peripherals.COMPARE);
 
-      Interrupts.Attach_Handler (Clock_Handler'Access, Alarm_Interrupt);
-      Interrupts.Attach_Handler (Clock_Handler'Access, Clock_Interrupt);
+      --  Update COMPARE for the first time
+
+      Update_Compare;
 
    end Initialize_Timers;
+
+   ---------------------
+   -- Monotonic_Clock --
+   ---------------------
+
+   function Monotonic_Clock return Time is
+      Base  : Time;
+      Count : CPU.Word;
+
+   begin
+
+      --  Get consisting reading of base time and COUNT
+
+      loop
+
+         Base  := Base_Time;
+         Count := CPU.Get_Count;
+
+         CPU.Barrier;
+
+         exit when Base = Base_Time;
+
+      end loop;
+
+      return Base + Time (Count);
+
+   end Monotonic_Clock;
 
    ---------
    -- Set --
    ---------
 
    procedure Set
-     (Alarm   : Alarm_Id;
+     (Alarm   : not null Alarm_Id;
       Timeout : Time)
    is
-      Aux : Alarm_Id := First_Alarm;
+      Aux : Alarm_Id;
    begin
 
-      --  Set alarm timeout
+      pragma Assert (Timeout < Time'Last);
+      pragma Assert (Alarm.Next = null);
+
+      --  Set timeout
 
       Alarm.Timeout := Timeout;
 
-      --  Search for element Aux where Aux.Timeout > Timeout
+      --  Check if Alarm is to be first in queue
 
-      while Aux.Timeout <= Timeout loop
-            Aux := Aux.Next;
-      end loop;
+      if Timeout < First_Alarm.Timeout then
 
-      --  Insert before Aux (always before Last_Alarm)
+         --  Insert Alarm first in queue, update COMPARE in needed
 
-      Alarm.Next := Aux;
-      Alarm.Prev := Aux.Prev;
-      Aux.Prev := Alarm;
-
-      --  Check if this alarm is to be first in queue
-
-      if Alarm.Prev = null then
+         Alarm.Next := First_Alarm;
          First_Alarm := Alarm;
-         Update_Alarm_Timer;
+
+         if not Defer_Updates then
+            Update_Compare;
+         end if;
+
       else
-         Alarm.Prev.Next := Alarm;
+
+         --  Find element Aux where Aux.Next.Timeout > Timeout
+
+         Aux := First_Alarm;
+
+         while Aux.Next.Timeout <= Timeout loop
+            Aux := Aux.Next;
+         end loop;
+
+         --  Insert after Aux (always before sentinel)
+
+         Alarm.Next := Aux.Next;
+         Aux.Next := Alarm;
+
+         pragma Assert (Aux.Timeout <= Timeout);
+         pragma Assert (Timeout < Alarm.Next.Timeout);
+
       end if;
 
    end Set;
@@ -320,48 +279,28 @@ package body System.BB.Time is
    -- Time_Of_Alarm --
    -------------------
 
-   function Time_Of_Alarm (Alarm : Alarm_Id) return Time is
+   function Time_Of_Alarm (Alarm : not null Alarm_Id) return Time is
    begin
-      return Alarm.Timeout;
+      if Alarm.Next /= null then
+         return Alarm.Timeout;
+      else
+         return Time'First;
+      end if;
    end Time_Of_Alarm;
 
-   ------------------------
-   -- Update_Alarm_Timer --
-   ------------------------
+   --------------------
+   -- Update_Compare --
+   --------------------
 
-   procedure Update_Alarm_Timer is
-      Now, Diff : Time;
+   procedure Update_Compare is
+      Aux : Time := First_Alarm.Timeout;
    begin
-      --  Return if updates are deferred
 
-      if Defer_Update or else Pending_Alarm = First_Alarm then
-         return;
-      end if;
+      Aux := Aux - Time'Min (Aux, Base_Time);
+      Aux := Time'Min (Aux, Max_Compare);
 
-      --  Cancel any pending hardware alarm
+      CPU.Adjust_Compare (CPU.Word (Aux));
 
-      if Pending_Alarm /= null then
-         Peripherals.Cancel_Alarm;
-         Pending_Alarm := null;
-      end if;
-
-      --  Find time remaining to first alarm
-
-      Now := Clock;
-
-      if First_Alarm.Timeout > Now then
-         Diff := First_Alarm.Timeout - Now;
-      else
-         Diff := 1;
-      end if;
-
-      --  Set timer if alarm is within a clock period
-
-      if Diff < Clock_Period then
-         Peripherals.Set_Alarm (Timer_Interval (Diff));
-         Pending_Alarm := First_Alarm;
-      end if;
-
-   end Update_Alarm_Timer;
+   end Update_Compare;
 
 end System.BB.Time;

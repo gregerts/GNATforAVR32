@@ -1,15 +1,12 @@
-with Ada.Real_Time, Ada.Task_Identification;
-use Ada.Real_Time, Ada.Task_Identification;
+with Ada.Real_Time, Ada.Task_Identification, Ada.Interrupts;
+use Ada.Real_Time, Ada.Task_Identification, Ada.Interrupts;
 
 package Execution_Time_Poller is
 
-   procedure Initialize
-     (N : Positive;
-      P : Time_Span);
+   procedure Register (T : Task_Id);
+   procedure Register (I : Interrupt_ID);
 
-   procedure Register (Tid : Task_Id);
-
-   procedure Run;
+   procedure Run (P : Time_Span);
    pragma No_Return (Run);
 
 end Execution_Time_Poller;

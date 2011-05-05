@@ -1,16 +1,13 @@
 package body Interrupt_Servers.Deferrable is
 
-   --------------
-   -- Register --
-   --------------
+   ----------------
+   -- Initialize --
+   ----------------
 
-   procedure Register
-     (S : in out Deferrable_Interrupt_Server;
-      I : Any_Interrupt_State)
-   is
+   procedure Initialize (S : in out Deferrable_Interrupt_Server) is
    begin
-      S.M.Register (I);
-   end Register;
+      S.M.Initialize;
+   end Initialize;
 
    ---------------
    -- Mechanism --
@@ -18,21 +15,16 @@ package body Interrupt_Servers.Deferrable is
 
    protected body Mechanism is
 
-      --------------
-      -- Register --
-      --------------
+      ----------------
+      -- Initialize --
+      ----------------
 
-      procedure Register (I : Any_Interrupt_State) is
+      procedure Initialize is
       begin
-         pragma Assert (Registered < State_Array'Last);
-         if Registered = 0 then
-            Execution_Timer := new Interrupt_Timer (Param.Pri);
-            Next := Epoch;
-            Replenish_Event.Set_Handler (Next, Replenish'Access);
-         end if;
-         Registered := Registered + 1;
-         States (Registered) := I;
-      end Register;
+         Execution_Timer := new Interrupt_Timer (Param.State.Identity);
+         Next := Epoch;
+         Replenish_Event.Set_Handler (Next, Replenish'Access);
+      end Initialize;
 
       ---------------
       -- Replenish --
@@ -43,9 +35,7 @@ package body Interrupt_Servers.Deferrable is
          Execution_Timer.Set_Handler (Param.Budget, Overrun'Access);
          if Disabled then
             Disabled := False;
-            for I in 1 .. Registered loop
-               States (I).Enable;
-            end loop;
+            Param.State.Enable;
          end if;
          Next := Next + Param.Period;
          Event.Set_Handler (Next, Replenish'Access);
@@ -59,9 +49,7 @@ package body Interrupt_Servers.Deferrable is
       begin
          if not Disabled then
             Disabled := True;
-            for I in 1 .. Registered loop
-               States (I).Disable;
-            end loop;
+            Param.State.Disable;
          end if;
       end Overrun;
 

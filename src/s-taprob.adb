@@ -88,7 +88,11 @@ package body System.Tasking.Protected_Objects is
          raise Program_Error;
       end if;
 
-      Set_Priority (Self_Id, Object.Ceiling);
+      --  Increase task priority if necessary
+
+      if Object.Ceiling > Caller_Priority then
+         Set_Priority (Self_Id, Object.Ceiling);
+      end if;
 
       --  Update the protected object's owner
 
@@ -131,7 +135,12 @@ package body System.Tasking.Protected_Objects is
       Self_Id.Common.Protected_Action_Nesting :=
         Self_Id.Common.Protected_Action_Nesting - 1;
 
-      Set_Priority (Self_Id, Object.Caller_Priority);
+      --  Restore task priority if necessary
+
+      if Object.Caller_Priority < Object.Ceiling then
+         Set_Priority (Self_Id, Object.Caller_Priority);
+      end if;
+
    end Unlock;
 
 begin

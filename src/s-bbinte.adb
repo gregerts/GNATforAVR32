@@ -59,17 +59,14 @@ with System.BB.Peripherals;
 --  Used for To_Level
 
 with System.BB.TMU;
+--  Used for Enter_Interrupt
+--           Leave_Interrupt
 
 package body System.BB.Interrupts is
 
    package SSE renames System.Storage_Elements;
 
    use type System.Storage_Elements.Storage_Offset;
-
-   subtype Real_Interrupt_Level is Interrupt_Level
-     range 1 .. Interrupt_Level'Last;
-   --  This subtype is the same as Interrupt_Level but excluding Level
-   --  0, which is not a real interrupt level.
 
    ----------------
    -- Local data --
@@ -82,7 +79,7 @@ package body System.BB.Interrupts is
    --  stack must be aligned to 8 bytes to allow double word data
    --  movements.
 
-   Interrupt_Stacks : array (Real_Interrupt_Level) of Stack_Space;
+   Interrupt_Stacks : array (Interrupt_Level) of Stack_Space;
    --  Array that contains the stack used for each interrupt level.
 
    Interrupt_Stack_Table : array (Interrupt_Level) of System.Address;
@@ -109,14 +106,12 @@ package body System.BB.Interrupts is
    -- Local subprograms --
    -----------------------
 
-   procedure Interrupt_Wrapper (Level : Interrupt_Level);
+   procedure Interrupt_Wrapper
+     (Interrupt : Interrupt_ID;
+      Level     : Interrupt_Level);
    pragma Export (Asm, Interrupt_Wrapper, "interrupt_wrapper");
    --  This wrapper procedure is in charge of setting the appropriate
    --  software priorities before calling the user-defined handler.
-
-   procedure Unhandled (Interrupt : Interrupt_ID);
-   --  This procedure is called when an interrupt without a
-   --  user-defined handler is encountered.
 
    --------------------
    -- Attach_Handler --
@@ -135,7 +130,7 @@ package body System.BB.Interrupts is
 
       Interrupt_Handlers_Table (Id) := Handler;
 
-      TMU.Initialize_Interrupt_Timer (Id);
+      TMU.Initialize_Interrupt_Clock (Id);
 
    end Attach_Handler;
 
@@ -161,10 +156,7 @@ package body System.BB.Interrupts is
      (Level : Interrupt_Level) return System.Any_Priority
    is
    begin
-      --  Assert that it is a real interrupt level.
-      pragma Assert (Level /= No_Level);
-
-      return (Any_Priority (Level) + Interrupt_Priority'First - 1);
+      return Interrupt_Priority'First + Any_Priority (Level);
    end To_Priority;
 
    -----------------------
@@ -180,7 +172,10 @@ package body System.BB.Interrupts is
    -- Interrupt_Wrapper --
    -----------------------
 
-   procedure Interrupt_Wrapper (Level : Interrupt_Level) is
+   procedure Interrupt_Wrapper
+     (Interrupt : Interrupt_ID;
+      Level     : Interrupt_Level)
+   is
 
       Self_Id : constant Threads.Thread_Id :=
         Threads.Thread_Self;
@@ -191,22 +186,22 @@ package body System.BB.Interrupts is
       Previous_Interrupt : constant Interrupt_ID :=
         Interrupt_Being_Handled;
 
-      Interrupt : constant Interrupt_ID :=
-        Peripherals.Get_Interrupt_ID (Level);
+      Handler : constant Interrupt_Handler :=
+        Interrupt_Handlers_Table (Interrupt);
 
    begin
       --  This must be an external interrupt
       pragma Assert (Level > 0);
 
-      --  Return immediatly in case of false interrupt
-      if Interrupt = No_Interrupt then
+      --  Return if no handler is registered for this interrupt
+      if Handler = null then
          return;
       end if;
 
-      --  Activate clock for current interrupt
+      --  Change to interrupt clock
       TMU.Enter_Interrupt (Interrupt);
 
-      --  Store the interrupt being handled
+      --  Store the interrupt being handled.
       Interrupt_Being_Handled := Interrupt;
 
       --  Then, we must set the appropriate software priority
@@ -218,7 +213,7 @@ package body System.BB.Interrupts is
       CPU_Primitives.Restore_Interrupts;
 
       --  Call the user handler
-      Interrupt_Handlers_Table (Interrupt).all (Interrupt);
+      Handler.all (Interrupt);
 
       --  Restore interrupts
       CPU_Primitives.Disable_Interrupts;
@@ -236,16 +231,6 @@ package body System.BB.Interrupts is
 
    end Interrupt_Wrapper;
 
-   ---------------
-   -- Unhandled --
-   ---------------
-
-   procedure Unhandled (Interrupt : Interrupt_ID) is
-      pragma Unreferenced (Interrupt);
-   begin
-      null;
-   end Unhandled;
-
    ----------------------------
    -- Within_Interrupt_Stack --
    ----------------------------
@@ -253,12 +238,13 @@ package body System.BB.Interrupts is
    function Within_Interrupt_Stack
      (Stack_Address : System.Address) return Boolean
    is
-      Interrupt_Handled : constant Interrupt_ID := Current_Interrupt;
-      Stack_Start       : System.Address;
-      Stack_End         : System.Address;
+      Level : constant Interrupt_Level
+        := Peripherals.To_Level (Current_Interrupt);
+      Stack_Start : System.Address;
+      Stack_End   : System.Address;
 
    begin
-      if Interrupt_Handled = No_Interrupt then
+      if Current_Interrupt = No_Interrupt then
 
          --  Return False if no interrupt is being handled
 
@@ -267,12 +253,12 @@ package body System.BB.Interrupts is
          --  Calculate stack boundaries for the interrupt being handled
 
          Stack_Start :=
-           Interrupt_Stacks (Interrupt_Handled)(Stack_Space'First)'Address;
+           Interrupt_Stacks (Level)(Stack_Space'First)'Address;
          Stack_End   :=
-           Interrupt_Stacks (Interrupt_Handled)(Stack_Space'Last)'Address;
+           Interrupt_Stacks (Level)(Stack_Space'Last)'Address;
 
          --  Compare the Address passed as argument against the
-         --  previosly calculated stack boundaries.
+         --  previously calculated stack boundaries.
 
          return Stack_Address >= Stack_Start
            and then Stack_Address <= Stack_End;
@@ -291,14 +277,9 @@ package body System.BB.Interrupts is
       Interrupt_Stack_Table (0) := SSE.To_Address (0);
 
       --  Set SP of interrupt level to the last double word
-      for Index in Real_Interrupt_Level loop
+      for Index in Interrupt_Level loop
          Interrupt_Stack_Table (Index) :=
            Interrupt_Stacks (Index)(Stack_Space'Last - 7)'Address;
-      end loop;
-
-      --  All interrupts initially have no handler
-      for Interrupt in Interrupt_ID loop
-         Interrupt_Handlers_Table (Interrupt) := Unhandled'Access;
       end loop;
 
    end Initialize_Interrupts;

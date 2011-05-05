@@ -76,10 +76,6 @@ package System.BB.Parameters is
    --  Scaling of peripheral clocks relative to main clock.
    --  Possible divisions are 1, 2, 4, 8, 16, 32, 64, 128 and 256.
 
-   Timer_Division : constant := 32;
-   --  Scaling of timer clock relative to peripheral clock A.
-   --  Possible divisions are 1, 4, 8, 16 and 32.
-
    Flash_Wait_State : constant := 1;
    --  Number of wait states in Flash. For AVR32 UC3 value 0 to
    --  disable and 1 to enable.
@@ -95,9 +91,9 @@ package System.BB.Parameters is
    --  Number of interrupt groups on the UC3A.
 
    Interrupts : constant := 59;
-   --  The number of interrupts on the UC3A.
+   --  The number of interrupts on the UC3A with TMU
 
-   Interrupt_Timers : constant := 10;
+   Interrupt_Clocks : constant := 10;
    --  Maximal number of interrupt timers and thereby also interrupts
 
    -------------------------

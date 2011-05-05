@@ -42,8 +42,7 @@ with System.OS_Interface;
 --  used for Time
 
 with System.BB.TMU;
---  used for Timer_Id
---           CPU_Time
+--  used for Clock_Id
 
 with System.Parameters;
 --  used for Size_Type
@@ -122,8 +121,8 @@ package System.Task_Primitives.Operations is
    -- TMU --
    ---------
 
-   function Task_Timer (T : ST.Task_Id) return System.BB.TMU.Timer_Id;
-   pragma Inline (Task_Timer);
-   --  This function returns the exeuction time of the given task
+   function Task_Clock (T : ST.Task_Id) return System.BB.TMU.Clock_Id;
+   pragma Inline (Task_Clock);
+   --  This function returns the exeuction time clock of the given task
 
 end System.Task_Primitives.Operations;

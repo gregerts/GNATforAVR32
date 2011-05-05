@@ -121,6 +121,15 @@ package body External_Interrupts is
       Control.Clear := S.M;
    end Clear;
 
+   --------------
+   -- Identity --
+   --------------
+
+   function Identity (S : External_Interrupt) return Interrupt_ID is
+   begin
+      return S.Id;
+   end Identity;
+
    -------------
    -- To_Mask --
    -------------
