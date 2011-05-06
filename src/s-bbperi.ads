@@ -93,9 +93,6 @@ package System.BB.Peripherals is
    procedure Set_Compare (Compare : TMU_Interval);
    pragma Inline (Set_Compare);
 
-   procedure Set_Count (Count : TMU_Interval);
-   pragma Inline (Set_Count);
-
    procedure Swap_Context (Compare_A : TMU_Interval;
                            Count_A   : TMU_Interval;
                            Count_B   : out TMU_Interval);

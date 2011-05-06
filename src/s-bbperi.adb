@@ -162,6 +162,9 @@ package body System.BB.Peripherals is
    procedure Initialize_Interrupts;
    --  Procedure initializing the Interrupt Controller.
 
+   procedure Initialize_TMU;
+   --  Procedure initializing the Time Management Unit.
+
    procedure GPIO_Configure_Peripheral
      (Port        : access GPIO_Port_Interface;
       From        : GPIO_Pin;
@@ -185,6 +188,9 @@ package body System.BB.Peripherals is
 
       Initialize_Interrupts;
       --  Initialize the interrupt controller.
+
+      Initialize_TMU;
+      --  Initialize the time management unit
 
    end Initialize_Board;
 
@@ -295,6 +301,16 @@ package body System.BB.Peripherals is
 
    end To_Level;
 
+   --------------------
+   -- Initialize_TMU --
+   --------------------
+
+   procedure Initialize_TMU is
+   begin
+      TMUI.Control := (Enable => True, others => <>);
+      TMUI.Enable  := (Compare_Match => True, others => <>);
+   end Initialize_TMU;
+
    -----------------
    -- Set_Compare --
    -----------------
@@ -303,15 +319,6 @@ package body System.BB.Peripherals is
    begin
       TMUI.Compare := Compare;
    end Set_Compare;
-
-   ---------------
-   -- Set_Count --
-   ---------------
-
-   procedure Set_Count (Count : TMU_Interval) is
-   begin
-      TMUI.Count := Count;
-   end Set_Count;
 
    ------------------
    -- Swap_Context --
