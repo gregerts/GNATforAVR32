@@ -57,7 +57,7 @@ context_switch:
 
 	/* Store address of running thread in r9 */
 	lda.w	r8, running_thread
-	ld.w	r9, r8[0]
+	ld.w	r9, r8
 
 	/* Add size of context */
 	sub	r9, -(CONTEXT_SIZE + 4)
@@ -69,24 +69,26 @@ context_switch:
 
 	/* Store address of first thread in r1 */
 	lda.w	r1, first_thread
-	ld.w	r2, r1[0]
+	ld.w	r9, r1
 
 	/* First thread is now also running thread */
-	st.w	r8[0], r2
+	st.w	r8[0], r9
 	
 	/* Do TMU context switch */
-	mov	r8, TMU_SWAP_COUNT_HI
-	ld.d	r4, r2++
-	ld.d	r6, r2++
-	st.d 	r8++, r4
-	st.d 	r8++, r6
-	ld.d 	r6, --r8
-	ld.d 	r4, --r8
-	st.d 	--r9, r6
-	st.d 	--r9, r4
+	lda.w	r0, system__bb__tmu__etc
+	ld.w	r1, r0
+	mov	lr, TMU_SWAP_COMPARE
+	ld.w	r2, r9[THREAD_ACTIVE_CLOCK]
+	ld.w	r3, r2[CLOCK_FIRST_ALARM]
+	ld.d	r4, r3[ALARM_TIMEOUT]
+	st.d	lr++, r4
+	ld.d	r4, r2[CLOCK_COUNT]
+	st.d	lr, r4
+	ld.d	r4, lr
+	st.d	r1[CLOCK_COUNT], r4
+	st.w	r0, r2
 
 	/* Load CPU context of first thread */
-	mov	r9, r2
 	ld.w	r0, r9++
 	mtsr	SYSREG_SR, r0
 	sub	pc, -2
