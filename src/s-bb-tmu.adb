@@ -95,10 +95,6 @@ package body System.BB.TMU is
    procedure Compare_Handler (Id : Interrupts.Interrupt_ID);
    --  Handler for the TMU COMPARE interrupt
 
-   procedure Context_Switch (First : Thread_Id);
-   pragma Export (Asm, Context_Switch, "tmu_context_switch");
-   --  Changes time context to first thread
-
    procedure Initialize_Clock
      (Clock    : Clock_Id;
       Capacity : Natural);
@@ -173,15 +169,6 @@ package body System.BB.TMU is
       end if;
 
    end Compare_Handler;
-
-   --------------------
-   -- Context_Switch --
-   --------------------
-
-   procedure Context_Switch (First : Thread_Id) is
-   begin
-      Update_ETC (First.Active_Clock);
-   end Context_Switch;
 
    ----------------
    -- Enter_Idle --
