@@ -80,6 +80,10 @@ package body System.BB.TMU is
    Idle : constant Clock_Id := Pool (0)'Access;
    --  Clock of the pseudo idle thread
 
+   Sentinel : aliased Alarm_Descriptor := (Timeout => CPU_Time'Last,
+                                           others  => <>);
+   --  Alarm of clocks when not set
+
    -----------------------
    -- Local subprograms --
    -----------------------
@@ -126,7 +130,7 @@ package body System.BB.TMU is
 
       if Alarm = Clock.First_Alarm then
 
-         Clock.First_Alarm := null;
+         Clock.First_Alarm := Sentinel'Access;
 
          if Active (Clock) then
             Peripherals.Set_Compare (CPU_Time'Last);
@@ -154,15 +158,16 @@ package body System.BB.TMU is
       Alarm : constant Alarm_Id := Clock.First_Alarm;
    begin
 
+      pragma Assert (Id = Peripherals.TMU);
       pragma Assert (Clock /= ETC);
 
       --  Call alarm handler if set and expired
 
-      if Alarm /= null and then Alarm.Timeout <= Clock.Count then
+      if Alarm.Timeout <= Clock.Count then
 
-         Clock.First_Alarm := null;
+         Clock.First_Alarm := Sentinel'Access;
+
          Alarm.Timeout := CPU_Time'First;
-
          Alarm.Handler (Alarm.Data);
 
       end if;
@@ -250,7 +255,7 @@ package body System.BB.TMU is
    begin
       Clock.all := (Count       => CPU_Time'First,
                     Capacity    => Capacity,
-                    First_Alarm => null);
+                    First_Alarm => Sentinel'Access);
    end Initialize_Clock;
 
    --------------------------------
@@ -376,7 +381,7 @@ package body System.BB.TMU is
       Clock : constant Clock_Id := Alarm.Clock;
    begin
 
-      pragma Assert (Clock /= null and then Clock.First_Alarm = null);
+      pragma Assert (Clock /= null);
 
       --  Set timeout
 
@@ -432,15 +437,12 @@ package body System.BB.TMU is
    ----------------
 
    procedure Update_ETC (Clock : Clock_Id) is
-      Compare : CPU_Time := CPU_Time'First;
    begin
       pragma Assert (Clock /= null);
 
-      if Clock.First_Alarm /= null then
-         Compare := Clock.First_Alarm.Timeout;
-      end if;
-
-      Peripherals.Swap_Context (Compare, Clock.Count, ETC.Count);
+      Peripherals.Swap_Context (Clock.First_Alarm.Timeout,
+                                Clock.Count,
+                                ETC.Count);
 
       ETC := Clock;
 
