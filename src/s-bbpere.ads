@@ -96,35 +96,16 @@ package System.BB.Peripherals.Registers is
    --  Addresses of memory mapped registers  --
    --------------------------------------------
 
-   Flash_Address :
-     constant System.Address := System'To_Address (16#FFFE1400#);
-
-   Interrupt_Controller_Address :
-     constant System.Address := System'To_Address (16#FFFF0800#);
-
-   Interrupt_Priority_Address :
-     constant System.Address := System'To_Address (16#FFFF0800#);
-
-   Interrupt_Request_Address :
-     constant System.Address := System'To_Address (16#FFFF0800# + 256);
-
-   Power_Manager_Address :
-     constant System.Address := System'To_Address (16#FFFF0C00#);
-
-   GPIO_Port_A_Address :
-     constant System.Address := System'To_Address (16#FFFF1000#);
-
-   GPIO_Port_B_Address :
-     constant System.Address := System'To_Address (16#FFFF1100#);
-
-   USART_Channel_0_Address :
-     constant System.Address := System'To_Address (16#FFFF1400#);
-
-   USART_Channel_1_Address :
-     constant System.Address := System'To_Address (16#FFFF1800#);
-
-   TMU_Address :
-     constant System.Address := System'To_Address (16#FFFF3A00#);
+   Flash_Address                : constant := 16#FFFE1400#;
+   Interrupt_Controller_Address : constant := 16#FFFF0800#;
+   Interrupt_Priority_Address   : constant := 16#FFFF0800#;
+   Interrupt_Request_Address    : constant := 16#FFFF0800# + 256;
+   Power_Manager_Address        : constant := 16#FFFF0C00#;
+   GPIO_Port_A_Address          : constant := 16#FFFF1000#;
+   GPIO_Port_B_Address          : constant := 16#FFFF1100#;
+   USART_Channel_0_Address      : constant := 16#FFFF1400#;
+   USART_Channel_1_Address      : constant := 16#FFFF1800#;
+   TMU_Address                  : constant := 16#FFFF3A00#;
 
    ---------------------------------
    -- Main Clock Control Register --
