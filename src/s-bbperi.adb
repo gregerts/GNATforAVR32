@@ -58,7 +58,7 @@ package body System.BB.Peripherals is
    --------------------------------
 
    type Interrupt_ID_Table is
-     array (Interrupt_Group, Interrupt_Line) of SBI.Interrupt_ID;
+     array (Interrupt_Group, Interrupt_Line) of Scaler_8;
 
    pragma Suppress_Initialization (Interrupt_ID_Table);
    pragma Pack (Interrupt_ID_Table);
@@ -98,7 +98,7 @@ package body System.BB.Peripherals is
 
    Group_To_Level : constant
      array (Interrupt_Group) of SBI.Interrupt_Level :=
-     (0 | 14 => 3, others => 0);
+     (0 => 3, others => 0);
 
    ------------------------------------------------
    -- Constants used for configurating registers --
@@ -292,7 +292,7 @@ package body System.BB.Peripherals is
       pragma Assert (Interrupt /= SBI.No_Interrupt);
 
       for I in Interrupt_Group loop
-         if To_Interrupt_ID (I, 0) > Interrupt then
+         if SBI.Interrupt_ID (To_Interrupt_ID (I, 0)) > Interrupt then
             return Group_To_Level (I - 1);
          end if;
       end loop;
