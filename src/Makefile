@@ -38,7 +38,8 @@ s-bbprot.ads \
 s-bbseou.ads \
 s-bbthqu.ads \
 s-bbthre.ads \
-s-bbtime.ads
+s-bbtime.ads \
+s-bb-tmu.ads
 
 LIBGNAT_ASM_SRC = \
 context_switch.S \
