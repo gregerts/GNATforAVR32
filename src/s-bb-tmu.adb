@@ -52,7 +52,7 @@ package body System.BB.TMU is
    type Clock_Stack is array (Stack_Index) of Clock_Id;
    pragma Suppress_Initialization (Clock_Stack);
 
-   type Pool_Index is range 0 .. Parameters.Interrupt_Clocks + 1;
+   type Pool_Index is range 0 .. Parameters.Interrupt_Clocks;
    for Pool_Index'Size use 8;
 
    -----------------------
