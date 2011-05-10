@@ -330,9 +330,8 @@ package body System.BB.Peripherals is
       Count_B   : out TMU_Interval)
    is
    begin
-      TMUI.Swap_Compare := Compare_A;
-      TMUI.Swap_Count   := Count_A;
-      Count_B           := TMUI.Swap_Count;
+      TMUI.Swap := (Compare_A, Count_A);
+      Count_B   := TMUI.Swap (1);
    end Swap_Context;
 
    ---------------

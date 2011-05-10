@@ -642,53 +642,6 @@ package System.BB.Peripherals.Registers is
 
    pragma Suppress_Initialization (TMU_Control_Register);
 
-   -----------------------
-   -- TMU Mode Register --
-   -----------------------
-
-   type TMU_Mode_Register is
-      record
-         Unused : Scaler_32 := 0;
-      end record;
-
-   for TMU_Mode_Register'Size use 32;
-
-   pragma Suppress_Initialization (TMU_Mode_Register);
-
-   -------------------------
-   -- TMU Status Register --
-   -------------------------
-
-   type TMU_Status_Register is
-      record
-         Compare_Match          : Boolean   := False;
-         Overflow               : Boolean   := False;
-         Unused_A               : Scaler_6  := 0;
-         Previous_Compare_Match : Boolean   := False;
-         Previous_Overflow      : Boolean   := False;
-         Unused_B               : Scaler_6  := 0;
-         Enable                 : Boolean   := False;
-         Unused_C               : Scaler_7  := 0;
-         Unused_D               : Scaler_8  := 0;
-      end record;
-
-   for TMU_Status_Register use
-      record
-         Compare_Match          at 0 range 31 .. 31;
-         Overflow               at 0 range 30 .. 30;
-         Unused_A               at 0 range 24 .. 29;
-         Previous_Compare_Match at 0 range 23 .. 23;
-         Previous_Overflow      at 0 range 22 .. 22;
-         Unused_B               at 0 range 16 .. 21;
-         Enable                 at 0 range 15 .. 15;
-         Unused_C               at 0 range 8 .. 14;
-         Unused_D               at 0 range 0 .. 7;
-      end record;
-
-   for TMU_Status_Register'Size use 32;
-
-   pragma Suppress_Initialization (TMU_Status_Register);
-
    -------------------------------
    -- TMU Interrupt Register --
    -------------------------------
@@ -713,22 +666,30 @@ package System.BB.Peripherals.Registers is
 
    pragma Suppress_Initialization (TMU_Interrupt_Register);
 
+   ------------------------
+   -- TMU Swap Registers --
+   ------------------------
+
+   type TMU_Swap_Registers is array (0 .. 1) of TMU_Interval;
+
+   pragma Volatile_Components (TMU_Swap_Registers);
+   pragma Suppress_Initialization (TMU_Swap_Registers);
+
    -------------------
    -- TMU Interface --
    -------------------
 
    type TMU_Interface is
       record
-         Control      : TMU_Control_Register;
-         Mode         : TMU_Mode_Register;
-         Status       : TMU_Status_Register;
-         Clear        : TMU_Interrupt_Register;
-         Enable       : TMU_Interrupt_Register;
-         Disable      : TMU_Interrupt_Register;
-         Compare      : TMU_Interval;
-         Count        : TMU_Interval;
-         Swap_Compare : TMU_Interval;
-         Swap_Count   : TMU_Interval;
+         Control : TMU_Control_Register;
+         Mode    : Scaler_32;
+         Status  : Scaler_32;
+         Clear   : TMU_Interrupt_Register;
+         Enable  : TMU_Interrupt_Register;
+         Disable : TMU_Interrupt_Register;
+         Compare : TMU_Interval;
+         Count   : TMU_Interval;
+         Swap    : TMU_Swap_Registers;
          pragma Atomic (Control);
          pragma Atomic (Mode);
          pragma Atomic (Status);
