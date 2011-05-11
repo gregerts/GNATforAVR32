@@ -190,13 +190,9 @@ package body System.BB.Interrupts is
         Interrupt_Handlers_Table (Interrupt);
 
    begin
-      --  This must be an external interrupt
+      --  This must be an external interrupt with a registered handler
       pragma Assert (Level > 0);
-
-      --  Return if no handler is registered for this interrupt
-      if Handler = null then
-         return;
-      end if;
+      pragma Assert (Handler /= null);
 
       --  Change to interrupt clock
       TMU.Enter_Interrupt (Interrupt);
