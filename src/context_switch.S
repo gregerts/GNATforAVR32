@@ -72,22 +72,8 @@ context_switch:
 	ld.w	r9, r1
 
 	/* First thread is now also running thread */
-	st.w	r8[0], r9
+	st.w	r8, r9
 	
-	/* Do TMU context switch */
-	lda.w	r0, system__bb__tmu__etc
-	ld.w	r1, r0
-	mov	lr, TMU_SWAP_COMPARE
-	ld.w	r2, r9[THREAD_ACTIVE_CLOCK]
-	ld.w	r3, r2[CLOCK_FIRST_ALARM]
-	ld.d	r4, r3[ALARM_TIMEOUT]
-	st.d	lr++, r4
-	ld.d	r4, r2[CLOCK_COUNT]
-	st.d	lr, r4
-	ld.d	r4, lr
-	st.d	r1[CLOCK_COUNT], r4
-	st.w	r0, r2
-
 	/* Load CPU context of first thread */
 	ld.w	r0, r9++
 	mtsr	SYSREG_SR, r0

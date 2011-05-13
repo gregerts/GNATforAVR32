@@ -87,8 +87,7 @@ package body System.BB.Peripherals is
       15 => (ADC, others => 0),
       16 => (MACB, others => 0),
       17 => (USB, others => 0),
-      18 => (SDRAMC, others => 0),
-      19 => (TMU, others => 0));
+      18 => (SDRAMC, others => 0));
 
    pragma Export (ASM, To_Interrupt_ID, "to_interrupt_id");
 
@@ -136,9 +135,6 @@ package body System.BB.Peripherals is
    GPIO_Port_B : aliased GPIO_Port_Interface;
    for GPIO_Port_B'Address use GPIO_Port_B_Address;
 
-   TMUI : aliased TMU_Interface;
-   for TMUI'Address use TMU_Address;
-
    -----------------------
    -- Local definitions --
    -----------------------
@@ -161,9 +157,6 @@ package body System.BB.Peripherals is
 
    procedure Initialize_Interrupts;
    --  Procedure initializing the Interrupt Controller.
-
-   procedure Initialize_TMU;
-   --  Procedure initializing the Time Management Unit.
 
    procedure GPIO_Configure_Peripheral
      (Port        : access GPIO_Port_Interface;
@@ -188,9 +181,6 @@ package body System.BB.Peripherals is
 
       Initialize_Interrupts;
       --  Initialize the interrupt controller.
-
-      Initialize_TMU;
-      --  Initialize the time management unit
 
    end Initialize_Board;
 
@@ -300,48 +290,6 @@ package body System.BB.Peripherals is
       return SBI.Interrupt_Level'First;
 
    end To_Level;
-
-   --------------------
-   -- Initialize_TMU --
-   --------------------
-
-   procedure Initialize_TMU is
-   begin
-      TMUI.Control := (Enable => True, others => <>);
-      TMUI.Enable  := (Compare_Match => True, others => <>);
-   end Initialize_TMU;
-
-   -----------------
-   -- Set_Compare --
-   -----------------
-
-   procedure Set_Compare (Compare : TMU_Interval) is
-   begin
-      TMUI.Compare := Compare;
-   end Set_Compare;
-
-   ------------------
-   -- Swap_Context --
-   ------------------
-
-   procedure Swap_Context
-     (Compare_A : TMU_Interval;
-      Count_A   : TMU_Interval;
-      Count_B   : out TMU_Interval)
-   is
-   begin
-      TMUI.Swap := (Compare_A, Count_A);
-      Count_B   := TMUI.Swap (1);
-   end Swap_Context;
-
-   ---------------
-   -- Get_Count --
-   ---------------
-
-   function Get_Count return TMU_Interval is
-   begin
-      return TMUI.Count;
-   end Get_Count;
 
    ------------------------
    -- Initialize_Console --

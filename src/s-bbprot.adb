@@ -55,10 +55,6 @@ with System.BB.Interrupts;
 --  Used for Current_Interrupt
 --           Delay_Context_Switch
 
-with System.BB.TMU;
---  Used for Enter_Idle
---           Leave_Idle
-
 package body System.BB.Protection is
 
    -----------------------
@@ -124,10 +120,6 @@ package body System.BB.Protection is
          --  There is no task ready to execute so we need to wait until there
          --  is one, unless we are currently handling an interrupt.
 
-         --  Enter TMU idle mode
-
-         TMU.Enter_Idle (TMU.Thread_Id (Self_Id));
-
          --  In the meantime, we put the task temporarily in the ready queue
          --  so interrupt handling is performed normally. Note that the task
          --  is inserted in the queue but its state is not Runnable.
@@ -155,10 +147,6 @@ package body System.BB.Protection is
          if Self_Id.State /= Threads.Runnable then
             Threads.Queues.Extract (Self_Id);
          end if;
-
-         --  Leave TMU idle mode
-
-         TMU.Leave_Idle (TMU.Thread_Id (Self_Id));
 
       end if;
 

@@ -38,8 +38,7 @@ s-bbprot.ads \
 s-bbseou.ads \
 s-bbthqu.ads \
 s-bbthre.ads \
-s-bbtime.ads \
-s-bb-tmu.ads
+s-bbtime.ads
 
 LIBGNAT_ASM_SRC = \
 context_switch.S \
@@ -71,11 +70,7 @@ s-tarest.ads \
 s-tposen.ads \
 a-sytaco.ads \
 a-taside.ads \
-a-taster.ads \
-a-exetim.ads \
-a-extiin.ads \
-a-extiti.ads \
-a-etinti.ads
+a-taster.ads
 
 LIBGNARL_OBJS = $(LIBGNARL_SRC:.ads=.o)
 LIBGNARL_ALIS = $(LIBGNARL_SRC:.ads=.ali)

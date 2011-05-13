@@ -1,18 +1,9 @@
 #ifndef __AVR32_H
 #define __AVR32_H
 
-#define EXECUTION_TIMING
-
 /* Context buffer offsets */
 #define CONTEXT_OFFSET	  0
 #define CONTEXT_SIZE      60
-
-/* TMU registers */
-#define TMU_SWAP_COMPARE    0xFFFF3A10
-#define THREAD_ACTIVE_CLOCK CONTEXT_SIZE
-#define CLOCK_FIRST_ALARM   8
-#define CLOCK_COUNT         0
-#define ALARM_TIMEOUT       0
 
 /* System registers */
 #define SYSREG_SR	  0

@@ -54,9 +54,6 @@ with System.BB.CPU_Primitives;
 with System.BB.Time;
 --  Used for Alarm_Descriptor
 
-with System.BB.TMU;
---  Used for Clock_Descriptor
-
 with System.BB.Interrupts;
 --  Used for Interrupt_Set
 --           Empty_Interrupt_Set
@@ -89,12 +86,6 @@ package System.BB.Threads is
       --  Location where the hardware registers (stack pointer, program
       --  counter, ...) are stored. This field supports context switches among
       --  threads.
-
-      Active_Clock : System.BB.TMU.Clock_Id;
-      --  Active execution time clock for this thread
-
-      Clock : aliased System.BB.TMU.Clock_Descriptor;
-      --  Execution-time clock for this thread
 
       ATCB : System.Address;
       --  Address of the Ada Task Control Block corresponding to the Ada task

@@ -105,7 +105,6 @@ package System.BB.Peripherals.Registers is
    GPIO_Port_B_Address          : constant := 16#FFFF1100#;
    USART_Channel_0_Address      : constant := 16#FFFF1400#;
    USART_Channel_1_Address      : constant := 16#FFFF1800#;
-   TMU_Address                  : constant := 16#FFFF3A00#;
 
    ---------------------------------
    -- Main Clock Control Register --
@@ -617,88 +616,5 @@ package System.BB.Peripherals.Registers is
       end record;
 
    pragma Suppress_Initialization (GPIO_Port_Interface);
-
-   --------------------------
-   -- TMU Control Register --
-   --------------------------
-
-   type TMU_Control_Register is
-      record
-         Enable   : Boolean   := False;
-         Disable  : Boolean   := False;
-         Unused_A : Scaler_6  := 0;
-         Unused_B : Scaler_24 := 0;
-      end record;
-
-   for TMU_Control_Register use
-      record
-         Enable   at 0 range 31 .. 31;
-         Disable  at 0 range 30 .. 30;
-         Unused_A at 0 range 24 .. 29;
-         Unused_B at 0 range 0 .. 23;
-      end record;
-
-   for TMU_Control_Register'Size use 32;
-
-   pragma Suppress_Initialization (TMU_Control_Register);
-
-   -------------------------------
-   -- TMU Interrupt Register --
-   -------------------------------
-
-   type TMU_Interrupt_Register is
-      record
-         Compare_Match : Boolean   := False;
-         Overflow      : Boolean   := False;
-         Unused_A      : Scaler_6  := 0;
-         Unused_B      : Scaler_24 := 0;
-      end record;
-
-   for TMU_Interrupt_Register use
-      record
-         Compare_Match          at 0 range 31 .. 31;
-         Overflow               at 0 range 30 .. 30;
-         Unused_A               at 0 range 24 .. 29;
-         Unused_B               at 0 range 0 .. 23;
-      end record;
-
-   for TMU_Interrupt_Register'Size use 32;
-
-   pragma Suppress_Initialization (TMU_Interrupt_Register);
-
-   ------------------------
-   -- TMU Swap Registers --
-   ------------------------
-
-   type TMU_Swap_Registers is array (0 .. 1) of TMU_Interval;
-
-   pragma Volatile_Components (TMU_Swap_Registers);
-   pragma Suppress_Initialization (TMU_Swap_Registers);
-
-   -------------------
-   -- TMU Interface --
-   -------------------
-
-   type TMU_Interface is
-      record
-         Control : TMU_Control_Register;
-         Mode    : Scaler_32;
-         Status  : Scaler_32;
-         Clear   : TMU_Interrupt_Register;
-         Enable  : TMU_Interrupt_Register;
-         Disable : TMU_Interrupt_Register;
-         Compare : TMU_Interval;
-         Count   : TMU_Interval;
-         Swap    : TMU_Swap_Registers;
-         pragma Atomic (Control);
-         pragma Atomic (Mode);
-         pragma Atomic (Status);
-         pragma Atomic (Clear);
-         pragma Atomic (Enable);
-         pragma Atomic (Disable);
-         pragma Volatile (Count);
-      end record;
-
-   pragma Suppress_Initialization (TMU_Interface);
 
 end System.BB.Peripherals.Registers;

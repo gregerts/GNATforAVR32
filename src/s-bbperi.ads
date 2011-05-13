@@ -81,26 +81,6 @@ package System.BB.Peripherals is
      Main_Clock_Frequency / SBP.Peripheral_Division;
    --  Frequency of peripheral clock in Hz
 
-   ------------------------------------
-   -- TMU definitions and primitives --
-   ------------------------------------
-
-   TMU_Frequency : constant := Peripheral_Frequency;
-
-   type TMU_Interval is mod 2 ** 64;
-   for TMU_Interval'Size use 64;
-
-   procedure Set_Compare (Compare : TMU_Interval);
-   pragma Inline (Set_Compare);
-
-   procedure Swap_Context (Compare_A : TMU_Interval;
-                           Count_A   : TMU_Interval;
-                           Count_B   : out TMU_Interval);
-   pragma Inline (Swap_Context);
-
-   function Get_Count return TMU_Interval;
-   pragma Inline (Get_Count);
-
    ----------------
    -- Interrupts --
    ----------------
@@ -111,7 +91,6 @@ package System.BB.Peripherals is
 
    --  Constants defining the external interrupts
 
-   TMU     : constant := 59; --  Group 19
    SDRAMC  : constant := 58; --  Group 18
    USB     : constant := 57; --  Group 17
    MACB    : constant := 56; --  Group 16

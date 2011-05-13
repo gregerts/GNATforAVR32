@@ -193,10 +193,6 @@ package body System.BB.Threads is
 
       Environment_Thread.Wakeup_Signaled := False;
 
-      --  Initialize the timers
-
-      TMU.Initialize_TMU (TMU.Thread_Id (Environment_Thread));
-
       --  Initialize alarm timer
 
       Initialize_Alarm (Environment_Thread.Alarm'Access,
@@ -328,10 +324,6 @@ package body System.BB.Threads is
       --  thread.
 
       Initialize_Context (Id.Context'Access, Code, Arg, Id.Top_Of_Stack);
-
-      --  Initialize execution time clock
-
-      TMU.Initialize_Thread_Clock (TMU.Thread_Id (Id));
 
       --  Initialize alarm timer
 

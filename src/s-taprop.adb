@@ -44,7 +44,6 @@ with System.Tasking.Debug;
 
 package body System.Task_Primitives.Operations is
 
-   use System.BB;
    use System.OS_Interface;
    use System.Parameters;
    use System.Storage_Elements;
@@ -240,15 +239,5 @@ package body System.Task_Primitives.Operations is
    begin
       return System.OS_Interface.Current_Interrupt = No_Interrupt;
    end Is_Task_Context;
-
-   ----------------
-   -- Task_Timer --
-   ----------------
-
-   function Task_Clock (T : ST.Task_Id) return System.BB.TMU.Clock_Id is
-   begin
-      return System.BB.TMU.Thread_Clock
-        (System.BB.TMU.Thread_Id (T.Common.LL.Thread));
-   end Task_Clock;
 
 end System.Task_Primitives.Operations;
