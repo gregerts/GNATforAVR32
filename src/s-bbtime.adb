@@ -55,8 +55,16 @@ package body System.BB.Time is
    type Clock_Stack is array (Stack_Index) of Clock_Id;
    pragma Suppress_Initialization (Clock_Stack);
 
-   type Pool_Index is range 0 .. Parameters.Interrupt_Clocks + 1;
-   for Pool_Index'Size use 8;
+   type Pool_Index is new Short_Short_Integer;
+
+   type Clock_Pool is array
+     (Pool_Index range 1 .. Parameters.Interrupt_Clocks)
+     of aliased Clock_Descriptor;
+   pragma Suppress_Initialization (Clock_Pool);
+
+   type Clock_Lookup is array (Interrupt_ID) of Pool_Index;
+   pragma Pack (Clock_Lookup);
+   pragma Suppress_Initialization (Clock_Lookup);
 
    -----------------------
    -- Local definitions --
@@ -65,14 +73,14 @@ package body System.BB.Time is
    Max_Compare : constant := CPU.Word'Last - 2 ** 16;
    --  Maximal value set to COMPARE register
 
-   Pool : array (Pool_Index) of aliased Clock_Descriptor;
-   --  Pool of clocks
+   Pool : Clock_Pool;
+   --  Pool of interrupt clocks
 
-   Last : Pool_Index := 1;
-   --  Pointing to last allocated clock in pool
+   Free : Pool_Index := 1;
+   --  Index of first free interrupt clock in pool
 
-   Lookup : array (Interrupt_ID) of Pool_Index;
-   --  Array for translating interrupt IDs to pool index
+   Lookup : Clock_Lookup;
+   --  Array for translating interrupt IDs to pool indexes
 
    Stack : Clock_Stack;
    --  Stack of interrupted timers
@@ -83,10 +91,10 @@ package body System.BB.Time is
    ETC : Clock_Id;
    --  The currently running execution time clock
 
-   RTC : constant Clock_Id := Pool (0)'Access;
+   RTC : aliased Clock_Descriptor;
    --  The real-time clock
 
-   Idle : constant Clock_Id := Pool (1)'Access;
+   Idle : aliased Clock_Descriptor;
    --  Clock of the pseudo idle thread
 
    Sentinel : aliased Alarm_Descriptor := (Timeout => Time'Last, others => <>);
@@ -135,7 +143,7 @@ package body System.BB.Time is
 
    function Active (Clock : Clock_Id) return Boolean is
    begin
-      return Clock = RTC or else Clock = ETC;
+      return Clock = RTC'Access or else Clock = ETC;
    end Active;
 
    -------------------
@@ -152,7 +160,7 @@ package body System.BB.Time is
 
       pragma Assert (Clock /= ETC);
 
-      if Clock = RTC then
+      if Clock = RTC'Access then
          Now := Clock.Base_Time + Time (CPU.Get_Count);
       else
          Now := Clock.Base_Time;
@@ -247,7 +255,7 @@ package body System.BB.Time is
 
       Defer_Updates := True;
 
-      Alarm_Wrapper (RTC);
+      Alarm_Wrapper (RTC'Access);
       Alarm_Wrapper (Stack (Top - 1));
 
       Defer_Updates := False;
@@ -260,6 +268,7 @@ package body System.BB.Time is
 
    procedure Context_Switch (First : Thread_Id) is
    begin
+      pragma Assert (Top = 0);
       Update_ETC (First.Active_Clock);
    end Context_Switch;
 
@@ -272,9 +281,9 @@ package body System.BB.Time is
       pragma Assert (ETC = Id.Active_Clock);
       pragma Assert (Id.Active_Clock = Id.Clock'Access);
 
-      Id.Active_Clock := Idle;
+      Id.Active_Clock := Idle'Access;
 
-      Update_ETC (Idle);
+      Update_ETC (Idle'Access);
 
    end Enter_Idle;
 
@@ -344,22 +353,24 @@ package body System.BB.Time is
    --------------------------------
 
    procedure Initialize_Interrupt_Clock (Id : Interrupt_ID) is
+      Clock : Clock_Id;
    begin
       pragma Assert (Id /= Interrupts.No_Interrupt);
       pragma Assert (Lookup (Id) = 0);
-      pragma Assert (Last < Pool_Index'Last);
+      pragma Assert (Free <= Pool'Last);
 
-      --  Allocate next clock in Pool to Id
+      --  Allocate free clock in Pool to Id
 
-      Last := Last + 1;
-      Lookup (Id) := Last;
+      Clock := Pool (Free)'Access;
+      Lookup (Id) := Free;
+      Free := Free + 1;
 
       --  Initialize clock, no alarms allowed for highest priority
 
       if Interrupts.Priority_Of_Interrupt (Id) < Any_Priority'Last then
-         Initialize_Clock (Pool (Last)'Access, 1);
+         Initialize_Clock (Clock, 1);
       else
-         Initialize_Clock (Pool (Last)'Access, 0);
+         Initialize_Clock (Clock, 0);
       end if;
 
    end Initialize_Interrupt_Clock;
@@ -394,11 +405,11 @@ package body System.BB.Time is
 
       --  Initialize execution time clock for idling, no alarms
 
-      Initialize_Clock (Idle, 0);
+      Initialize_Clock (Idle'Access, 0);
 
       --  Initialize real-time clock, no limit on alarms
 
-      Initialize_Clock (RTC, Natural'Last);
+      Initialize_Clock (RTC'Access, Natural'Last);
 
       --  Activate clock of environment thread
 
@@ -432,8 +443,8 @@ package body System.BB.Time is
    procedure Leave_Idle (Id : Thread_Id) is
       Clock : constant Clock_Id := Id.Clock'Access;
    begin
-      pragma Assert (ETC = Idle);
-      pragma Assert (Id.Active_Clock = Idle);
+      pragma Assert (ETC = Idle'Access);
+      pragma Assert (Id.Active_Clock = Idle'Access);
 
       Id.Active_Clock := Clock;
 
@@ -461,7 +472,7 @@ package body System.BB.Time is
 
    function Monotonic_Clock return Time is
    begin
-      return Time_Of_Clock (RTC);
+      return Time_Of_Clock (RTC'Access);
    end Monotonic_Clock;
 
    ---------------------
@@ -470,7 +481,7 @@ package body System.BB.Time is
 
    function Real_Time_Clock return Clock_Id is
    begin
-      return RTC;
+      return RTC'Access;
    end Real_Time_Clock;
 
    ---------------
@@ -599,7 +610,8 @@ package body System.BB.Time is
    --------------------
 
    procedure Update_Compare is
-      Diff : constant Time := Time'Min (Remaining (RTC), Remaining (ETC));
+      Diff : constant Time
+        := Time'Min (Remaining (RTC'Access), Remaining (ETC));
    begin
       CPU.Adjust_Compare (CPU.Word (Time'Min (Diff, Max_Compare)));
    end Update_Compare;
