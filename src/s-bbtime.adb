@@ -50,22 +50,6 @@ package body System.BB.Time is
    use type CPU.Word;
    use type Interrupts.Interrupt_ID;
 
-   type Stack_Index is new Interrupts.Interrupt_Level;
-
-   type Clock_Stack is array (Stack_Index) of Clock_Id;
-   pragma Suppress_Initialization (Clock_Stack);
-
-   type Pool_Index is new Short_Short_Integer;
-
-   type Clock_Pool is array
-     (Pool_Index range 1 .. Parameters.Interrupt_Clocks)
-     of aliased Clock_Descriptor;
-   pragma Suppress_Initialization (Clock_Pool);
-
-   type Clock_Lookup is array (Interrupt_ID) of Pool_Index;
-   pragma Pack (Clock_Lookup);
-   pragma Suppress_Initialization (Clock_Lookup);
-
    -----------------------
    -- Local definitions --
    -----------------------
@@ -73,20 +57,11 @@ package body System.BB.Time is
    Max_Compare : constant := CPU.Word'Last - 2 ** 16;
    --  Maximal value set to COMPARE register
 
-   Pool : Clock_Pool;
-   --  Pool of interrupt clocks
+   Pool_Size : constant := Parameters.Interrupt_Clocks;
+   --  Number of interrupt clocks in pool
 
-   Free : Pool_Index := 1;
-   --  Index of first free interrupt clock in pool
-
-   Lookup : Clock_Lookup;
-   --  Array for translating interrupt IDs to pool indexes
-
-   Stack : Clock_Stack;
-   --  Stack of interrupted timers
-
-   Top : Stack_Index := 0;
-   --  Index of free place on stack
+   Stack_Size : constant := Parameters.Interrupt_Levels;
+   --  Size of stack for interrupted execution time clocks
 
    ETC : Clock_Id;
    --  The currently running execution time clock
@@ -96,6 +71,21 @@ package body System.BB.Time is
 
    Idle : aliased Clock_Descriptor;
    --  Clock of the pseudo idle thread
+
+   Pool : array (1 .. Pool_Size) of aliased Clock_Descriptor;
+   --  Pool of interrupt clocks
+
+   Free : Integer := 1;
+   --  Index of first free interrupt clock in pool
+
+   Lookup : array (Interrupt_ID) of Clock_Id := (others => null);
+   --  Lookup array translating interrupt IDs to interrupt clocks
+
+   Stack : array (1 .. Stack_Size) of Clock_Id := (others => null);
+   --  Stack of interrupted execution time clocks
+
+   Top : Integer := 0;
+   --  Index of top element on stack or zero if empty
 
    Sentinel : aliased Alarm_Descriptor := (Timeout => Time'Last, others => <>);
    --  Always the last alarm in the queue of every clock
@@ -256,7 +246,7 @@ package body System.BB.Time is
       Defer_Updates := True;
 
       Alarm_Wrapper (RTC'Access);
-      Alarm_Wrapper (Stack (Top - 1));
+      Alarm_Wrapper (Stack (Top));
 
       Defer_Updates := False;
 
@@ -292,15 +282,13 @@ package body System.BB.Time is
    ---------------------
 
    procedure Enter_Interrupt (Id : Interrupt_ID) is
-      I : constant Pool_Index := Lookup (Id);
    begin
       pragma Assert (Top < Stack'Last);
-      pragma Assert (I > 0);
 
-      Stack (Top) := ETC;
       Top := Top + 1;
+      Stack (Top) := ETC;
 
-      Update_ETC (Pool (I)'Access);
+      Update_ETC (Interrupt_Clock (Id));
 
    end Enter_Interrupt;
 
@@ -356,14 +344,15 @@ package body System.BB.Time is
       Clock : Clock_Id;
    begin
       pragma Assert (Id /= Interrupts.No_Interrupt);
-      pragma Assert (Lookup (Id) = 0);
+      pragma Assert (Lookup (Id) = null);
       pragma Assert (Free <= Pool'Last);
 
       --  Allocate free clock in Pool to Id
 
       Clock := Pool (Free)'Access;
-      Lookup (Id) := Free;
       Free := Free + 1;
+
+      Lookup (Id) := Clock;
 
       --  Initialize clock, no alarms allowed for highest priority
 
@@ -427,13 +416,8 @@ package body System.BB.Time is
    ---------------------
 
    function Interrupt_Clock (Id : Interrupt_ID) return Clock_Id is
-      I : constant Pool_Index := Lookup (Id);
    begin
-      if I > 0 then
-         return Pool (I)'Access;
-      else
-         return null;
-      end if;
+      return Lookup (Id);
    end Interrupt_Clock;
 
    ----------------
@@ -462,7 +446,7 @@ package body System.BB.Time is
 
       Top := Top - 1;
 
-      Update_ETC (Stack (Top));
+      Update_ETC (Stack (Top + 1));
 
    end Leave_Interrupt;
 
