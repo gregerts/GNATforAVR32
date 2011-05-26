@@ -175,20 +175,6 @@ package body System.BB.CPU_Primitives is
       SMC.Asm ("", Clobber => "memory", Volatile => True);
    end Barrier;
 
-   ---------------
-   -- Get_Count --
-   ---------------
-
-   function Get_Count return Word is
-      Count : Word;
-   begin
-      SMC.Asm ("mfsr    %0, 264",
-               Outputs => Word'Asm_Output ("=r", Count),
-               Volatile => True);
-
-      return Count;
-   end Get_Count;
-
    --------------------
    -- Adjust_Compare --
    --------------------
@@ -209,24 +195,34 @@ package body System.BB.CPU_Primitives is
 
    end Adjust_Compare;
 
-   ----------------
-   -- Swap_Count --
-   ----------------
+   ---------------
+   -- Get_Count --
+   ---------------
 
-   function Swap_Count return Word is
-      Zero  : constant Word := 0;
+   function Get_Count return Word is
       Count : Word;
+   begin
+      SMC.Asm ("mfsr    %0, 264",
+               Outputs => Word'Asm_Output ("=r", Count),
+               Volatile => True);
 
+      return Count;
+   end Get_Count;
+
+   -----------------
+   -- Reset_Count --
+   -----------------
+
+   procedure Reset_Count (Prev : out Word) is
+      Count : constant Word := 2;
    begin
 
       SMC.Asm ("mfsr    %0, 264" & ASCII.LF & ASCII.HT &
                "mtsr    264, %1",
-               Inputs => Word'Asm_Input ("r", Zero),
-               Outputs => Word'Asm_Output ("+r", Count),
+               Inputs => Word'Asm_Input ("r", Count),
+               Outputs => Word'Asm_Output ("+r", Prev),
                Volatile => True);
 
-      return Count + 2;
-
-   end Swap_Count;
+   end Reset_Count;
 
 end System.BB.CPU_Primitives;

@@ -137,7 +137,12 @@ package body System.BB.Time is
 
       --  Update base time of real time clock
 
-      Base_Time := Base_Time + Time (CPU.Swap_Count);
+      declare
+         Prev : CPU.Word;
+      begin
+         CPU.Reset_Count (Prev);
+         Base_Time := Base_Time + Time (Prev);
+      end;
 
       --  Call all expired alarm handlers, defer COMPARE updates
 
