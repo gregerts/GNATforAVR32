@@ -605,12 +605,14 @@ package body System.BB.Time is
    ----------------
 
    procedure Update_ETC (Clock : Clock_Id) is
-      Count : constant CPU.Word := CPU.Swap_Count;
+      Prev : CPU.Word;
    begin
       pragma Assert (Clock /= null);
 
-      RTC.Base_Time := RTC.Base_Time + Time (Count);
-      ETC.Base_Time := ETC.Base_Time + Time (Count);
+      CPU.Reset_Count (Prev);
+
+      RTC.Base_Time := RTC.Base_Time + Time (Prev);
+      ETC.Base_Time := ETC.Base_Time + Time (Prev);
 
       ETC := Clock;
 

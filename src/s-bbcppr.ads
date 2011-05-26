@@ -137,8 +137,8 @@ package System.BB.CPU_Primitives is
    function Get_Count return Word;
    pragma Inline_Always (Get_Count);
 
-   function Swap_Count return Word;
-   pragma Inline_Always (Swap_Count);
+   procedure Reset_Count (Prev : out Word);
+   pragma Inline_Always (Reset_Count);
 
 private
 
