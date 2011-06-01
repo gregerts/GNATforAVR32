@@ -25,7 +25,7 @@ package body Simulation.Periodic is
 
       S.Timeout := False;
 
-      if Random (S.Gen'Access) < 50 then
+      if Random (S.Gen'Access) < 95 then
          W := (30 * S.C) / 4;
       else
          W := (50 * S.C) / 4;
