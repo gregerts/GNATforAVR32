@@ -13,6 +13,7 @@ project Test is
   package Compiler is
      for Default_Switches ("Ada")
        use ("-gnatan",
+            "-gnat05",
             "-g",
             "-O2",
 	    "-march=ucr1",
