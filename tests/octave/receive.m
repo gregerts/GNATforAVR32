@@ -18,8 +18,11 @@ function data = receive (n)
   % Read n samples into data
   try
     for i = 1:n
-      data = [data; cellfun(@hex2dec, strsplit(fgetl(usart),":"))];
+      line = fgetl(usart);
+      data = [data; cellfun(@hex2dec, strsplit(line, ":"))];
     endfor
+  catch
+    printf("Error: %s\n", line);
   end_try_catch
 
   % Close USART file
