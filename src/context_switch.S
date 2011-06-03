@@ -60,7 +60,7 @@ context_switch:
 	ld.w	r9, r8[0]
 
 	/* Add size of context */
-	sub	r9, -44
+	sub	r9, -(CONTEXT_SIZE + 4)
 	
 	/* Save context of running thread */
 	stm	--r9, r0,r1,r2,r3,r4,r5,r6,r7,sp,lr
