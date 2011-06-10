@@ -530,31 +530,22 @@ package body System.BB.Time is
    -------------------
 
    function Time_Of_Clock (Clock : not null Clock_Id) return Time is
-      Base  : Time;
-      Count : CPU.Word;
-
+      T : Time := Clock.Base_Time;
    begin
 
-      --  If clock is not active return base time
+      if Active (Clock) then
 
-      if not Active (Clock) then
-         return Clock.Base_Time;
-      end if;
-
-      --  Else the time of clock is sum of base time and count
-
-      loop
-
-         Base  := Clock.Base_Time;
-         Count := CPU.Get_Count;
+         T := T + Time (CPU.Get_Count);
 
          CPU.Barrier;
 
-         exit when Base = Clock.Base_Time;
+         if T < Clock.Base_Time then
+            T := Clock.Base_Time;
+         end if;
 
-      end loop;
+      end if;
 
-      return Base + Time (Count);
+      return T;
 
    end Time_Of_Clock;
 
