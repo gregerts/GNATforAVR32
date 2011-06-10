@@ -11,6 +11,7 @@ package body Execution_Time_Poller is
    type Task_Array is array (Positive range <>) of Task_Id;
    type CPU_Time_Array is array (Positive range <>) of CPU_Time;
 
+   procedure Put is new Put_Hex (Integer);
    procedure Put is new Put_Hex (Time);
    procedure Put is new Put_Hex (CPU_Time);
 
@@ -100,6 +101,8 @@ package body Execution_Time_Poller is
 
       New_Line;
       Put_Line ("SYNC");
+      Put (Last_Task + Last_Interrupt + 2);
+      New_Line;
 
       loop
 
