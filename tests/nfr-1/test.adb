@@ -3,6 +3,7 @@ use System, Ada.Real_Time, Utilities, GNAT.IO;
 
 package body Test is
 
+   procedure Put is new Put_Hex (Integer);
    procedure Put is new Put_Hex (Time);
 
    protected Timed_SO is
@@ -56,6 +57,8 @@ package body Test is
 
       New_Line;
       Put_Line ("SYNC");
+      Put (2);
+      New_Line;
 
       loop
 	 Timed_SO.Release;

@@ -18,7 +18,7 @@ function data = receive (n)
   % Read n samples into data
   try
     for i = 1:n
-      data = [data; transpose(hex2dec(split(fgetl(usart),":")))];
+      data = [data; cellfun(@hex2dec, strsplit(fgetl(usart),":"))];
     endfor
   end_try_catch
 

@@ -3,7 +3,7 @@
 
 /* Context buffer offsets */
 #define CONTEXT_OFFSET	  0
-#define CONTEXT_SIZE      40
+#define CONTEXT_SIZE     40
 
 /* System registers */
 #define SYSREG_SR	  0

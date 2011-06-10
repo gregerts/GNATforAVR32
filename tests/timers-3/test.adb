@@ -64,6 +64,7 @@ package body Test is
       begin
 
          pragma Assert (Next <= Now);
+	 pragma Assert (Now <= Next + Microseconds (20));
 
          D (L, 1) := Data (To_Count (Now - Next));
          D (L, 2) := Data (X);
