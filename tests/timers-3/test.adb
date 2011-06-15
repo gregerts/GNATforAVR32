@@ -5,6 +5,14 @@ use System, Ada.Real_Time, Ada.Real_Time.Timing_Events,
 
 package body Test is
 
+   ------------------------
+   -- Test configuration --
+   ------------------------
+   
+   A : constant := 1000;
+   B : constant := 3000;
+   N : constant := 100;
+
    -----------------
    -- Definitions --
    -----------------
@@ -22,6 +30,7 @@ package body Test is
    function To_Count is new Ada.Unchecked_Conversion (Time_Span, Count);
 
    procedure Put is new Put_Hex (Data);
+   procedure Put is new Put_Hex (Integer);
 
    ----------
    -- Idle --
@@ -144,7 +153,9 @@ package body Test is
 
       New_Line;
       Put_Line ("SYNC");
-
+      Put (Data_Array'Last (2));
+      New_Line;
+      
       loop
 
          Statistics.Start;

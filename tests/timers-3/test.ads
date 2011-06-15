@@ -1,5 +1,3 @@
-generic
-   A, B, N : Natural;
 package Test is
 
    ---------
