@@ -9,7 +9,7 @@ package body Ada.Execution_Time.Interrupts is
       if C = null then
          return CPU_Time_First;
       else
-         return CPU_Time (SBT.Time_Of_Clock (C));
+         return CPU_Time (SBT.Elapsed_Time (C));
       end if;
    end Clock;
 

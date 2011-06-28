@@ -77,7 +77,7 @@ package body Ada.Execution_Time is
       return CPU_Time
    is
    begin
-      return CPU_Time (SBT.Time_Of_Clock (STPO.Task_Clock (To_Task_Id (T))));
+      return CPU_Time (SBT.Elapsed_Time (STPO.Task_Clock (To_Task_Id (T))));
    end Clock;
 
    ---------

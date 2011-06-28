@@ -95,7 +95,7 @@ package body System.BB.Threads is
 
       --  Test if the alarm time is in the future
 
-      if T > Time_Of_Clock (Real_Time_Clock) then
+      if T > Elapsed_Time (Real_Time_Clock) then
 
          --  Update state of thread to Delayed
 

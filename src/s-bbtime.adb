@@ -253,6 +253,30 @@ package body System.BB.Time is
       Update_ETC (First.Active_Clock);
    end Context_Switch;
 
+   ------------------
+   -- Elapsed_Time --
+   ------------------
+
+   function Elapsed_Time (Clock : not null Clock_Id) return Time is
+      T : Time := Clock.Base_Time;
+   begin
+
+      if Active (Clock) then
+
+         T := T + Time (CPU.Get_Count);
+
+         CPU.Barrier;
+
+         if T < Clock.Base_Time then
+            T := Clock.Base_Time;
+         end if;
+
+      end if;
+
+      return T;
+
+   end Elapsed_Time;
+
    ----------------
    -- Enter_Idle --
    ----------------
@@ -447,7 +471,7 @@ package body System.BB.Time is
 
    function Monotonic_Clock return Time is
    begin
-      return Time_Of_Clock (RTC'Access);
+      return Elapsed_Time (RTC'Access);
    end Monotonic_Clock;
 
    ---------------------
@@ -524,30 +548,6 @@ package body System.BB.Time is
       end if;
 
    end Set;
-
-   -------------------
-   -- Time_Of_Clock --
-   -------------------
-
-   function Time_Of_Clock (Clock : not null Clock_Id) return Time is
-      T : Time := Clock.Base_Time;
-   begin
-
-      if Active (Clock) then
-
-         T := T + Time (CPU.Get_Count);
-
-         CPU.Barrier;
-
-         if T < Clock.Base_Time then
-            T := Clock.Base_Time;
-         end if;
-
-      end if;
-
-      return T;
-
-   end Time_Of_Clock;
 
    ------------------
    -- Thread_Clock --

@@ -172,7 +172,7 @@ package body Ada.Execution_Time.Timers is
          Initialize (TM);
       end if;
 
-      At_Time := CPU_Time (SBT.Time_Of_Clock (SBT.Clock (TM.Id))) + In_Time;
+      At_Time := CPU_Time (SBT.Elapsed_Time (SBT.Clock (TM.Id))) + In_Time;
 
       Set_Handler (TM, At_Time, Handler);
 
@@ -221,7 +221,7 @@ package body Ada.Execution_Time.Timers is
 
       loop
          Timeout := CPU_Time (SBT.Time_Of_Alarm (TM.Id));
-         Now := CPU_Time (SBT.Time_Of_Clock (SBT.Clock (TM.Id)));
+         Now := CPU_Time (SBT.Elapsed_Time (SBT.Clock (TM.Id)));
          exit when Timeout = CPU_Time (SBT.Time_Of_Alarm (TM.Id));
       end loop;
 
