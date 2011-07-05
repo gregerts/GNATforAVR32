@@ -138,33 +138,23 @@ package body System.BB.Time is
    -------------------
 
    procedure Alarm_Wrapper (Clock : Clock_Id) is
-      Alarm : Alarm_Id;
-      Now : Time;
-
+      Alarm : Alarm_Id := Clock.First_Alarm;
    begin
 
-      --  Only the real time clock can be active
+      --  No alarms allowed for ETC at the highest interrupt level
 
       pragma Assert (Clock /= ETC);
 
-      if Clock = RTC'Access then
-         Now := Clock.Base_Time + Time (CPU.Get_Count);
-      else
-         Now := Clock.Base_Time;
-      end if;
+      --  Remove all expired alarms from queue and call handlers
 
-      --  Call all expired alarm handlers
-
-      loop
-
-         Alarm := Clock.First_Alarm;
-         exit when Alarm.Timeout > Now;
-
-         --  Remove Alarm from queue and call handler
+      while Alarm.Timeout <= Clock.Base_Time loop
 
          Clock.First_Alarm := Alarm.Next;
          Alarm.Next := null;
+
          Alarm.Handler (Alarm.Data);
+
+         Alarm := Clock.First_Alarm;
 
       end loop;
 
@@ -250,7 +240,7 @@ package body System.BB.Time is
    procedure Context_Switch (First : Thread_Id) is
    begin
       pragma Assert (Top = 0);
-      Update_ETC (First.Active_Clock);
+      Update_ETC (First.Clock'Access);
    end Context_Switch;
 
    ------------------
@@ -283,13 +273,8 @@ package body System.BB.Time is
 
    procedure Enter_Idle (Id : Thread_Id) is
    begin
-      pragma Assert (ETC = Id.Active_Clock);
-      pragma Assert (Id.Active_Clock = Id.Clock'Access);
-
-      Id.Active_Clock := Idle'Access;
-
+      pragma Assert (ETC = Id.Clock'Access);
       Update_ETC (Idle'Access);
-
    end Enter_Idle;
 
    ---------------------
@@ -324,10 +309,11 @@ package body System.BB.Time is
 
          Clock.Capacity := Clock.Capacity - 1;
 
-         Alarm.Clock   := Clock;
-         Alarm.Handler := Handler;
-         Alarm.Data    := Data;
-         Alarm.Next    := null;
+         Alarm.all := (Clock   => Clock,
+                       Timeout => Time'First,
+                       Handler => Handler,
+                       Data    => Data,
+                       Next    => null);
 
          Success := True;
 
@@ -385,15 +371,11 @@ package body System.BB.Time is
 
    procedure Initialize_Thread_Clock (Id : Thread_Id) is
    begin
-      pragma Assert (Id /= null and then Id.Active_Clock = null);
-
-      --  Active clock of thread is thread clock
-
-      Id.Active_Clock := Id.Clock'Access;
+      pragma Assert (Id /= null);
 
       --  Only one alarm for execution time clocks in Ravenscar
 
-      Initialize_Clock (Id.Active_Clock, 1);
+      Initialize_Clock (Id.Clock'Access, 1);
 
    end Initialize_Thread_Clock;
 
@@ -440,14 +422,13 @@ package body System.BB.Time is
    ----------------
 
    procedure Leave_Idle (Id : Thread_Id) is
-      Clock : constant Clock_Id := Id.Clock'Access;
    begin
-      pragma Assert (ETC = Idle'Access);
-      pragma Assert (Id.Active_Clock = Idle'Access);
 
-      Id.Active_Clock := Clock;
+      if ETC = Idle'Access then
+         Update_ETC (Id.Clock'Access);
+      end if;
 
-      Update_ETC (Clock);
+      pragma Assert (ETC = Id.Clock'Access);
 
    end Leave_Idle;
 
@@ -542,10 +523,9 @@ package body System.BB.Time is
          Alarm.Next := Aux.Next;
          Aux.Next := Alarm;
 
-         pragma Assert (Aux.Timeout <= Timeout);
-         pragma Assert (Timeout < Alarm.Next.Timeout);
-
       end if;
+
+      pragma Assert (Alarm.Next /= null);
 
    end Set;
 

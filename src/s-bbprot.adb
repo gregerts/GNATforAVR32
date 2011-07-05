@@ -149,16 +149,15 @@ package body System.BB.Protection is
 
          end loop;
 
-         --  A task has been made ready to execute. We remove the one that was
-         --  temporarily inserted in the ready queue, if needed.
+         --  A task has been made ready to execute. If this task is
+         --  runnable we leave idle mode, else we remove it from the
+         --  ready queue and let the context switch change clock.
 
-         if Self_Id.State /= Threads.Runnable then
+         if Self_Id.State = Threads.Runnable then
+            Time.Leave_Idle (Time.Thread_Id (Self_Id));
+         else
             Threads.Queues.Extract (Self_Id);
          end if;
-
-         --  Leave TMU idle mode
-
-         Time.Leave_Idle (Time.Thread_Id (Self_Id));
 
       end if;
 
