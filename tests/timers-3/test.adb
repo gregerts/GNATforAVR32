@@ -32,14 +32,6 @@ package body Test is
    procedure Put is new Put_Hex (Data);
    procedure Put is new Put_Hex (Integer);
 
-   ----------
-   -- Idle --
-   ----------
-
-   task Idle is
-      pragma Priority (Priority'First);
-   end Idle;
-
    ----------------
    -- Statistics --
    ----------------
@@ -64,17 +56,6 @@ package body Test is
       Done : Boolean := False;
       First : Boolean := True;
    end Statistics;
-
-   ----------
-   -- Idle --
-   ----------
-
-   task body Idle is
-   begin
-      loop
-	 null;
-      end loop;
-   end Idle;
 
    ----------------
    -- Statistics --
