@@ -35,6 +35,8 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
+with Ada.Execution_Time.Interrupts;
+with Ada.Interrupts;
 with Ada.Unchecked_Conversion;
 with System.Tasking;
 with System.Task_Primitives.Operations;
@@ -79,6 +81,22 @@ package body Ada.Execution_Time is
    begin
       return CPU_Time (SBT.Elapsed_Time (STPO.Task_Clock (To_Task_Id (T))));
    end Clock;
+
+   --------------------------
+   -- Clock_For_Interrupts --
+   --------------------------
+
+   function Clock_For_Interrupts return CPU_Time is
+      Sum : CPU_Time := 0;
+   begin
+
+      for I in Ada.Interrupts.Interrupt_ID loop
+         Sum := Sum + Interrupts.Clock (I);
+      end loop;
+
+      return Sum;
+
+   end Clock_For_Interrupts;
 
    ---------
    -- "+" --
