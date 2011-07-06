@@ -8,7 +8,7 @@
 --                            (AVR32 ELF Version)                           --
 --                                                                          --
 --          Copyright (C) 1992-2007, Free Software Foundation, Inc.         --
---             Copyright (C) 2007-2008 Kristoffer N. Gregertsen             --
+--             Copyright (C) 2007-2011, Kristoffer N. Gregertsen            --
 --                                                                          --
 -- This specification is derived from the Ada Reference Manual for use with --
 -- GNAT. The copyright notice above, and the license provisions that follow --

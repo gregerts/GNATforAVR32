@@ -9,7 +9,7 @@
 --        Copyright (C) 1999-2002 Universidad Politecnica de Madrid         --
 --             Copyright (C) 2003-2006 The European Space Agency            --
 --                     Copyright (C) 2003-2007, AdaCore                     --
---             Copyright (C) 2007-2008 Kristoffer N. Gregertsen             --
+--             Copyright (C) 2007-2011, Kristoffer N. Gregertsen            --
 --                                                                          --
 -- GNARL is free software; you can  redistribute it  and/or modify it under --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
