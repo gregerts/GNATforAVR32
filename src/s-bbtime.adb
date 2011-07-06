@@ -54,7 +54,7 @@ package body System.BB.Time is
    -- Local definitions --
    -----------------------
 
-   Max_Compare : constant := CPU.Word'Last - 2 ** 16;
+   Max_Compare : constant := CPU.Word'Last / 2;
    --  Maximal value set to COMPARE register
 
    Pool_Size : constant := Parameters.Interrupt_Clocks;
@@ -102,7 +102,7 @@ package body System.BB.Time is
    pragma Inline (Alarm_Wrapper);
    --  Calls all expired alarm handlers for the given clock
 
-   procedure Compare_Handler (Id : Interrupts.Interrupt_ID);
+   procedure Compare_Handler (Id : Interrupt_ID);
    --  Handler for the COMPARE interrupt
 
    procedure Context_Switch (First : Thread_Id);
@@ -223,7 +223,7 @@ package body System.BB.Time is
    -- Compare_Handler --
    ---------------------
 
-   procedure Compare_Handler (Id : Interrupts.Interrupt_ID) is
+   procedure Compare_Handler (Id : Interrupt_ID) is
    begin
 
       pragma Assert (Id = Peripherals.COMPARE);
@@ -499,7 +499,7 @@ package body System.BB.Time is
 
       if Timeout < Clock.First_Alarm.Timeout then
 
-         --  Insert Alarm first in queue, update COMPARE in needed
+         --  Insert Alarm first in queue, update COMPARE if needed
 
          Alarm.Next := Clock.First_Alarm;
          Clock.First_Alarm := Alarm;
