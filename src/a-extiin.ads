@@ -6,4 +6,9 @@ package Ada.Execution_Time.Interrupts is
 
    function Supported (I : Ada.Interrupts.Interrupt_ID) return Boolean;
 
+private
+
+   pragma Inline (Clock);
+   pragma Inline (Supported);
+
 end Ada.Execution_Time.Interrupts;
