@@ -55,6 +55,42 @@ package body Ada.Real_Time.Timing_Events is
    function To_Access is new Ada.Unchecked_Conversion
         (System.Address, Timing_Event_Access);
 
+   --------------------
+   -- Cancel_Handler --
+   --------------------
+
+   procedure Cancel_Handler
+     (Event     : in out Timing_Event;
+      Cancelled : out Boolean)
+   is
+   begin
+
+      Protection.Enter_Kernel;
+
+      if Event.Id = null then
+         Initialize (Event);
+      end if;
+
+      SBT.Cancel (Event.Id);
+
+      Cancelled     := Event.Handler /= null;
+      Event.Handler := null;
+
+      Protection.Leave_Kernel_No_Change;
+
+   end Cancel_Handler;
+
+   ---------------------
+   -- Current_Handler --
+   ---------------------
+
+   function Current_Handler
+     (Event : Timing_Event) return Timing_Event_Handler
+   is
+   begin
+      return Event.Handler;
+   end Current_Handler;
+
    ---------------------
    -- Execute_Handler --
    ---------------------
@@ -81,7 +117,6 @@ package body Ada.Real_Time.Timing_Events is
    procedure Initialize (Event : in out Timing_Event) is
       Success : Boolean;
    begin
-      Protection.Enter_Kernel;
 
       Event.Id := Event.Alarm'Unchecked_Access;
 
@@ -90,8 +125,6 @@ package body Ada.Real_Time.Timing_Events is
                             Execute_Handler'Access,
                             Event'Address,
                             Success);
-
-      Protection.Leave_Kernel_No_Change;
 
       pragma Assert (Success);
 
@@ -108,11 +141,11 @@ package body Ada.Real_Time.Timing_Events is
    is
    begin
 
+      Protection.Enter_Kernel;
+
       if Event.Id = null then
          Initialize (Event);
       end if;
-
-      Protection.Enter_Kernel;
 
       Event.Handler := Handler;
 
@@ -138,42 +171,6 @@ package body Ada.Real_Time.Timing_Events is
    begin
       Set_Handler (Event, Clock + In_Time, Handler);
    end Set_Handler;
-
-   ---------------------
-   -- Current_Handler --
-   ---------------------
-
-   function Current_Handler
-     (Event : Timing_Event) return Timing_Event_Handler
-   is
-   begin
-      return Event.Handler;
-   end Current_Handler;
-
-   --------------------
-   -- Cancel_Handler --
-   --------------------
-
-   procedure Cancel_Handler
-     (Event     : in out Timing_Event;
-      Cancelled : out Boolean)
-   is
-   begin
-
-      Protection.Enter_Kernel;
-
-      if Event.Id = null then
-         Initialize (Event);
-      end if;
-
-      SBT.Cancel (Event.Id);
-
-      Cancelled     := Event.Handler /= null;
-      Event.Handler := null;
-
-      Protection.Leave_Kernel_No_Change;
-
-   end Cancel_Handler;
 
    -------------------
    -- Time_Of_Event --
