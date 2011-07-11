@@ -77,11 +77,11 @@ package body Ada.Execution_Time.Timers is
    is
    begin
 
+      Protection.Enter_Kernel;
+
       if TM.Id = null then
          Initialize (TM);
       end if;
-
-      Protection.Enter_Kernel;
 
       SBT.Cancel (TM.Id);
 
@@ -138,8 +138,6 @@ package body Ada.Execution_Time.Timers is
          Clock := STPO.Task_Clock (To_Task_Id (TM.T.all));
       end if;
 
-      Protection.Enter_Kernel;
-
       TM.Id := TM.Alarm'Unchecked_Access;
 
       SBT.Initialize_Alarm (TM.Id,
@@ -147,8 +145,6 @@ package body Ada.Execution_Time.Timers is
                             Execute_Handler'Access,
                             TM'Address,
                             Success);
-
-      Protection.Leave_Kernel_No_Change;
 
       if not Success then
          raise Timer_Resource_Error;
@@ -189,11 +185,11 @@ package body Ada.Execution_Time.Timers is
    is
    begin
 
+      Protection.Enter_Kernel;
+
       if TM.Id = null then
          Initialize (TM);
       end if;
-
-      Protection.Enter_Kernel;
 
       TM.Handler := Handler;
 
