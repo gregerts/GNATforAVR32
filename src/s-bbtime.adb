@@ -117,12 +117,18 @@ package body System.BB.Time is
    -------------------
 
    procedure Alarm_Wrapper (Clock : Clock_Id) is
+      Now : constant Time :=  Clock.Base_Time + Time (CPU.Get_Count);
       Alarm : Alarm_Id := Clock.First_Alarm;
+
    begin
+
+      --  Only active clocks can expire
+
+      pragma Assert (Active (Clock));
 
       --  Remove all expired alarms from queue and call handlers
 
-      while Alarm.Timeout <= Clock.Base_Time loop
+      while Alarm.Timeout <= Now loop
 
          Clock.First_Alarm := Alarm.Next;
          Alarm.Next := null;
@@ -205,6 +211,8 @@ package body System.BB.Time is
 
       Alarm_Wrapper (RTC'Access);
       Alarm_Wrapper (ETC);
+
+      Update_Compare;
 
    end Compare_Handler;
 
