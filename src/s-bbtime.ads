@@ -131,10 +131,6 @@ package System.BB.Time is
    pragma Inline_Always (Interrupt_Clock);
    --  Returns the execution time clock for the given interrupt ID
 
-   function Monotonic_Clock return Time;
-   pragma Inline (Monotonic_Clock);
-   --  Returns the elapsed time of the real-time clock
-
    function Real_Time_Clock return Clock_Id;
    pragma Inline_Always (Real_Time_Clock);
    --  Returns the real time clock

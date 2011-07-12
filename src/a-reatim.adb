@@ -146,7 +146,7 @@ package body Ada.Real_Time is
 
    function Clock return Time is
    begin
-      return Time (System.Task_Primitives.Operations.Monotonic_Clock);
+      return Time (STPO.Monotonic_Clock);
    end Clock;
 
    ------------------

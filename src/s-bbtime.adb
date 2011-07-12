@@ -447,15 +447,6 @@ package body System.BB.Time is
    end Leave_Interrupt;
 
    ---------------------
-   -- Monotonic_Clock --
-   ---------------------
-
-   function Monotonic_Clock return Time is
-   begin
-      return Elapsed_Time (RTC'Access);
-   end Monotonic_Clock;
-
-   ---------------------
    -- Real_Time_Clock --
    ---------------------
 

@@ -44,6 +44,8 @@ with System.Tasking.Debug;
 
 package body System.Task_Primitives.Operations is
 
+   package SBT renames System.BB.Time;
+
    use System.BB;
    use System.OS_Interface;
    use System.Parameters;
@@ -105,7 +107,7 @@ package body System.Task_Primitives.Operations is
 
    function Monotonic_Clock return Time is
    begin
-      return Time (System.OS_Interface.Clock);
+      return Time (SBT.Elapsed_Time (SBT.Real_Time_Clock));
    end Monotonic_Clock;
 
    ------------
@@ -247,8 +249,7 @@ package body System.Task_Primitives.Operations is
 
    function Task_Clock (T : ST.Task_Id) return System.BB.Time.Clock_Id is
    begin
-      return System.BB.Time.Thread_Clock
-        (System.BB.Time.Thread_Id (T.Common.LL.Thread));
+      return SBT.Thread_Clock (SBT.Thread_Id (T.Common.LL.Thread));
    end Task_Clock;
 
 end System.Task_Primitives.Operations;
