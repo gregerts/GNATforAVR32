@@ -35,8 +35,6 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Ada.Execution_Time.Interrupts;
-with Ada.Interrupts;
 with Ada.Unchecked_Conversion;
 with System.Tasking;
 with System.Task_Primitives.Operations;
