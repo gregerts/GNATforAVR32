@@ -54,7 +54,7 @@ package body System.BB.Time is
    -- Local definitions --
    -----------------------
 
-   Max_Compare : constant := CPU.Word'Last - 2 ** 16;
+   Max_Compare : constant := CPU.Word'Last / 2;
    --  Maximal value set to COMPARE register
 
    Sentinel : aliased Alarm_Descriptor := (Timeout => Time'Last, others => <>);
@@ -249,7 +249,7 @@ package body System.BB.Time is
 
       if Timeout < First_Alarm.Timeout then
 
-         --  Insert Alarm first in queue, update COMPARE in needed
+         --  Insert Alarm first in queue, update COMPARE if needed
 
          Alarm.Next := First_Alarm;
          First_Alarm := Alarm;
@@ -273,10 +273,9 @@ package body System.BB.Time is
          Alarm.Next := Aux.Next;
          Aux.Next := Alarm;
 
-         pragma Assert (Aux.Timeout <= Timeout);
-         pragma Assert (Timeout < Alarm.Next.Timeout);
-
       end if;
+
+      pragma Assert (Alarm.Next /= null);
 
    end Set;
 

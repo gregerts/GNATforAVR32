@@ -6,7 +6,7 @@
 --                                                                          --
 --                                 B o d y                                  --
 --                                                                          --
---                Copyright (C) 2008, Kristoffer N. Gregertsen              --
+--             Copyright (C) 2008-2011, Kristoffer N. Gregertsen            --
 --                                                                          --
 -- GNAT is free software;  you can  redistribute it  and/or modify it under --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -55,6 +55,42 @@ package body Ada.Real_Time.Timing_Events is
    function To_Access is new Ada.Unchecked_Conversion
         (System.Address, Timing_Event_Access);
 
+   --------------------
+   -- Cancel_Handler --
+   --------------------
+
+   procedure Cancel_Handler
+     (Event     : in out Timing_Event;
+      Cancelled : out Boolean)
+   is
+   begin
+
+      Protection.Enter_Kernel;
+
+      if Event.Id = null then
+         Initialize (Event);
+      end if;
+
+      SBT.Cancel (Event.Id);
+
+      Cancelled     := Event.Handler /= null;
+      Event.Handler := null;
+
+      Protection.Leave_Kernel_No_Change;
+
+   end Cancel_Handler;
+
+   ---------------------
+   -- Current_Handler --
+   ---------------------
+
+   function Current_Handler
+     (Event : Timing_Event) return Timing_Event_Handler
+   is
+   begin
+      return Event.Handler;
+   end Current_Handler;
+
    ---------------------
    -- Execute_Handler --
    ---------------------
@@ -80,15 +116,12 @@ package body Ada.Real_Time.Timing_Events is
 
    procedure Initialize (Event : in out Timing_Event) is
    begin
-      Protection.Enter_Kernel;
 
       Event.Id := Event.Alarm'Unchecked_Access;
 
       SBT.Initialize_Alarm (Event.Id,
                             Execute_Handler'Access,
                             Event'Address);
-
-      Protection.Leave_Kernel_No_Change;
 
    end Initialize;
 
@@ -103,11 +136,11 @@ package body Ada.Real_Time.Timing_Events is
    is
    begin
 
+      Protection.Enter_Kernel;
+
       if Event.Id = null then
          Initialize (Event);
       end if;
-
-      Protection.Enter_Kernel;
 
       Event.Handler := Handler;
 
@@ -133,42 +166,6 @@ package body Ada.Real_Time.Timing_Events is
    begin
       Set_Handler (Event, Clock + In_Time, Handler);
    end Set_Handler;
-
-   ---------------------
-   -- Current_Handler --
-   ---------------------
-
-   function Current_Handler
-     (Event : Timing_Event) return Timing_Event_Handler
-   is
-   begin
-      return Event.Handler;
-   end Current_Handler;
-
-   --------------------
-   -- Cancel_Handler --
-   --------------------
-
-   procedure Cancel_Handler
-     (Event     : in out Timing_Event;
-      Cancelled : out Boolean)
-   is
-   begin
-
-      Protection.Enter_Kernel;
-
-      if Event.Id = null then
-         Initialize (Event);
-      end if;
-
-      SBT.Cancel (Event.Id);
-
-      Cancelled     := Event.Handler /= null;
-      Event.Handler := null;
-
-      Protection.Leave_Kernel_No_Change;
-
-   end Cancel_Handler;
 
    -------------------
    -- Time_Of_Event --

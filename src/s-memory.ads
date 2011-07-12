@@ -6,7 +6,7 @@
 --                                                                          --
 --                                 S p e c                                  --
 --                                                                          --
---              Copyright (C) 2009, Kristoffer Nyborg Gregertsen            --
+--             Copyright (C) 2009-2011, Kristoffer N. Gregertsen            --
 --                                                                          --
 -- GNAT is free software;  you can  redistribute it  and/or modify it under --
 -- terms of the  GNU General Public License as published  by the Free Soft- --

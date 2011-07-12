@@ -4,7 +4,7 @@ RTS_NAME    = ravenscar
 
 # Machine settings
 MARCH = ucr1
-MPART = uc3a0512
+MPART = uc3a0512es
 
 # Source files for Ravenscar LIBGNAT
 LIBGNAT_ADA_SRC = \

@@ -1,13 +1,16 @@
-with System, Ada.Real_Time.Timing_Events, Utilities, Quick_Random, GNAT.IO;
-use System, Ada.Real_Time, Ada.Real_Time.Timing_Events, Utilities, GNAT.IO;
+with System, Ada.Real_Time.Timing_Events, Ada.Unchecked_Conversion,
+  Utilities, Random_Time, GNAT.IO;
+use System, Ada.Real_Time, Ada.Real_Time.Timing_Events,
+  Utilities, Random_Time, GNAT.IO;
 
 package body Test is
 
-   procedure Put is new Put_Hex (Integer);
-   procedure Put is new Put_Hex (Time);
-
-   package QR is new Quick_Random (100_000, 200_000);
-   use QR;
+   type Data is mod 2 ** 64;
+   for Data'Size use 64;
+   
+   function To_Data is new Ada.Unchecked_Conversion (Time, Data);
+   
+   procedure Put_Data is new Put_Hex (Data);
    
    TE : Timing_Event;
    Gen : aliased Generator;
@@ -20,32 +23,35 @@ package body Test is
    protected body Interrupter is
       procedure Handler (Event : in out Timing_Event) is
       begin
-	 Event.Set_Handler (Nanoseconds (Random (Gen'Access)), Handler'Access);
+	 Event.Set_Handler (Random (Gen'Access), Handler'Access);
       end Handler;
    end Interrupter;
 
    procedure Run is
-      TA, TB : Time;
+      A, B : Data;
    begin
 
       New_Line;
       Put_Line ("SYNC");
-      Put (2);
+      Put_Data (3);
       New_Line;
 
+      Initialize (Gen, Microseconds (100), Microseconds (200));
       Reset (Gen, 43);
       
-      TE.Set_Handler (Nanoseconds (Random (Gen'Access)), Interrupter.Handler'Access);
+      TE.Set_Handler (Random (Gen'Access), Interrupter.Handler'Access);
 
       loop
-	 TA := Clock;
-	 TB := Clock;
+	 A := To_Data (Clock);
+	 B := To_Data (Clock);
 
-	 pragma Assert (TA < TB);
+	 pragma Assert (A < B);
 
-	 Put (TA);
+	 Put_Data (A);
 	 Put (':');
-	 Put (TB);
+	 Put_Data (B);
+	 Put (':');
+	 Put_Data (A xor B);
 	 New_Line;
 	 
       end loop;

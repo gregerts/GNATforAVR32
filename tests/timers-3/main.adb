@@ -1,8 +1,8 @@
 with Ada.Real_Time;
-with Test_Instance;
+with Test;
 with Error;
 
 procedure Main is
 begin
-   Test_Instance.Run;
+   Test.Run;
 end Main;

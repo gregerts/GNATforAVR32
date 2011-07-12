@@ -6,7 +6,7 @@
 --                                                                          --
 --                                 S p e c                                  --
 --                                                                          --
---                Copyright (C) 2008, Kristoffer N. Gregertsen              --
+--             Copyright (C) 2008-2011, Kristoffer N. Gregertsen            --
 --                                                                          --
 -- This specification is derived from the Ada Reference Manual for use with --
 -- GNAT. The copyright notice above, and the license provisions that follow --

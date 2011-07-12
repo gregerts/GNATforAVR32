@@ -1,20 +1,27 @@
-with Ada.Unchecked_Conversion, GNAT.IO, Utilities;
-use GNAT.IO, Utilities;
+with System, Ada.Real_Time.Timing_Events, Ada.Unchecked_Conversion,
+  GNAT.IO, Random_Time, Utilities;
+use System, Ada.Real_Time, Ada.Real_Time.Timing_Events,
+  GNAT.IO, Random_Time, Utilities;
 
 package body Test is
+
+   ------------------------
+   -- Test configuration --
+   ------------------------
+   
+   A : constant := 1000;
+   B : constant := 3000;
+   N : constant := 100;
 
    -----------------
    -- Definitions --
    -----------------
 
-   package T_Random is new Quick_Random (A, B);
-   use T_Random;
-
    type Count is mod 2**64;
    for Count'Size use 64;
 
-   type Data is mod 2**16;
-   for Data'Size use 16;
+   type Data is mod 2**32;
+   for Data'Size use 32;
 
    type Data_Array is array (1 .. N, 1 .. 3) of Data;
    type Data_Access is access all Data_Array;
@@ -23,6 +30,7 @@ package body Test is
    function To_Count is new Ada.Unchecked_Conversion (Time_Span, Count);
 
    procedure Put is new Put_Hex (Data);
+   procedure Put is new Put_Hex (Integer);
 
    ----------------
    -- Statistics --
@@ -41,7 +49,7 @@ package body Test is
    private
       T : Timing_Event;
       L : Integer;
-      X : Integer;
+      X : Time_Span;
       D : aliased Data_Array;
       Gen : aliased Generator;
       Next : Time;
@@ -67,14 +75,14 @@ package body Test is
 	 pragma Assert (Now <= Next + Microseconds (20));
 
          D (L, 1) := Data (To_Count (Now - Next));
-         D (L, 2) := Data (X);
+         D (L, 2) := Data (To_Count (X));
          D (L, 3) := D (L, 1) xor D (L, 2);
 
          L := L + 1;
 
          if L <= Data_Array'Last then
             X := Random (Gen'Access);
-            Next := Next + Microseconds (X);
+            Next := Next + X;
             T.Set_Handler (Next, Handler'Access);
          else
             Done := True;
@@ -90,14 +98,15 @@ package body Test is
       begin
 
          if First then
+	    Initialize (Gen, Microseconds (A), Microseconds (B));
             Reset (Gen, 1);
             First := False;
          end if;
 
          L := Data_Array'First;
-
          X := Random (Gen'Access);
-         Next := Clock + Microseconds (1000 + X);
+
+	 Next := Clock + X + Milliseconds (1);
          T.Set_Handler (Next, Handler'Access);
 
          Done := False;
@@ -125,7 +134,9 @@ package body Test is
 
       New_Line;
       Put_Line ("SYNC");
-
+      Put (Data_Array'Last (2));
+      New_Line;
+      
       loop
 
          Statistics.Start;
