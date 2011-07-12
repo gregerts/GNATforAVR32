@@ -35,7 +35,6 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Ada.Execution_Time.Interrupts.Timers;
 with Ada.Unchecked_Conversion;
 with System.Tasking;
 with System.Task_Primitives.Operations;
@@ -46,7 +45,6 @@ package body Ada.Execution_Time.Timers is
    package Protection renames System.BB.Protection;
    package STPO renames System.Task_Primitives.Operations;
    package SBT renames System.BB.Time;
-   package EIT renames Ada.Execution_Time.Interrupts.Timers;
 
    use type SBT.Alarm_Id;
    use type Ada.Task_Identification.Task_Id;
@@ -125,23 +123,15 @@ package body Ada.Execution_Time.Timers is
    ----------------
 
    procedure Initialize (TM : in out Timer'Class) is
-      Clock : SBT.Clock_Id;
       Success : Boolean;
    begin
 
       pragma Assert (TM.Id = null);
 
-      if TM in EIT.Interrupt_Timer'Class then
-         Clock := SBT.Interrupt_Clock
-           (SBT.Interrupt_ID (EIT.Interrupt_Timer (TM).I));
-      else
-         Clock := STPO.Task_Clock (To_Task_Id (TM.T.all));
-      end if;
-
       TM.Id := TM.Alarm'Unchecked_Access;
 
       SBT.Initialize_Alarm (TM.Id,
-                            Clock,
+                            STPO.Task_Clock (To_Task_Id (TM.T.all)),
                             Execute_Handler'Access,
                             TM'Address,
                             Success);

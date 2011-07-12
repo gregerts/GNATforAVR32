@@ -87,15 +87,9 @@ package body Ada.Execution_Time is
    --------------------------
 
    function Clock_For_Interrupts return CPU_Time is
-      Sum : CPU_Time := 0;
    begin
-
-      for I in Ada.Interrupts.Interrupt_ID loop
-         Sum := Sum + Interrupts.Clock (I);
-      end loop;
-
-      return Sum;
-
+      raise Program_Error;
+      return CPU_Time_First;
    end Clock_For_Interrupts;
 
    ---------

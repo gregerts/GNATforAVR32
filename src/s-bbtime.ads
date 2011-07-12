@@ -69,8 +69,6 @@ package System.BB.Time is
 
    type Thread_Id is not null access all System.BB.Threads.Thread_Descriptor;
 
-   subtype Interrupt_ID is System.BB.Interrupts.Interrupt_ID;
-
    ---------------
    -- Constants --
    ---------------
@@ -105,9 +103,6 @@ package System.BB.Time is
    -- Initialization --
    --------------------
 
-   procedure Initialize_Interrupt_Clock (Id : Interrupt_ID);
-   --  Initializes the clock for the given interrupt ID
-
    procedure Initialize_Thread_Clock (Id : Thread_Id);
    --  Initializes the clock for the given thread
 
@@ -126,10 +121,6 @@ package System.BB.Time is
    function Elapsed_Time (Clock : not null Clock_Id) return Time;
    pragma Inline (Elapsed_Time);
    --  Returns the elapsed time of the given clock
-
-   function Interrupt_Clock (Id : Interrupt_ID) return Clock_Id;
-   pragma Inline_Always (Interrupt_Clock);
-   --  Returns the execution time clock for the given interrupt ID
 
    function Real_Time_Clock return Clock_Id;
    pragma Inline_Always (Real_Time_Clock);
@@ -171,17 +162,9 @@ package System.BB.Time is
    pragma Inline (Enter_Idle);
    --  Enter idle mode
 
-   procedure Enter_Interrupt (Id : Interrupt_ID);
-   pragma Inline (Enter_Interrupt);
-   --  Enter interrupt mode
-
    procedure Leave_Idle (Id : Thread_Id);
    pragma Inline (Leave_Idle);
    --  Leave idle mode
-
-   procedure Leave_Interrupt;
-   pragma Inline (Leave_Interrupt);
-   --  Leave interrupt mode
 
 private
 

@@ -57,12 +57,6 @@ package body System.BB.Time is
    Max_Compare : constant := CPU.Word'Last / 2;
    --  Maximal value set to COMPARE register
 
-   Pool_Size : constant := Parameters.Interrupt_Clocks;
-   --  Number of interrupt clocks in pool
-
-   Stack_Size : constant := Parameters.Interrupt_Levels;
-   --  Size of stack for interrupted execution time clocks
-
    ETC : Clock_Id;
    --  The currently running execution time clock
 
@@ -71,21 +65,6 @@ package body System.BB.Time is
 
    Idle : aliased Clock_Descriptor;
    --  Clock of the pseudo idle thread
-
-   Pool : array (1 .. Pool_Size) of aliased Clock_Descriptor;
-   --  Pool of interrupt clocks
-
-   Free : Integer := 1;
-   --  Index of first free interrupt clock in pool
-
-   Lookup : array (Interrupt_ID) of Clock_Id := (others => null);
-   --  Lookup array translating interrupt IDs to interrupt clocks
-
-   Stack : array (1 .. Stack_Size) of Clock_Id := (others => null);
-   --  Stack of interrupted execution time clocks
-
-   Top : Integer := 0;
-   --  Index of top element on stack or zero if empty
 
    Sentinel : aliased Alarm_Descriptor := (Timeout => Time'Last, others => <>);
    --  Always the last alarm in the queue of every clock
@@ -102,7 +81,7 @@ package body System.BB.Time is
    pragma Inline (Alarm_Wrapper);
    --  Calls all expired alarm handlers for the given clock
 
-   procedure Compare_Handler (Id : Interrupt_ID);
+   procedure Compare_Handler (Id : Interrupts.Interrupt_ID);
    --  Handler for the COMPARE interrupt
 
    procedure Context_Switch (First : Thread_Id);
@@ -140,10 +119,6 @@ package body System.BB.Time is
    procedure Alarm_Wrapper (Clock : Clock_Id) is
       Alarm : Alarm_Id := Clock.First_Alarm;
    begin
-
-      --  No alarms allowed for ETC at the highest interrupt level
-
-      pragma Assert (Clock /= ETC);
 
       --  Remove all expired alarms from queue and call handlers
 
@@ -223,13 +198,13 @@ package body System.BB.Time is
    -- Compare_Handler --
    ---------------------
 
-   procedure Compare_Handler (Id : Interrupt_ID) is
+   procedure Compare_Handler (Id : Interrupts.Interrupt_ID) is
    begin
 
       pragma Assert (Id = Peripherals.COMPARE);
 
       Alarm_Wrapper (RTC'Access);
-      Alarm_Wrapper (Stack (Top));
+      Alarm_Wrapper (ETC);
 
    end Compare_Handler;
 
@@ -239,7 +214,6 @@ package body System.BB.Time is
 
    procedure Context_Switch (First : Thread_Id) is
    begin
-      pragma Assert (Top = 0);
       Update_ETC (First.Clock'Access);
    end Context_Switch;
 
@@ -276,21 +250,6 @@ package body System.BB.Time is
       pragma Assert (ETC = Id.Clock'Access);
       Update_ETC (Idle'Access);
    end Enter_Idle;
-
-   ---------------------
-   -- Enter_Interrupt --
-   ---------------------
-
-   procedure Enter_Interrupt (Id : Interrupt_ID) is
-   begin
-      pragma Assert (Top < Stack'Last);
-
-      Top := Top + 1;
-      Stack (Top) := ETC;
-
-      Update_ETC (Interrupt_Clock (Id));
-
-   end Enter_Interrupt;
 
    ----------------------
    -- Initialize_Alarm --
@@ -337,34 +296,6 @@ package body System.BB.Time is
                     First_Alarm => Sentinel'Access);
    end Initialize_Clock;
 
-   --------------------------------
-   -- Initialize_Interrupt_Clock --
-   --------------------------------
-
-   procedure Initialize_Interrupt_Clock (Id : Interrupt_ID) is
-      Clock : Clock_Id;
-   begin
-      pragma Assert (Id /= Interrupts.No_Interrupt);
-      pragma Assert (Lookup (Id) = null);
-      pragma Assert (Free <= Pool'Last);
-
-      --  Allocate free clock in Pool to Id
-
-      Clock := Pool (Free)'Access;
-      Free := Free + 1;
-
-      Lookup (Id) := Clock;
-
-      --  Initialize clock, no alarms allowed for highest priority
-
-      if Interrupts.Priority_Of_Interrupt (Id) < Any_Priority'Last then
-         Initialize_Clock (Clock, 1);
-      else
-         Initialize_Clock (Clock, 0);
-      end if;
-
-   end Initialize_Interrupt_Clock;
-
    -----------------------------
    -- Initialize_Thread_Clock --
    -----------------------------
@@ -408,15 +339,6 @@ package body System.BB.Time is
 
    end Initialize_Timers;
 
-   ---------------------
-   -- Interrupt_Clock --
-   ---------------------
-
-   function Interrupt_Clock (Id : Interrupt_ID) return Clock_Id is
-   begin
-      return Lookup (Id);
-   end Interrupt_Clock;
-
    ----------------
    -- Leave_Idle --
    ----------------
@@ -431,20 +353,6 @@ package body System.BB.Time is
       pragma Assert (ETC = Id.Clock'Access);
 
    end Leave_Idle;
-
-   ---------------------
-   -- Leave_Interrupt --
-   ---------------------
-
-   procedure Leave_Interrupt is
-   begin
-      pragma Assert (Top > 0);
-
-      Top := Top - 1;
-
-      Update_ETC (Stack (Top + 1));
-
-   end Leave_Interrupt;
 
    ---------------------
    -- Real_Time_Clock --

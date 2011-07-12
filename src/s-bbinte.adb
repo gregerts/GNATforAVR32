@@ -58,10 +58,6 @@ with System.BB.Threads.Queues;
 with System.BB.Peripherals;
 --  Used for To_Level
 
-with System.BB.Time;
---  Used for Enter_Interrupt
---           Leave_Interrupt
-
 package body System.BB.Interrupts is
 
    package SSE renames System.Storage_Elements;
@@ -130,8 +126,6 @@ package body System.BB.Interrupts is
 
       Interrupt_Handlers_Table (Id) := Handler;
 
-      Time.Initialize_Interrupt_Clock (Id);
-
    end Attach_Handler;
 
    ---------------------------
@@ -194,9 +188,6 @@ package body System.BB.Interrupts is
       pragma Assert (Level > 0);
       pragma Assert (Handler /= null);
 
-      --  Change to interrupt clock
-      Time.Enter_Interrupt (Interrupt);
-
       --  Store the interrupt being handled.
       Interrupt_Being_Handled := Interrupt;
 
@@ -221,9 +212,6 @@ package body System.BB.Interrupts is
 
       --  Restore the interrupt that was previously handled.
       Interrupt_Being_Handled := Previous_Interrupt;
-
-      --  Restore previous clock
-      Time.Leave_Interrupt;
 
    end Interrupt_Wrapper;
 
