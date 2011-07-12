@@ -215,13 +215,14 @@ package body Ada.Execution_Time.Timers is
          return Ada.Real_Time.Time_Span_Zero;
       end if;
 
-      loop
-         Timeout := CPU_Time (SBT.Time_Of_Alarm (TM.Id));
-         Now := CPU_Time (SBT.Elapsed_Time (SBT.Clock (TM.Id)));
-         exit when Timeout = CPU_Time (SBT.Time_Of_Alarm (TM.Id));
-      end loop;
+      Now     := CPU_Time (SBT.Elapsed_Time (SBT.Clock (TM.Id)));
+      Timeout := CPU_Time (SBT.Time_Of_Alarm (TM.Id));
 
-      return Timeout - Now;
+      if Timeout > Now then
+         return Timeout - Now;
+      else
+         return Ada.Real_Time.Time_Span_Zero;
+      end if;
 
    end Time_Remaining;
 
