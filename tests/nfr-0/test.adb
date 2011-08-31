@@ -1,33 +1,30 @@
-with System, Ada.Real_Time.Timing_Events, Ada.Unchecked_Conversion,
-  Utilities, Random_Time, GNAT.IO;
-use System, Ada.Real_Time, Ada.Real_Time.Timing_Events,
-  Utilities, Random_Time, GNAT.IO;
+with System, Ada.Real_Time, Ada.Unchecked_Conversion, Ada.Execution_Time.Timers,
+  Ada.Task_Identification, Utilities, GNAT.IO;
+use System, Ada.Real_Time, Ada.Execution_Time, Ada.Execution_Time.Timers,
+  Ada.Task_Identification, Utilities, GNAT.IO;
 
 package body Test is
 
    type Data is mod 2 ** 64;
    for Data'Size use 64;
    
-   function To_Data is new Ada.Unchecked_Conversion (Time, Data);
-   
+   function To_Data is new Ada.Unchecked_Conversion (CPU_Time, Data);
    procedure Put_Data is new Put_Hex (Data);
+      
+   task Runner is
+      pragma Priority (Priority'Last);
+   end Runner;
    
-   TE : Timing_Event;
-   Gen : aliased Generator;
-
    protected Interrupter is
-      procedure Handler (Event : in out Timing_Event);
+      procedure Handler (TM : in out Timer);
       pragma Priority (Any_Priority'Last);
    end Interrupter;
 
-   protected body Interrupter is
-      procedure Handler (Event : in out Timing_Event) is
-      begin
-	 Event.Set_Handler (Random (Gen'Access), Handler'Access);
-      end Handler;
-   end Interrupter;
-
-   procedure Run is
+   T  : aliased constant Task_Id := Runner'Identity;
+   TM : Timer (T'Access);
+   DT : constant := 10_000;
+   
+   task body Runner is
       A, B : Data;
    begin
 
@@ -36,14 +33,13 @@ package body Test is
       Put_Data (3);
       New_Line;
 
-      Initialize (Gen, Microseconds (100), Microseconds (200));
-      Reset (Gen, 43);
+      TM.Set_Handler (Microseconds (2 * DT), Interrupter.Handler'Access);
       
-      TE.Set_Handler (Random (Gen'Access), Interrupter.Handler'Access);
-
       loop
-	 A := To_Data (Clock);
-	 B := To_Data (Clock);
+         
+         A := To_Data (Clock (T));
+         Busy_Wait (DT);
+	 B := To_Data (Clock (T));
 
 	 pragma Assert (A < B);
 
@@ -56,6 +52,20 @@ package body Test is
 	 
       end loop;
 
-   end Run;
+   end Runner;
 
+   protected body Interrupter is
+
+      procedure Handler (TM : in out Timer) is
+      begin
+         TM.Set_Handler (Microseconds (2 * DT), Handler'Access);
+      end Handler;
+
+   end Interrupter;
+
+   procedure Run is
+   begin
+      delay until Time_Last;
+   end Run;
+   
 end Test;
