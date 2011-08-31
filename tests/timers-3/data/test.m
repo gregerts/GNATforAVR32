@@ -1,22 +1,11 @@
 #! /usr/bin/octave -q
 
-n = 100000;
-C = 1/60;
-
-data = receive(n);
+data = receive(10000);
 
 i = find(bitxor(data(:,1),data(:,2)) == data(:,3));
-o = C * data(i,1);
-x = C * data(i,2);
+sd = [min(data(i,1)); max(data(i,1)); mean(data(i,1))];
 
-hist(x,100);
+printf("N & %d & %d & %d \\\\\n", sd);
 
-o_min  = min(o);
-o_max  = max(o);
-o_mean = mean(o);
-
-printf("Min  & %8.4e \\\\\n", o_min);
-printf("Max  & %8.4e \\\\\n", o_max)
-printf("Mean & %8.4e \\\\\n", o_mean);
-
-save("test.dat", "data", "o", "x");
+fn = sprintf("%s-%s.dat", date, get_branch);
+save(fn, "data", "sd");
