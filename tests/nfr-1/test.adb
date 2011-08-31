@@ -1,5 +1,7 @@
-with Ada.Unchecked_Conversion, System, Ada.Real_Time, Utilities, GNAT.IO;
-use System, Ada.Real_Time, Utilities, GNAT.IO;
+with Ada.Unchecked_Conversion, System, Ada.Real_Time, Ada.Execution_Time.Timers,
+  Ada.Task_Identification, Utilities, GNAT.IO;
+use System, Ada.Real_Time, Ada.Execution_Time.Timers, Ada.Task_Identification,
+  Utilities, GNAT.IO;
 
 package body Test is
 
@@ -11,6 +13,7 @@ package body Test is
    procedure Put_Data is new Put_Hex (Data);
 
    protected Timed_SO is
+      procedure Handler (TM : in out Timer);
       procedure Release;
       entry Suspend (D : out Data);
    private
@@ -21,8 +24,17 @@ package body Test is
    task Sporadic is
       pragma Priority (Priority'Last);
    end Sporadic;
+   
+   T : aliased constant Task_Id := Sporadic'Identity;
+   TM : Timer (T'Access);
 
    protected body Timed_SO is
+      
+      procedure Handler (TM : in out Timer) is
+      begin
+         pragma Assert (False);
+         null;
+      end Handler;
 
       procedure Release is
       begin
@@ -43,6 +55,8 @@ package body Test is
    begin
       loop
 
+         TM.Set_Handler (Milliseconds (100), Timed_SO.Handler'Access);
+         
 	 Timed_SO.Suspend (A);
 	 B := To_Data (Clock);
 
@@ -59,6 +73,7 @@ package body Test is
    end Sporadic;
 
    procedure Run is
+      Next : Time := Clock;
    begin
 
       New_Line;
@@ -67,7 +82,9 @@ package body Test is
       New_Line;
 
       loop
+         delay until Next;
 	 Timed_SO.Release;
+         Next := Next + Milliseconds (10);
       end loop;
 
    end Run;
