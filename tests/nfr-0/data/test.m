@@ -1,6 +1,6 @@
 #! /usr/bin/octave -q
 
-data = receive(100000);
+data = receive(10000);
 
 i = bitxor(data(:,1),data(:,2)) == data(:,3);
 dt = data(i,2) - data(i,1);

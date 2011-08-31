@@ -5,6 +5,5 @@ package Test is
    ---------
 
    procedure Run;
-   pragma No_Return (Run);
 
 end Test;
