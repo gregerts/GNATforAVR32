@@ -33,9 +33,11 @@ package body Test is
       Put_Data (3);
       New_Line;
 
-      TM.Set_Handler (Microseconds (2 * DT), Interrupter.Handler'Access);
-      
       loop
+
+         if TM.Current_Handler = null then
+            TM.Set_Handler (Microseconds (2 * DT), Interrupter.Handler'Access);
+         end if;
          
          A := To_Data (Clock (T));
          Busy_Wait (DT);
@@ -58,7 +60,7 @@ package body Test is
 
       procedure Handler (TM : in out Timer) is
       begin
-         TM.Set_Handler (Microseconds (2 * DT), Handler'Access);
+         null;
       end Handler;
 
    end Interrupter;
