@@ -23,7 +23,7 @@ package body Test is
 
       New_Line;
       Put_Line ("SYNC");
-      Put (3);
+      Put (4);
       New_Line;
 
       loop
