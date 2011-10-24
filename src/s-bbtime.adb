@@ -240,7 +240,7 @@ package body System.BB.Time is
    procedure Context_Switch (First : Thread_Id) is
    begin
       pragma Assert (Top = 0);
-      Update_ETC (First.Clock'Access);
+      Update_ETC (First.Active_Clock);
    end Context_Switch;
 
    ------------------
@@ -273,7 +273,8 @@ package body System.BB.Time is
 
    procedure Enter_Idle (Id : Thread_Id) is
    begin
-      pragma Assert (ETC = Id.Clock'Access);
+      pragma Assert (ETC = Id.Active_Clock and ETC = Id.Clock'Access);
+      Id.Active_Clock := Idle'Access;
       Update_ETC (Idle'Access);
    end Enter_Idle;
 
@@ -377,6 +378,10 @@ package body System.BB.Time is
 
       Initialize_Clock (Id.Clock'Access, 1);
 
+      --  Active clock of thread is its own clock
+
+      Id.Active_Clock := Id.Clock'Access;
+
    end Initialize_Thread_Clock;
 
    -----------------------
@@ -423,13 +428,9 @@ package body System.BB.Time is
 
    procedure Leave_Idle (Id : Thread_Id) is
    begin
-
-      if ETC = Idle'Access then
-         Update_ETC (Id.Clock'Access);
-      end if;
-
-      pragma Assert (ETC = Id.Clock'Access);
-
+      pragma Assert (ETC = Id.Active_Clock and ETC = Idle'Access);
+      Id.Active_Clock := Id.Clock'Access;
+      Update_ETC (Id.Clock'Access);
    end Leave_Idle;
 
    ---------------------
