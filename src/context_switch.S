@@ -9,7 +9,7 @@
  *      Copyright (C) 1999-2002 Universidad Politecnica de Madrid           *
  *             Copyright (C) 2003-2005 The European Space Agency            *
  *                     Copyright (C) 2003-2005 AdaCore                      *
- *             Copyright (C) 2007-2008 Kristoffer N. Gregertsen             *	
+ *             Copyright (C) 2007-2008 Kristoffer N. Gregertsen             *
  *                                                                          *
  * GNAT is free software;  you can  redistribute it  and/or modify it under *
  * terms of the  GNU General Public License as published  by the Free Soft- *
@@ -38,7 +38,7 @@
 /* This file is a AVR32 specific implementation, inspired by AVR32 Linux  */
 
 #include "avr32.h"
-	
+
 /* Procedure: context_switch
  *
  * This routine performs a context switch between the two tasks that are
@@ -52,7 +52,7 @@
 
 	.global context_switch
 	.type	context_switch, @function
-	
+
 context_switch:
 
 	/* Store address of running thread in r9 */
@@ -60,9 +60,9 @@ context_switch:
 	ld.w	r9, r8[0]
 
 	/* Add size of context */
-	sub	r9, -(CONTEXT_SIZE + 4)
-	
-	/* Save context of running thread */
+	sub	r9, -CONTEXT_SIZE
+
+	/* Save CPU context of running thread */
 	stm	--r9, r0,r1,r2,r3,r4,r5,r6,r7,sp,lr
 	mfsr	r0, SYSREG_SR
 	st.w	--r9, r0
@@ -73,7 +73,7 @@ context_switch:
 
 	/* First thread is now also running thread */
 	st.w	r8[0], r2
-	
+
 	/* Do timer context switch */
 	mov	r12, r2
 	call	timer_context_switch
