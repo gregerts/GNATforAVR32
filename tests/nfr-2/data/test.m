@@ -1,12 +1,21 @@
 #! /usr/bin/octave -q
 
-data = receive(1000);
+d = receive(100);
+s = size(d);
 
-i = bitxor(bitxor(data(:,1),data(:,2)),data(:,3)) == data(:,4);
-dt = data(i,3) - data(i,2);
-sd = [min(dt); max(dt); mean(dt); sqrt(var(dt))];
+c = zeros(s(1),1);
 
-printf("N & %d & %d & %1.4f & %1.4f \\\\\n",sd);
+for i = 1:s(2)
+  c = bitxor(c,d(:,i));
+endfor
+
+i = !c;
+
+dtr = d(i,2) - d(i,1);
+
+sd = [min(dtr) max(dtr) mean(dtr) sqrt(var(dtr))];
+
+printf("N & %d & %d & %1.4f & %1.4f \\\\\n",sd');
 
 fn = sprintf("%s-%s.dat", date, get_branch);
-save(fn, "data", "dt", "sd");
+save(fn, "d", "dtr", "sd");
