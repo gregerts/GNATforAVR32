@@ -69,6 +69,9 @@ package body System.BB.Time is
    Sentinel : aliased Alarm_Descriptor := (Timeout => Time'Last, others => <>);
    --  Always the last alarm in the queue of every clock
 
+   Defer_Updates : Boolean := False;
+   --  True if updates to COMPARE are to be deferred
+
    -----------------------
    -- Local subprograms --
    -----------------------
@@ -117,9 +120,7 @@ package body System.BB.Time is
    -------------------
 
    procedure Alarm_Wrapper (Clock : Clock_Id) is
-      Now : constant Time :=  Clock.Base_Time + Time (CPU.Get_Count);
       Alarm : Alarm_Id := Clock.First_Alarm;
-
    begin
 
       --  Only active clocks can expire
@@ -128,7 +129,7 @@ package body System.BB.Time is
 
       --  Remove all expired alarms from queue and call handlers
 
-      while Alarm.Timeout <= Now loop
+      while Alarm.Timeout <= Clock.Base_Time loop
 
          Clock.First_Alarm := Alarm.Next;
          Alarm.Next := null;
@@ -167,7 +168,7 @@ package body System.BB.Time is
 
          Clock.First_Alarm := Alarm.Next;
 
-         if Active (Clock) then
+         if not Defer_Updates and then Active (Clock) then
             Update_Compare;
          end if;
 
@@ -209,8 +210,26 @@ package body System.BB.Time is
 
       pragma Assert (Id = Peripherals.COMPARE);
 
+      --  Update base time of real time clock
+
+      declare
+         Prev : CPU.Word;
+      begin
+         CPU.Reset_Count (Prev);
+         RTC.Base_Time := RTC.Base_Time + Time (Prev);
+         ETC.Base_Time := ETC.Base_Time + Time (Prev);
+      end;
+
+      --  Call all expired alarm handlers, defer COMPARE updates
+
+      Defer_Updates := True;
+
       Alarm_Wrapper (RTC'Access);
       Alarm_Wrapper (ETC);
+
+      Defer_Updates := False;
+
+      --  Now update COMPARE register to reflect new alarm status
 
       Update_Compare;
 
@@ -412,7 +431,7 @@ package body System.BB.Time is
          Alarm.Next := Clock.First_Alarm;
          Clock.First_Alarm := Alarm;
 
-         if Active (Clock) then
+         if not Defer_Updates and then Active (Clock) then
             Update_Compare;
          end if;
 
