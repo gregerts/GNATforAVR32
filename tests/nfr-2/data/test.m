@@ -12,7 +12,6 @@ endfor
 i = !c;
 
 dtr = d(i,2) - d(i,1);
-
 sd = [min(dtr) max(dtr) mean(dtr) sqrt(var(dtr))];
 
 printf("N & %d & %d & %1.4f & %1.4f \\\\\n",sd');

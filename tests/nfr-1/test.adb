@@ -5,9 +5,9 @@ package body Test is
 
    type Data is mod 2 ** 64;
    for Data'Size use 64;
-   
+
    function To_Data is new Ada.Unchecked_Conversion (Time, Data);
-   
+
    procedure Put_Data is new Put_Hex (Data);
 
    protected Timed_SO is
@@ -21,9 +21,9 @@ package body Test is
    task Sporadic is
       pragma Priority (Priority'Last);
    end Sporadic;
-   
+
    protected body Timed_SO is
-      
+
       procedure Release is
       begin
 	 Open := True;
@@ -41,6 +41,12 @@ package body Test is
    task body Sporadic is
       A, B : Data;
    begin
+
+      New_Line;
+      Put_Line ("SYNC");
+      Put (3);
+      New_Line;
+
       loop
 
 	 Timed_SO.Suspend (A);
@@ -61,18 +67,11 @@ package body Test is
    procedure Run is
       Next : Time := Clock;
    begin
-
-      New_Line;
-      Put_Line ("SYNC");
-      Put (3);
-      New_Line;
-
       loop
          delay until Next;
 	 Timed_SO.Release;
          Next := Next + Milliseconds (10);
       end loop;
-
    end Run;
 
 end Test;
