@@ -14,7 +14,5 @@ sd = [min(dt(iu)); max(dt(iu)); mean(dt(iu)); sqrt(var(dt(iu)));
 
 printf("N & %d & %d & %1.4f & %1.4f \\\\\n",sd);
 
-dd = sd(6) - sd(1);
-
 fn = sprintf("%s-%s.dat", date, get_branch);
 save(fn, "data", "dt", "sd");

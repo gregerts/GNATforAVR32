@@ -90,6 +90,9 @@ package System.BB.Threads is
       --  counter, ...) are stored. This field supports context switches among
       --  threads.
 
+      Active_Clock : System.BB.Time.Clock_Id;
+      --  Active clock for this thread (either its own clock or the idle clock)
+
       Clock : aliased System.BB.Time.Clock_Descriptor;
       --  Execution-time clock for this thread
 
