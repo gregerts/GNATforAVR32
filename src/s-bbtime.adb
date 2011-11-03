@@ -90,6 +90,9 @@ package body System.BB.Time is
    Sentinel : aliased Alarm_Descriptor := (Timeout => Time'Last, others => <>);
    --  Always the last alarm in the queue of every clock
 
+   Defer_Updates : Boolean := False;
+   --  True if updates to COMPARE are to be deferred
+
    -----------------------
    -- Local subprograms --
    -----------------------
@@ -186,7 +189,7 @@ package body System.BB.Time is
 
          Clock.First_Alarm := Alarm.Next;
 
-         if Active (Clock) then
+         if not Defer_Updates and then Active (Clock) then
             Update_Compare;
          end if;
 
@@ -228,8 +231,14 @@ package body System.BB.Time is
 
       pragma Assert (Id = Peripherals.COMPARE);
 
+      --  Call all expired alarm handlers, defer COMPARE updates
+
+      Defer_Updates := True;
+
       Alarm_Wrapper (RTC'Access);
       Alarm_Wrapper (Stack (Top));
+
+      Defer_Updates := False;
 
    end Compare_Handler;
 
@@ -496,7 +505,7 @@ package body System.BB.Time is
          Alarm.Next := Clock.First_Alarm;
          Clock.First_Alarm := Alarm;
 
-         if Active (Clock) then
+         if not Defer_Updates and then Active (Clock) then
             Update_Compare;
          end if;
 
