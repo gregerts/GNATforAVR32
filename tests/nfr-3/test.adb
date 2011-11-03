@@ -173,7 +173,7 @@ package body Test is
 
       New_Line;
       Put_Line ("SYNC");
-      Put (1);
+      Put (2);
       New_Line;
 
       Statistics.Initialize;
@@ -183,6 +183,8 @@ package body Test is
          Statistics.Wait;
 
          for I in R'Range loop
+            Put_Data (R (I));
+            Put (':');
             Put_Data (R (I));
             New_Line;
          end loop;
