@@ -1,6 +1,6 @@
 #! /usr/bin/octave -q
 
-K = 2;
+K = 4;
 d = receive(1000);
 s = size(d);
 
